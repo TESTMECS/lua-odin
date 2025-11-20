@@ -16,9 +16,9 @@ main :: proc() {
 	sb := strings.builder_make(varena)
 	defer strings.builder_destroy(&sb)
 	// ARGS
-	fmt.println(os.args)
 	if len(os.args) < 2 {
 		fmt.println("Usage: lua-odin <file|repl|ast|bytes> <file>")
+		os.exit(1)
 	}
 	//
 	user_args := os.args[1:]
@@ -32,7 +32,7 @@ main :: proc() {
 			line, err := bufio.reader_read_string(&reader, '\n')
 			if err != nil do OUAU_ERR("ERR: Failed to read input", err, &sb, false, 1)
 			line = strings.trim_space(line)
-			if line == "exit" do OUAU_RESULT(nil, "Bye!", &sb, true)
+			if line == "exit" do OUAU_RESULT("", "Bye!", &sb, true)
 			OUAU_RUN_STRING(line, &sb, false, varena)
 		}
 	case "file":
@@ -53,17 +53,20 @@ OUAU_RUN_STRING :: proc(
 	root := PARSE_CHUNK(&p)
 	i := NEW_INTERPRETER(&p.nodes, varena)
 	val := INTERPRET(i, root)
+	ok := CHECK_TY(val)
+	v := VALUE_TO_STRING(val)
+	fmt.println("IS....", val.(f64))
+	if ok {
+		OUAU_ERR("ERR: Failed to evaluate", nil, sb, true, 1)
+		os.exit(1)
+	}
 	if is_exit && val != nil {
-		OUAU_RESULT(val, "", sb, true)
+		OUAU_RESULT(v, "", sb, true)
 		os.exit(0)
 	}
 	if !is_exit && val != nil {
-		OUAU_RESULT(val, "", sb, false)
+		OUAU_RESULT(v, "", sb, false)
 		return
-	}
-	if is_exit && val == nil {
-		OUAU_ERR("ERR: Failed to evaluate", nil, sb, true, 1)
-		os.exit(1)
 	}
 }
 OUAU_ERR :: proc(
@@ -84,16 +87,23 @@ OUAU_ERR :: proc(
 		fmt.println(err_msg)
 	}
 }
-OUAU_RESULT :: proc(res: Value, msg: string, sb: ^strings.Builder, is_exit := true) {
+OUAU_RESULT :: proc(res: string, msg: string, sb: ^strings.Builder, is_exit := true) {
 	strings.builder_reset(sb)
-	fmt.sbprintln(sb, msg)
+	fmt.sbprintln(sb, msg, res)
 	result := strings.to_string(sb^)
 	if is_exit {
-		fmt.println(result)
+		fmt.println("IS", result)
 		os.exit(0)
 	}
 	 else {
-		fmt.println(result)
+		fmt.println("IS", result)
 	}
+}
+CHECK_TY :: proc(val: Value) -> bool {
+	switch v in val {
+	case bool, f64, string, rawptr, (^Table), (^Closure), (^ReturnValue):
+		return true
+	}
+	return false
 }
 
