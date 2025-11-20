@@ -67,14 +67,16 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 }
 EVAL_BLOCK :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	child := i.nodes.first_child[node]
+	last_result: Value
 	for child != 0 {
 		v := EVAL(i, child)
 		if _, ok := v.(^ReturnValue); ok {
 			return v
 		}
+		last_result = v
 		child = i.nodes.next_sibling[child]
 	}
-	return nil
+	return last_result
 }
 EVAL_UBLOCK :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	child := i.nodes.first_child[node]
@@ -202,15 +204,17 @@ EVAL_LOCAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		append(&values, val)
 		child = i.nodes.next_sibling[child]
 	}
+	last_value: Value
 	for name, idx in vars {
 		if idx < len(values) {
 			ENV_SET(i.current, name, values[idx])
+			last_value = values[idx]
 		}
 		 else {
 			ENV_SET(i.current, name, nil)
 		}
 	}
-	return nil
+	return last_value
 }
 EVAL_BREAK :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	return nil
@@ -727,14 +731,16 @@ EVAL_GLOBAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		append(&values, val)
 		child = i.nodes.next_sibling[child]
 	}
+	last_value: Value
 	for name, idx in vars {
 		if idx < len(values) {
 			i.globals[name] = values[idx]
+			last_value = values[idx]
 		}
 		 else {
 			i.globals[name] = nil
 		}
 	}
-	return nil
+	return last_value
 }
 
