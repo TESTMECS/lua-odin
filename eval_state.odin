@@ -81,15 +81,10 @@ INIT_BUILTINS :: proc(i: ^Interpreter) {
 }
 
 BUILTIN_PRINT :: proc(args: []Value) -> Value {
-	fmt.println("PRINT CALLED")
-	fmt.println("ARGS ARE")
-	fmt.println(len(args))
-
 	for arg in args {
-		fmt.println("ARG IS ", arg)
-		fmt.println("VALUE TO STRING IS ", VALUE_TO_STRING(arg))
-		// fmt.print(VALUE_TO_STRING(arg))
+		fmt.print(arg)
 	}
+	fmt.println()
 	return nil
 }
 

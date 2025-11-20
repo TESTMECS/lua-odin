@@ -1,7 +1,5 @@
 package ouau
-import "core:fmt"
 import "core:math"
-import "core:strconv"
 import "core:strings"
 EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	kind := i.nodes.kind[node]
@@ -247,9 +245,7 @@ EVAL_CALL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	}
 
 	arg_child := GET_ARGUMENTS_CHILD(i, node)
-	fmt.println("ARG CHILD NODE:", arg_child)
 	args := EVAL_EXPRESSION_LIST(i, arg_child)
-	fmt.println("EVALUATED ARGS COUNT:", len(args))
 	if fn_val_closure.is_native {
 		return fn_val_closure.native_proc(args)
 	}
@@ -408,7 +404,6 @@ GET_FUNCTION_CHILD :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
 GET_ARGUMENTS_CHILD :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
 	fn_child := i.nodes.first_child[node]
 	arg_child := i.nodes.next_sibling[fn_child]
-	fmt.println("GET_ARGUMENTS_CHILD: node=", node, "fn_child=", fn_child, "arg_child=", arg_child)
 	return arg_child
 }
 GET_LEFT_CHILD :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
@@ -632,20 +627,20 @@ COMPARE_TABLE :: proc(left, right: ^Table) -> bool {
 COMPARE_CLOSURE :: proc(left, right: ^Closure) -> bool {
 	return left == right
 }
-VALUE_TO_STRING :: proc(v: Value) -> string {
+VALUE_TO_STRING :: proc(v: Value, allocator := context.allocator) -> string {
+	sb := strings.builder_make(allocator)
+	defer strings.builder_destroy(&sb)
 	#partial switch val in v {
 	case bool:
 		return val ? "true" : "false"
 	case f64:
-		buf: [64]u8
-		n := strconv.write_float(buf[:], val, 'f', -1, 64)
-		return n
+		strings.write_f64(&sb, val, 'f')
+		ret_val := strings.to_string(sb)
+		return ret_val
 	case string:
 		return val
 	case rawptr:
-		buf: [32]u8
-		n := strconv.write_uint(buf[:], cast(u64)uintptr(val), 16)
-		return string(buf[:])
+		return "userdata"
 	case ^Table:
 		return "table"
 	case ^Closure:
