@@ -53,7 +53,7 @@ OUAU_RUN_STRING :: proc(
 	root := PARSE_CHUNK(&p)
 	i := NEW_INTERPRETER(&p.nodes, varena)
 	val := INTERPRET(i, root)
-	fmt.println("VAL", val)
+	fmt.println("RET:", val)
 }
 OUAU_ERR :: proc(
 	msg: string,
