@@ -224,6 +224,7 @@ test_for_list :: proc(t: ^testing.T) {
 @(test)
 test_global :: proc(t: ^testing.T) {
 	using i
+	using pt
 	v := new(virtual.Arena, context.allocator)
 	err := virtual.arena_init_growing(v)
 	ensure(err == nil)
@@ -238,6 +239,8 @@ test_global :: proc(t: ^testing.T) {
 
 	p := NEW_PARSER(input, varena)
 	root := PARSE_CHUNK(&p)
+	DUMP_AST(&p)
+
 	i := NEW_INTERPRETER(&p.nodes, varena)
 	val := INTERPRET(i, root)
 	if val == nil || val.(f64) != 1 {
