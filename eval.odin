@@ -42,7 +42,6 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	case .IDENTIFIER:
 		name := i.nodes.name[node]
 		if val, ok := ENV_GET(i.current, name); ok {
-			LOGSF(context.logger, "EVAL: IDENTIFIER %s = %v", name, val)
 			return val
 		}
 		if val, ok := i.globals[name]; ok {
@@ -156,15 +155,12 @@ EVAL_FUNCTION :: proc(i: ^Interpreter, node: NODEID, allocator := context.alloca
 }
 EVAL_FOR :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	var_name := i.nodes.name[node]
-	LOGSF(context.logger, "EVAL_FOR: starting for loop with var %s", var_name)
 	child := i.nodes.first_child[node]
 
 	// Numeric for loop: init, limit, [step], body
 	init := EVAL(i, child)
-	LOGSF(context.logger, "EVAL_FOR: init = %v", init)
 	child = i.nodes.next_sibling[child]
 	limit := EVAL(i, child)
-	LOGSF(context.logger, "EVAL_FOR: limit = %v", limit)
 	child = i.nodes.next_sibling[child]
 
 
@@ -172,20 +168,16 @@ EVAL_FOR :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	// Check if there's a step expression before the body
 	if child != 0 && i.nodes.kind[child] != .BLOCK {
 		step = EVAL(i, child)
-		LOGSF(context.logger, "EVAL_FOR: step = %v", step)
 		child = i.nodes.next_sibling[child]
 	}
 
 	ENV_SET(i.current, var_name, init)
-	LOGSF(context.logger, "EVAL_FOR: starting loop iterations")
 	for {
 		current_val, _ := ENV_GET(i.current, var_name)
-		LOGSF(context.logger, "EVAL_FOR: iteration %v", current_val)
 		if (step.(f64) > 0 && current_val.(f64) > limit.(f64)) ||
 		   (step.(f64) < 0 && current_val.(f64) < limit.(f64)) {
 			break
 		}
-		LOGSF(context.logger, "EVAL_FOR: evaluating body")
 		body_result := EVAL(i, child)
 		if _, ok := body_result.(^ReturnValue); ok {
 			return body_result
@@ -206,12 +198,10 @@ EVAL_LOCAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	for child != 0 {
 		val := EVAL(i, child)
 		append(&values, val)
-		LOGSF(context.logger, "EVAL_LOCAL: evaluated value = %v", val)
 		child = i.nodes.next_sibling[child]
 	}
 	for name, idx in vars {
 		if idx < len(values) {
-			LOGSF(context.logger, "EVAL_LOCAL: setting %s = %v", name, values[idx])
 			ENV_SET(i.current, name, values[idx])
 		}
 		 else {
@@ -246,7 +236,6 @@ EVAL_CALL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 
 	fn_val_closure, ok := fn_val.(^Closure)
 	if !ok {
-		LOGSF(context.logger, "Attempt to call a non-function value (type: %T)", fn_val)
 		return nil
 	}
 
@@ -269,7 +258,6 @@ EVAL_UNARY :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	case .NOT:
 		return !IS_TRUTHY(operand)
 	case .POUND:
-		LOGSF(context.logger, "EVAL_UNARY POUND: operand = %v", operand)
 		switch val in operand {
 		case string:
 			return f64(len(val))
@@ -290,7 +278,6 @@ EVAL_UNARY :: proc(i: ^Interpreter, node: NODEID) -> Value {
 					break
 				}
 			}
-			LOGSF(context.logger, "EVAL_UNARY POUND: table length = %v", length)
 			return f64(length)
 		case bool, f64, rawptr, ^Closure, ^ReturnValue:
 			return nil
@@ -352,7 +339,6 @@ EVAL_BINARY :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		table_val := left
 		table, ok := table_val.(^Table)
 		if !ok || table == nil {
-			LOGSF(context.logger, "Attempt to index a non-table value (type: %T)", table_val)
 			return nil
 		}
 		right_node_id := GET_RIGHT_CHILD(i, node)
@@ -544,12 +530,10 @@ EVAL_PLUS :: proc(left, right: Value) -> Value {
 	}
 	lvalue, ok := left.(f64)
 	if !ok {
-		LOGSF(context.logger, "Attempt to concatenate a non-string value (%v, %v)", left, right)
 		return nil
 	}
 	rvalue, okk := right.(f64)
 	if !okk {
-		LOGSF(context.logger, "Attempt to concatenate a non-string value (%v, %v)", left, right)
 		return nil
 	}
 	return lvalue + rvalue
@@ -678,7 +662,6 @@ EVAL_ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		value_to_assign := EVAL(i, rvalue)
 		name := i.nodes.name[lvalue]
 		env := i.current
-		// LOGSF(context.logger, "Assigning to %v", env)
 		for env != nil {
 			if val, ok := ENV_GET(env, name); ok {
 				ENV_SET(env, name, value_to_assign)
@@ -698,7 +681,6 @@ EVAL_ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 			table_val := EVAL(i, table_expr_node)
 			table, ok := table_val.(^Table)
 			if !ok || table == nil {
-				LOGSF(context.logger, "Attempt to index a non-table value (type: %T)", table_val)
 				return nil
 			}
 			key_node := GET_RIGHT_CHILD(i, lvalue)
@@ -716,7 +698,6 @@ EVAL_ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 			table_val := EVAL(i, table_expr_node)
 			table, ok := table_val.(^Table)
 			if !ok || table == nil {
-				LOGSF(context.logger, "Attempt to index a non-table value (type: %T)", table_val)
 				return nil
 			}
 			key_node := GET_RIGHT_CHILD(i, lvalue)
@@ -727,9 +708,7 @@ EVAL_ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 			table.data[key_tag] = value_to_assign
 			return value_to_assign
 		}
-
 	case:
-		LOGSF(context.logger, "Attempt to assign to a non-lvalue (type: %T)", lvalue_kind)
 	}
 	return nil
 }

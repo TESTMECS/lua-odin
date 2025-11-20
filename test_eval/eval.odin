@@ -75,7 +75,6 @@ test_eval_table :: proc(t: ^testing.T) {
 	// pt.dump_ast(&p)
 	i := NEW_INTERPRETER(&p.nodes, varena)
 	val := INTERPRET(i, root)
-	// log.info(val)
 	if val == nil {
 		testing.fail(t)
 	}
@@ -104,7 +103,6 @@ test_eval_array :: proc(t: ^testing.T) {
 	// pt.dump_ast(&p)
 	i := NEW_INTERPRETER(&p.nodes, varena)
 	val := INTERPRET(i, root)
-	// log.info(val)
 	if val == nil {
 		testing.fail(t)
 	}
@@ -162,7 +160,7 @@ test_while :: proc(t: ^testing.T) {
 	// pt.dump_ast(&p)
 	i := NEW_INTERPRETER(&p.nodes, varena)
 	val := INTERPRET(i, root)
-	log.info(val)
+
 	if val == nil {
 		testing.fail(t)
 	}
