@@ -179,10 +179,8 @@ GET_PRECEDENCE :: proc(tok: Token) -> Precedence {
 		return .LOWEST
 	}
 }
-
 PARSE_INFIX :: proc(p: ^Parser, left: NODEID) -> NODEID {
 	tok := p.current.kind
-
 	if tok == .OPEN {
 		ADVANCE(p)
 		args := make([dynamic]NODEID)
@@ -194,20 +192,17 @@ PARSE_INFIX :: proc(p: ^Parser, left: NODEID) -> NODEID {
 			}
 		}
 		EXPECT(p, .CLOSE)
-
 		node := NEW_NODE(p, .CALL)
 		ADD_CHILD(p, node, left)
 		for arg in args do ADD_CHILD(p, node, arg)
 		return node
 	}
-
 	if tok == .DOT {
 		ADVANCE(p)
 		if p.current.kind == .IDENTIFIER {
 			right := NEW_NODE(p, .IDENTIFIER)
 			p.nodes.name[right] = string(p.current.text)
 			ADVANCE(p)
-
 			node := NEW_NODE(p, .BINARY)
 			p.nodes.token[node] = tok
 			ADD_CHILD(p, node, left)
@@ -215,22 +210,18 @@ PARSE_INFIX :: proc(p: ^Parser, left: NODEID) -> NODEID {
 			return node
 		}
 	}
-
 	if tok == .BOPEN {
 		ADVANCE(p)
 		right := PARSE_PRECEDENCE(p, .LOWEST)
 		EXPECT(p, .BCLOSE)
-
 		node := NEW_NODE(p, .BINARY)
 		p.nodes.token[node] = tok
 		ADD_CHILD(p, node, left)
 		ADD_CHILD(p, node, right)
 		return node
 	}
-
 	ADVANCE(p)
 	right := PARSE_PRECEDENCE(p, GET_PRECEDENCE(tok))
-
 	node := NEW_NODE(p, .BINARY)
 	p.nodes.token[node] = tok
 	ADD_CHILD(p, node, left)
@@ -239,6 +230,7 @@ PARSE_INFIX :: proc(p: ^Parser, left: NODEID) -> NODEID {
 }
 PARSE_PRIMARY :: proc(p: ^Parser) -> NODEID {
 	tk := p.current.kind
+	LOGSF(context.logger, "PARSE_PRIMARY: tk=%v", tk)
 	if tk == .NUMBER {
 		id := NEW_NODE(p, .LITERAL)
 		val, _ := strconv.parse_i64(string(p.current.text))
@@ -273,7 +265,6 @@ PARSE_PRIMARY :: proc(p: ^Parser) -> NODEID {
 	if tk == .TOPEN {
 		return PARSE_TABLE(p)
 	}
-
 	return NEW_NODE(p, .INVALID)
 }
 PARSE_EXPRESSION_STATEMENT :: proc(p: ^Parser) -> NODEID {
@@ -479,7 +470,6 @@ PARSE_RETURN :: proc(p: ^Parser) -> NODEID {
 PARSE_TABLE :: proc(p: ^Parser) -> NODEID {
 	EXPECT(p, .TOPEN)
 	table := NEW_NODE(p, .TABLE)
-
 	if p.current.kind != .TCLOSE {
 		for {
 			if p.current.kind == .OPEN {
@@ -515,7 +505,6 @@ PARSE_TABLE :: proc(p: ^Parser) -> NODEID {
 			ADVANCE(p)
 		}
 	}
-
 	EXPECT(p, .TCLOSE)
 	return table
 }

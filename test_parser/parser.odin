@@ -1,5 +1,6 @@
 package parser_test
 
+import "core:log"
 import "core:mem/virtual"
 import "core:testing"
 
@@ -179,7 +180,7 @@ test_tables :: proc(t: ^testing.T) {
 	local a = {
 		b = 1,
 		c = 2,
-		d = 3,
+		d = 3
 	};
 	`
 
@@ -187,6 +188,7 @@ test_tables :: proc(t: ^testing.T) {
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
 	DUMP_AST(&p)
+	log.info(p.nodes)
 	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t)
 	EXPECT_NODE(p.nodes.kind[1], .LOCAL, t)
 	EXPECT_NODE(p.nodes.kind[2], .IDENTIFIER, t)
