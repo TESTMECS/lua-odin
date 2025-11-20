@@ -1,7 +1,99 @@
 package ouau
+import "core:bufio"
 import "core:fmt"
-main :: proc()
-{
-	fmt.println("Hello, world!")
+import "core:mem"
+import "core:mem/virtual"
+import "core:os"
+import "core:strings"
+main :: proc() {
+	// Arena
+	v: virtual.Arena
+	err := virtual.arena_init_growing(&v)
+	ensure(err == nil)
+	varena := virtual.arena_allocator(&v)
+	defer virtual.arena_destroy(&v)
+	//
+	sb := strings.builder_make(varena)
+	defer strings.builder_destroy(&sb)
+	// ARGS
+	fmt.println(os.args)
+	if len(os.args) < 2 {
+		fmt.println("Usage: lua-odin <file|repl|ast|bytes> <file>")
+	}
+	//
+	user_args := os.args[1:]
+	switch user_args[0] {
+	case "repl":
+		reader: bufio.Reader
+		bufio.reader_init(&reader, os.stream_from_handle(os.stdin), bufio.DEFAULT_BUF_SIZE, varena)
+		xtra_args := user_args[1:]
+		for {
+			fmt.println("Ouau=>> ")
+			line, err := bufio.reader_read_string(&reader, '\n')
+			if err != nil do OUAU_ERR("ERR: Failed to read input", err, &sb, false, 1)
+			line = strings.trim_space(line)
+			if line == "exit" do OUAU_RESULT(nil, "Bye!", &sb, true)
+			OUAU_RUN_STRING(line, &sb, false, varena)
+		}
+	case "file":
+		unimplemented("TODO")
+	case "ast":
+		unimplemented("TODO")
+	case "bytes":
+		unimplemented("TODO")
+	}
+}
+OUAU_RUN_STRING :: proc(
+	input: string,
+	sb: ^strings.Builder,
+	is_exit := false,
+	varena: mem.Allocator,
+) {
+	p := NEW_PARSER(input, varena)
+	root := PARSE_CHUNK(&p)
+	i := NEW_INTERPRETER(&p.nodes, varena)
+	val := INTERPRET(i, root)
+	if is_exit && val != nil {
+		OUAU_RESULT(val, "", sb, true)
+		os.exit(0)
+	}
+	if !is_exit && val != nil {
+		OUAU_RESULT(val, "", sb, false)
+		return
+	}
+	if is_exit && val == nil {
+		OUAU_ERR("ERR: Failed to evaluate", nil, sb, true, 1)
+		os.exit(1)
+	}
+}
+OUAU_ERR :: proc(
+	msg: string,
+	err: os.Error,
+	sb: ^strings.Builder,
+	is_exit := true,
+	exit_code := 1,
+) {
+	strings.builder_reset(sb)
+	fmt.sbprintln(sb, msg, err)
+	err_msg := strings.to_string(sb^)
+	if is_exit {
+		fmt.eprintln(err_msg)
+		os.exit(exit_code)
+	}
+	 else {
+		fmt.println(err_msg)
+	}
+}
+OUAU_RESULT :: proc(res: Value, msg: string, sb: ^strings.Builder, is_exit := true) {
+	strings.builder_reset(sb)
+	fmt.sbprintln(sb, msg)
+	result := strings.to_string(sb^)
+	if is_exit {
+		fmt.println(result)
+		os.exit(0)
+	}
+	 else {
+		fmt.println(result)
+	}
 }
 

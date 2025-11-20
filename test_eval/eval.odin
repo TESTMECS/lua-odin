@@ -1,7 +1,6 @@
 package test_eval
 import i "../"
 import pt "../test_parser"
-import "core:log"
 import "core:mem/virtual"
 import "core:testing"
 @(test)
