@@ -1,4 +1,5 @@
 package ouau
+import "core:fmt"
 import "core:math"
 import "core:strconv"
 import "core:strings"
@@ -246,7 +247,9 @@ EVAL_CALL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	}
 
 	arg_child := GET_ARGUMENTS_CHILD(i, node)
+	fmt.println("ARG CHILD NODE:", arg_child)
 	args := EVAL_EXPRESSION_LIST(i, arg_child)
+	fmt.println("EVALUATED ARGS COUNT:", len(args))
 	if fn_val_closure.is_native {
 		return fn_val_closure.native_proc(args)
 	}
@@ -404,7 +407,9 @@ GET_FUNCTION_CHILD :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
 }
 GET_ARGUMENTS_CHILD :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
 	fn_child := i.nodes.first_child[node]
-	return i.nodes.next_sibling[fn_child]
+	arg_child := i.nodes.next_sibling[fn_child]
+	fmt.println("GET_ARGUMENTS_CHILD: node=", node, "fn_child=", fn_child, "arg_child=", arg_child)
+	return arg_child
 }
 GET_LEFT_CHILD :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
 	return i.nodes.first_child[node]
@@ -475,10 +480,21 @@ CALL_USER_FUNCTION :: proc(i: ^Interpreter, fn: ^Closure, args: []Value) -> Valu
 EVAL_EXPRESSION_LIST :: proc(i: ^Interpreter, node: NODEID) -> []Value {
 	values: [dynamic]Value
 
-	child := i.nodes.first_child[node]
-	for child != 0 {
-		append(&values, EVAL(i, child))
-		child = i.nodes.next_sibling[child]
+	if node == 0 {
+		return values[:]
+	}
+
+	// Check if this node is a container (like a block) or an actual argument
+	if i.nodes.kind[node] == .BLOCK {
+		child := i.nodes.first_child[node]
+		for child != 0 {
+			append(&values, EVAL(i, child))
+			child = i.nodes.next_sibling[child]
+		}
+	}
+	 else {
+		// This node is the actual argument
+		append(&values, EVAL(i, node))
 	}
 
 	return values[:]
@@ -621,13 +637,15 @@ VALUE_TO_STRING :: proc(v: Value) -> string {
 	case bool:
 		return val ? "true" : "false"
 	case f64:
-		buf: [16]u8
-		return strconv.write_float(buf[:], val, 'f', 2, 64)
+		buf: [64]u8
+		n := strconv.write_float(buf[:], val, 'f', -1, 64)
+		return n
 	case string:
 		return val
 	case rawptr:
-		buf: [16]u8
-		return strconv.write_uint(buf[:], cast(u64)uintptr(val), 16)
+		buf: [32]u8
+		n := strconv.write_uint(buf[:], cast(u64)uintptr(val), 16)
+		return string(buf[:])
 	case ^Table:
 		return "table"
 	case ^Closure:
