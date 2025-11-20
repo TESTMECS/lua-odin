@@ -14,12 +14,21 @@ test_eval :: proc(t: ^testing.T) {
 	defer free_all(context.allocator)
 	varena := virtual.arena_allocator(v)
 
-	input := `local a = 1;`
+	input := `
+	do 
+	 local a = 1;
+		return a;
+	end
+	`
+
+
 	p := NEW_PARSER(input, varena)
 	root := PARSE_CHUNK(&p)
 	i := NEW_INTERPRETER(&p.nodes, varena)
 	val := INTERPRET(i, root)
-	// log.info(val)
+	if val == nil || val.(f64) != 1 {
+		testing.fail(t)
+	}
 }
 @(test)
 test_eval2 :: proc(t: ^testing.T) {
@@ -45,8 +54,7 @@ test_eval2 :: proc(t: ^testing.T) {
 	root := PARSE_CHUNK(&p)
 	i := NEW_INTERPRETER(&p.nodes, varena)
 	val := INTERPRET(i, root)
-	// log.info(val)
-	if val == nil {
+	if val == nil || val.(f64) != 3 {
 		testing.fail(t)
 	}
 }
@@ -72,10 +80,9 @@ test_eval_table :: proc(t: ^testing.T) {
 
 	p := NEW_PARSER(input, varena)
 	root := PARSE_CHUNK(&p)
-	// pt.dump_ast(&p)
 	i := NEW_INTERPRETER(&p.nodes, varena)
 	val := INTERPRET(i, root)
-	if val == nil {
+	if val == nil || val.(f64) != 2 {
 		testing.fail(t)
 	}
 }
@@ -100,10 +107,9 @@ test_eval_array :: proc(t: ^testing.T) {
 
 	p := NEW_PARSER(input, varena)
 	root := PARSE_CHUNK(&p)
-	// pt.dump_ast(&p)
 	i := NEW_INTERPRETER(&p.nodes, varena)
 	val := INTERPRET(i, root)
-	if val == nil {
+	if val == nil || val.(f64) != 1 {
 		testing.fail(t)
 	}
 }
@@ -129,11 +135,9 @@ test_ifelse :: proc(t: ^testing.T) {
 
 	p := NEW_PARSER(input, varena)
 	root := PARSE_CHUNK(&p)
-	// pt.dump_ast(&p)
 	i := NEW_INTERPRETER(&p.nodes, varena)
 	val := INTERPRET(i, root)
-	// log.info(val)
-	if val == nil {
+	if val == nil || val.(f64) != 3 {
 		testing.fail(t)
 	}
 }
@@ -157,11 +161,9 @@ test_while :: proc(t: ^testing.T) {
 
 	p := NEW_PARSER(input, varena)
 	root := PARSE_CHUNK(&p)
-	// pt.dump_ast(&p)
 	i := NEW_INTERPRETER(&p.nodes, varena)
 	val := INTERPRET(i, root)
-
-	if val == nil {
+	if val == nil || val.(f64) != 10 {
 		testing.fail(t)
 	}
 }
@@ -185,7 +187,7 @@ test_for :: proc(t: ^testing.T) {
 
 	p := NEW_PARSER(input, varena)
 	root := PARSE_CHUNK(&p)
-	pt.dump_ast(&p)
+	pt.DUMP_AST(&p)
 	i := NEW_INTERPRETER(&p.nodes, varena)
 	val := INTERPRET(i, root)
 	if val == nil || val.(f64) != 10 {
@@ -215,8 +217,8 @@ test_for_list :: proc(t: ^testing.T) {
 	root := PARSE_CHUNK(&p)
 	i := NEW_INTERPRETER(&p.nodes, varena)
 	val := INTERPRET(i, root)
-	log.info(val)
-	if val == nil {
+	tbl, ok := val.(^Table)
+	if val == nil || !ok {
 		testing.fail(t)
 	}
 }
