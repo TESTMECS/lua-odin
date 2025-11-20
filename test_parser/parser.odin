@@ -227,7 +227,17 @@ test_for :: proc(t: ^testing.T) {
 
 	p := parser.NEW_PARSER(input, varena)
 	program := parser.PARSE_CHUNK(&p)
-	// dump_ast(&p)
+	// DUMP_AST(&p)
+	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t)
+	EXPECT_NODE(p.nodes.kind[1], .FOR, t)
+	EXPECT_NODE(p.nodes.kind[2], .LITERAL, t)
+	EXPECT_NODE(p.nodes.kind[3], .LITERAL, t)
+	EXPECT_NODE(p.nodes.kind[4], .BLOCK, t)
+	EXPECT_NODE(p.nodes.kind[5], .IDENTIFIER, t)
+	CHECK_ID(&p, 5, "print", t)
+	EXPECT_NODE(p.nodes.kind[6], .IDENTIFIER, t)
+	CHECK_ID(&p, 6, "i", t)
+	EXPECT_NODE(p.nodes.kind[7], .CALL, t)
 }
 @(test)
 test_while :: proc(t: ^testing.T) {
@@ -247,7 +257,15 @@ test_while :: proc(t: ^testing.T) {
 
 	p := parser.NEW_PARSER(input, varena)
 	program := parser.PARSE_CHUNK(&p)
-	// dump_ast(&p)
+	// DUMP_AST(&p)
+	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t)
+	EXPECT_NODE(p.nodes.kind[1], .WHILE, t)
+	EXPECT_NODE(p.nodes.kind[2], .LITERAL, t)
+	EXPECT_NODE(p.nodes.kind[3], .BLOCK, t)
+	EXPECT_NODE(p.nodes.kind[4], .IDENTIFIER, t)
+	CHECK_ID(&p, 4, "print", t)
+	EXPECT_NODE(p.nodes.kind[5], .STRING, t)
+	EXPECT_NODE(p.nodes.kind[6], .CALL, t)
 }
 @(test)
 test_repeat :: proc(t: ^testing.T) {
@@ -268,7 +286,23 @@ test_repeat :: proc(t: ^testing.T) {
 
 	p := parser.NEW_PARSER(input, varena)
 	program := parser.PARSE_CHUNK(&p)
-	// dump_ast(&p)
+	// DUMP_AST(&p)
+	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t)
+	EXPECT_NODE(p.nodes.kind[1], .REPEAT, t)
+	EXPECT_NODE(p.nodes.kind[2], .BLOCK, t)
+	EXPECT_NODE(p.nodes.kind[3], .IDENTIFIER, t)
+	CHECK_ID(&p, 3, "print", t)
+	EXPECT_NODE(p.nodes.kind[4], .STRING, t)
+	EXPECT_NODE(p.nodes.kind[5], .CALL, t)
+	EXPECT_NODE(p.nodes.kind[6], .IDENTIFIER, t)
+	CHECK_ID(&p, 6, "i", t)
+	EXPECT_NODE(p.nodes.kind[7], .IDENTIFIER, t)
+	CHECK_ID(&p, 7, "i", t)
+	EXPECT_NODE(p.nodes.kind[8], .LITERAL, t)
+	EXPECT_NODE(p.nodes.kind[9], .BINARY, t)
+	EXPECT_NODE(p.nodes.kind[10], .BINARY, t)
+	EXPECT_NODE(p.nodes.kind[11], .LITERAL, t)
+	EXPECT_NODE(p.nodes.kind[12], .UBLOCK, t)
 }
 @(test)
 test_list :: proc(t: ^testing.T) {
@@ -283,7 +317,7 @@ test_list :: proc(t: ^testing.T) {
 	local a = {
 		b = 1,
 		c = 2,
-		d = 3,
+		d = 3
 	}
 	print(#a)
 	`
@@ -291,7 +325,30 @@ test_list :: proc(t: ^testing.T) {
 
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
-	// dump_ast(&p)
+	// DUMP_AST(&p)
+	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t)
+	EXPECT_NODE(p.nodes.kind[1], .LOCAL, t)
+	EXPECT_NODE(p.nodes.kind[2], .IDENTIFIER, t)
+	CHECK_ID(&p, 2, "a", t)
+	EXPECT_NODE(p.nodes.kind[3], .TABLE, t)
+	EXPECT_NODE(p.nodes.kind[4], .IDENTIFIER, t)
+	CHECK_ID(&p, 4, "b", t)
+	EXPECT_NODE(p.nodes.kind[5], .LITERAL, t)
+	EXPECT_NODE(p.nodes.kind[6], .BINARY, t)
+	EXPECT_NODE(p.nodes.kind[7], .IDENTIFIER, t)
+	CHECK_ID(&p, 7, "c", t)
+	EXPECT_NODE(p.nodes.kind[8], .LITERAL, t)
+	EXPECT_NODE(p.nodes.kind[9], .BINARY, t)
+	EXPECT_NODE(p.nodes.kind[10], .IDENTIFIER, t)
+	CHECK_ID(&p, 10, "d", t)
+	EXPECT_NODE(p.nodes.kind[11], .LITERAL, t)
+	EXPECT_NODE(p.nodes.kind[12], .BINARY, t)
+	EXPECT_NODE(p.nodes.kind[13], .IDENTIFIER, t)
+	CHECK_ID(&p, 13, "print", t)
+	EXPECT_NODE(p.nodes.kind[14], .UNARY, t)
+	EXPECT_NODE(p.nodes.kind[15], .IDENTIFIER, t)
+	CHECK_ID(&p, 15, "a", t)
+	EXPECT_NODE(p.nodes.kind[16], .CALL, t)
 }
 @(test)
 test_logic :: proc(t: ^testing.T) {
@@ -321,7 +378,7 @@ test_logic :: proc(t: ^testing.T) {
 
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
-	// dump_ast(&p)
+	// DUMP_AST(&p)
 }
 @(test)
 test_bitwise :: proc(t: ^testing.T) {
@@ -345,7 +402,7 @@ test_bitwise :: proc(t: ^testing.T) {
 
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
-	// dump_ast(&p)
+	// DUMP_AST(&p)
 }
 @(test)
 test_parse_forlist :: proc(t: ^testing.T) {
@@ -363,7 +420,7 @@ test_parse_forlist :: proc(t: ^testing.T) {
 
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
-	// dump_ast(&p)
+	// DUMP_AST(&p)
 }
 @(test)
 test_array_assignment :: proc(t: ^testing.T) {
@@ -400,7 +457,7 @@ test_array_access :: proc(t: ^testing.T) {
 
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
-	// dump_ast(&p)
+	// DUMP_AST(&p)
 }
 @(test)
 test_string :: proc(t: ^testing.T) {
@@ -419,6 +476,6 @@ test_string :: proc(t: ^testing.T) {
 
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
-	// log.info(p.nodes)
+	// DUMP_AST(&p)
 }
 

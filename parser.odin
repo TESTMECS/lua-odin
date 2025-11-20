@@ -230,7 +230,6 @@ PARSE_INFIX :: proc(p: ^Parser, left: NODEID) -> NODEID {
 }
 PARSE_PRIMARY :: proc(p: ^Parser) -> NODEID {
 	tk := p.current.kind
-	LOGSF(context.logger, "PARSE_PRIMARY: tk=%v", tk)
 	if tk == .NUMBER {
 		id := NEW_NODE(p, .LITERAL)
 		val, _ := strconv.parse_i64(string(p.current.text))
