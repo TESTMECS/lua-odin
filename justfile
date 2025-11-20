@@ -11,4 +11,6 @@ alias b := build
 build:
 	odin build .
 	
-
+alias re := repl
+repl:
+	odin run . -- repl 

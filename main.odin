@@ -55,7 +55,7 @@ OUAU_RUN_STRING :: proc(
 	val := INTERPRET(i, root)
 	ok := CHECK_TY(val)
 	v := VALUE_TO_STRING(val)
-	fmt.println("IS....", val.(f64))
+	fmt.println("IS", v)
 	if ok {
 		OUAU_ERR("ERR: Failed to evaluate", nil, sb, true, 1)
 		os.exit(1)
