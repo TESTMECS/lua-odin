@@ -221,4 +221,27 @@ test_for_list :: proc(t: ^testing.T) {
 		testing.fail(t)
 	}
 }
+@(test)
+test_global :: proc(t: ^testing.T) {
+	using i
+	v := new(virtual.Arena, context.allocator)
+	err := virtual.arena_init_growing(v)
+	ensure(err == nil)
+	defer virtual.arena_destroy(v)
+	defer free_all(context.allocator)
+	varena := virtual.arena_allocator(v)
+
+	input := `
+	a = 1;
+	`
+
+
+	p := NEW_PARSER(input, varena)
+	root := PARSE_CHUNK(&p)
+	i := NEW_INTERPRETER(&p.nodes, varena)
+	val := INTERPRET(i, root)
+	if val == nil || val.(f64) != 1 {
+		testing.fail(t)
+	}
+}
 

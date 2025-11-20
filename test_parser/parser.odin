@@ -478,4 +478,26 @@ test_string :: proc(t: ^testing.T) {
 	nodeid := PARSE_CHUNK(&p)
 	// DUMP_AST(&p)
 }
+@(test)
+test_global :: proc(t: ^testing.T) {
+	using parser
+	v := new(virtual.Arena, context.allocator)
+	err := virtual.arena_init_growing(v)
+	ensure(err == nil)
+	defer virtual.arena_destroy(v)
+	defer free_all(context.allocator)
+	varena := virtual.arena_allocator(v)
+
+	input := `
+	do
+		a = 1;
+		return a;
+	end
+	`
+
+
+	p := NEW_PARSER(input, varena)
+	nodeid := PARSE_CHUNK(&p)
+	DUMP_AST(&p)
+}
 
