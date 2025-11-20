@@ -53,21 +53,7 @@ OUAU_RUN_STRING :: proc(
 	root := PARSE_CHUNK(&p)
 	i := NEW_INTERPRETER(&p.nodes, varena)
 	val := INTERPRET(i, root)
-	ok := CHECK_TY(val)
-	v := VALUE_TO_STRING(val)
-	fmt.println("IS", v)
-	if ok {
-		OUAU_ERR("ERR: Failed to evaluate", nil, sb, true, 1)
-		os.exit(1)
-	}
-	if is_exit && val != nil {
-		OUAU_RESULT(v, "", sb, true)
-		os.exit(0)
-	}
-	if !is_exit && val != nil {
-		OUAU_RESULT(v, "", sb, false)
-		return
-	}
+	fmt.println("VAL", val)
 }
 OUAU_ERR :: proc(
 	msg: string,
