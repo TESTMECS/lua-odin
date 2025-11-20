@@ -180,13 +180,31 @@ test_tables :: proc(t: ^testing.T) {
 		b = 1,
 		c = 2,
 		d = 3,
-	}
+	};
 	`
 
 
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
-	// dump_ast(&p)
+	DUMP_AST(&p)
+	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t)
+	EXPECT_NODE(p.nodes.kind[1], .LOCAL, t)
+	EXPECT_NODE(p.nodes.kind[2], .IDENTIFIER, t)
+	CHECK_ID(&p, 2, "a", t)
+	EXPECT_NODE(p.nodes.kind[3], .TABLE, t)
+	EXPECT_NODE(p.nodes.kind[4], .IDENTIFIER, t)
+	CHECK_ID(&p, 4, "b", t)
+	EXPECT_NODE(p.nodes.kind[5], .LITERAL, t)
+	EXPECT_NODE(p.nodes.kind[6], .BINARY, t)
+	EXPECT_NODE(p.nodes.kind[7], .IDENTIFIER, t)
+	CHECK_ID(&p, 7, "c", t)
+	EXPECT_NODE(p.nodes.kind[8], .LITERAL, t)
+	EXPECT_NODE(p.nodes.kind[9], .BINARY, t)
+	EXPECT_NODE(p.nodes.kind[10], .IDENTIFIER, t)
+	CHECK_ID(&p, 10, "d", t)
+	EXPECT_NODE(p.nodes.kind[11], .LITERAL, t)
+	EXPECT_NODE(p.nodes.kind[12], .BINARY, t)
+	// EXPECT_NODE(p.nodes.kind[13], .INVALID, t)
 }
 @(test)
 test_for :: proc(t: ^testing.T) {
