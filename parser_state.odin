@@ -16,6 +16,7 @@ NODE_KIND :: enum u8 {
 	UNARY,
 	BINARY,
 	STRING,
+	GLOBAL,
 	TABLE,
 	REPEAT,
 	DO,

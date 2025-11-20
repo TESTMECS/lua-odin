@@ -81,6 +81,7 @@ PARSE_STMT :: proc(p: ^Parser) -> NODEID {
 	if tk == .FUNCTION do return PARSE_FUNCTION(p)
 	if tk == .FOR do return PARSE_FOR(p)
 	if tk == .LOCAL do return PARSE_LOCAL(p)
+	if tk == .GLOBAL do return PARSE_GLOBAL(p)
 	if tk == .BREAK do return PARSE_BREAK(p)
 	if tk == .RETURN do return PARSE_RETURN(p)
 	if tk == .OPEN do return PARSE_CALL(p)
@@ -506,5 +507,32 @@ PARSE_TABLE :: proc(p: ^Parser) -> NODEID {
 	}
 	EXPECT(p, .TCLOSE)
 	return table
+}
+PARSE_GLOBAL :: proc(p: ^Parser) -> NODEID {
+	EXPECT(p, .GLOBAL)
+	node := NEW_NODE(p, .GLOBAL)
+
+	if p.current.kind == .FUNCTION {
+		PARSE_FUNCTION(p)
+	}
+	 else {
+		vars := make([dynamic]NODEID)
+		append(&vars, PARSE_PRIMARY(p))
+
+		for p.current.kind == .COMMA {
+			ADVANCE(p)
+			append(&vars, PARSE_PRIMARY(p))
+		}
+
+		for v in vars do ADD_CHILD(p, node, v)
+
+		if p.current.kind == .ASSIGN {
+			ADVANCE(p)
+			values := PARSE_EXPLIST(p)
+			for val in values do ADD_CHILD(p, node, val)
+		}
+	}
+
+	return node
 }
 

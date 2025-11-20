@@ -2,8 +2,7 @@ package ouau
 
 import "core:fmt"
 
-Token :: enum u8
-{
+Token :: enum u8 {
 	EOF,
 	ILLEGAL,
 	// keywords
@@ -21,6 +20,7 @@ Token :: enum u8
 	ELSEIF,
 	FUNCTION,
 	LOCAL,
+	GLOBAL,
 	TRUE,
 	FALSE,
 	NIL,
@@ -73,8 +73,7 @@ Token :: enum u8
 	BOPEN,
 	BCLOSE,
 }
-Token_def :: struct
-{
+Token_def :: struct {
 	kind: Token,
 	text: []u8,
 }

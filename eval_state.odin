@@ -1,15 +1,13 @@
 package ouau
 import "core:fmt"
-KeyTag :: struct
-{
+KeyTag :: struct {
 	kind: u8,
 	i:    i64,
 	f:    f64,
 	s:    string,
 	p:    rawptr,
 }
-Value :: union
-{
+Value :: union {
 	bool,
 	f64,
 	string,
@@ -20,45 +18,39 @@ Value :: union
 }
 
 ReturnValue :: struct {
-    value: Value,
+	value: Value,
 }
-Table :: struct
-{
+Table :: struct {
 	data:      map[KeyTag]Value,
 	sorted:    [dynamic]KeyTag,
 	dirty:     bool,
 	metatable: ^Table,
 }
-Closure :: struct
-{
+Closure :: struct {
 	is_native:   bool,
 	params:      []string,
 	body:        NODEID,
 	closure:     ^Environment,
 	native_proc: proc(args: []Value) -> Value,
 }
-Environment :: struct
-{
+Environment :: struct {
 	values: map[string]Value,
 	sorted: [dynamic]string,
 	dirty:  bool,
 	outer:  ^Environment,
 }
-Frame :: struct
-{
+Frame :: struct {
 	env:         ^Environment,
 	return_addr: NODEID,
 	result:      Value,
 }
-Interpreter :: struct
-{
+Interpreter :: struct {
 	globals:    map[string]Value,
 	current:    ^Environment,
 	nodes:      ^NODES,
 	call_stack: [dynamic]^Frame,
 }
-NEW_INTERPRETER :: proc(nodes: ^NODES, allocator := context.allocator) -> ^Interpreter
-{
+NEW_INTERPRETER :: proc(nodes: ^NODES, allocator := context.allocator) -> ^Interpreter {
 	i := new(Interpreter, allocator)
 	i.nodes = nodes
 	i.globals = make(map[string]Value, allocator)
@@ -67,23 +59,21 @@ NEW_INTERPRETER :: proc(nodes: ^NODES, allocator := context.allocator) -> ^Inter
 	INIT_BUILTINS(i)
 	return i
 }
-INTERPRET :: proc(i: ^Interpreter, root: NODEID) -> Value
-{
-    // root is a block. Let's iterate its statements.
-    child := i.nodes.first_child[root]
-    last_val: Value
-    for child != 0 {
-        v := EVAL(i, child)
-        if ret, ok := v.(^ReturnValue); ok {
-            return ret.value
-        }
-        last_val = v
-        child = i.nodes.next_sibling[child]
-    }
+INTERPRET :: proc(i: ^Interpreter, root: NODEID) -> Value {
+	// root is a block. Let's iterate its statements.
+	child := i.nodes.first_child[root]
+	last_val: Value
+	for child != 0 {
+		v := EVAL(i, child)
+		if ret, ok := v.(^ReturnValue); ok {
+			return ret.value
+		}
+		last_val = v
+		child = i.nodes.next_sibling[child]
+	}
 	return last_val
 }
-INIT_BUILTINS :: proc(i: ^Interpreter)
-{
+INIT_BUILTINS :: proc(i: ^Interpreter) {
 	// Add print function
 	print_fn := new(Closure)
 	print_fn.is_native = true
@@ -91,10 +81,8 @@ INIT_BUILTINS :: proc(i: ^Interpreter)
 	i.globals["print"] = print_fn
 }
 
-BUILTIN_PRINT :: proc(args: []Value) -> Value
-{
-	for arg in args
-	{
+BUILTIN_PRINT :: proc(args: []Value) -> Value {
+	for arg in args {
 		fmt.print(VALUE_TO_STRING(arg))
 	}
 	fmt.println()

@@ -23,6 +23,8 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		return EVAL_FOR(i, node)
 	case .LOCAL:
 		return EVAL_LOCAL(i, node)
+	case .GLOBAL:
+		return EVAL_GLOBAL(i, node)
 	case .BREAK:
 		return EVAL_BREAK(i, node)
 	case .RETURN:
@@ -709,6 +711,29 @@ EVAL_ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 			return value_to_assign
 		}
 	case:
+	}
+	return nil
+}
+EVAL_GLOBAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
+	child := i.nodes.first_child[node]
+	vars: [dynamic]string
+	for child != 0 && i.nodes.kind[child] == .IDENTIFIER {
+		append(&vars, i.nodes.name[child])
+		child = i.nodes.next_sibling[child]
+	}
+	values: [dynamic]Value
+	for child != 0 {
+		val := EVAL(i, child)
+		append(&values, val)
+		child = i.nodes.next_sibling[child]
+	}
+	for name, idx in vars {
+		if idx < len(values) {
+			i.globals[name] = values[idx]
+		}
+		 else {
+			i.globals[name] = nil
+		}
 	}
 	return nil
 }

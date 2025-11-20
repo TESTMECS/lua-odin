@@ -233,8 +233,8 @@ test_global :: proc(t: ^testing.T) {
 	varena := virtual.arena_allocator(v)
 
 	input := `
-	a = 1;
-	`
+	global a = 1;
+	return a;`
 
 
 	p := NEW_PARSER(input, varena)
