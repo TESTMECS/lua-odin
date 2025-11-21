@@ -1,4 +1,6 @@
 test_dir := "test_parser"
+test_file_dir := "./examples"
+test_file_name := "test.ouau"
 alias cp := commit-push
 commit-push MSG:
 	git add . && git commit -m "{{MSG}}" && git push
@@ -14,3 +16,7 @@ build:
 alias re := repl
 repl:
 	odin run . -- repl 
+
+alias tf := test-file
+test-file:
+	odin run . -- file {{test_file_dir}}/{{test_file_name}}

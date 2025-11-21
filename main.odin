@@ -27,20 +27,23 @@ main :: proc() {
 		reader: bufio.Reader
 		bufio.reader_init(&reader, os.stream_from_handle(os.stdin), bufio.DEFAULT_BUF_SIZE, varena)
 		xtra_args := user_args[1:]
-		
-		// Create one interpreter for the entire REPL session
 		i := NEW_INTERPRETER(nil, varena)
-		
 		for {
 			fmt.println("Ouau=>> ")
-			line, err := bufio.reader_read_string(&reader, '\n')
+			line, err := bufio.reader_read_string(&reader, '\n', varena)
 			if err != nil do OUAU_ERR("ERR: Failed to read input", err, &sb, false, 1)
 			line = strings.trim_space(line)
 			if line == "exit" do OUAU_RESULT("", "Bye!", &sb, true)
 			OUAU_RUN_STRING(line, &sb, false, varena, i)
 		}
 	case "file":
-		unimplemented("TODO")
+		// Create one interpreter for the entire REPL session
+		i := NEW_INTERPRETER(nil, varena)
+		file_path := user_args[1]
+		fmt.println("File path:", file_path)
+		file, ok := os.read_entire_file_from_filename(file_path, varena)
+		if !ok do OUAU_ERR("ERR: Failed to read file", err, &sb, false, 1)
+		OUAU_RUN_STRING(string(file), &sb, false, varena, i)
 	case "ast":
 		unimplemented("TODO")
 	case "bytes":
