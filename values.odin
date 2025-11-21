@@ -49,8 +49,8 @@ Closure :: struct {
 }
 Prototype :: struct {
 	using header: GC_HEADER,
-	instructions: [dynamic]Instruction,
-	constants:    [dynamic]Value,
+	instructions: []Instruction,
+	constants:    []Value,
 	proto:        [dynamic]^Prototype,
 	upvalues:     [dynamic]^UpValueDesc,
 	max_stack:    int,

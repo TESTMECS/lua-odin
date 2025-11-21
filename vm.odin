@@ -1,6 +1,8 @@
 package ouau
+import "core:fmt"
 VM_EXECUTE :: proc(vm: ^VM, closure: ^Closure, args: []Value) -> Value {
 	thread := vm.current_thread
+	thread.call_count = 0
 	frame := VMFrame {
 		func        = closure,
 		base_reg    = 0,
@@ -38,18 +40,25 @@ EXECUTE_INSTRUCTION :: proc(vm: ^VM, inst: Instruction) -> Value {
 		EXECUTE_MOVE(vm, a, b, c)
 	case .LOADK:
 		EXECUTE_LOADK(vm, a, b, c)
+	case .CLOSURE:
+		op, a, bx := DECODE_ABX(inst)
+		EXECUTE_CLOSURE(vm, a, bx)
 	case .LOADBOOL:
 		EXECUTE_LOADBOOL(vm, a, b, c)
 	case .ADD:
 		EXECUTE_ADD(vm, a, b, c)
 	case .CALL:
-		return EXECUTE_CALL(
-			vm,
-			vm.current_thread.call_stack[vm.current_thread.call_count].func,
-			a,
-			b,
-			c,
-		)
+		function_value := STACK_GET(vm.current_thread, int(a))
+		if closure, ok := function_value.(^Closure); ok {
+			return EXECUTE_CALL(vm, closure, a, b, c)
+		}
+		 else {
+			vm.current_thread.globals.panic(
+				vm.current_thread,
+				"attempt to call non-function value",
+				0,
+			)
+		}
 	case .RETURN:
 		return EXECUTE_RETURN(vm, a, b, c)
 	case .JMP:
@@ -114,15 +123,15 @@ EXECUTE_MUL :: proc(vm: ^VM, a, b, c: u32) {
 }
 EXECUTE_CALL :: proc(vm: ^VM, closure: ^Closure, a, b, c: u32) -> Value {
 	thread := vm.current_thread
-	thread.call_count += 1
 	frame := VMFrame {
 		func        = closure,
-		base_reg    = thread.base + int(a),
-		saved_pc    = thread.pc,
+		base_reg    = thread.base + int(a) + 1,
+		saved_pc    = thread.pc + 1,
 		num_results = int(c),
 		tail_calls  = 0,
 	}
 	append(&thread.call_stack, frame)
+	thread.call_count += 1
 	thread.base = frame.base_reg
 	thread.pc = 0
 	return nil
@@ -144,9 +153,13 @@ EXECUTE_RETURN :: proc(vm: ^VM, a, b, c: u32) -> Value {
 	if len(thread.call_stack) > 0 {
 		frame := &thread.call_stack[thread.call_count]
 		thread.base = frame.base_reg
-		thread.pc = frame.saved_pc + 1
+		thread.pc = frame.saved_pc // + 1
 		for result, i in results {
-			STACK_SET(thread, i, result)
+			STACK_SET(
+				thread,
+				int(frame.func.proto.instructions[frame.saved_pc - 1] >> 8) & 0xFF + i,
+				result,
+			)
 		}
 	}
 	return nil
@@ -182,5 +195,25 @@ EXECUTE_JMP :: proc(vm: ^VM, a, b, c: u32) {
 		thread.call_stack[thread.call_count].func.proto.instructions[thread.pc],
 	)
 	thread.pc += int(sbx) - 1
+}
+EXECUTE_CLOSURE :: proc(vm: ^VM, a, bx: u32) {
+	thread := vm.current_thread
+	frame := thread.call_stack[thread.call_count]
+	if int(bx) >= len(frame.func.proto.proto) {
+		fmt.printf(
+			"ERROR: Closure index %d out of bounds [0, %d]\n",
+			bx,
+			len(frame.func.proto.proto),
+		)
+		thread.globals.panic(thread, "CLOSURE index out of bounds", 0)
+		return
+	}
+	// LOGSF(context.logger, "frame.func.proto.proto[%d]", int(bx))
+	proto := frame.func.proto.proto[int(bx)]
+	// LOGSF(context.logger, "proto->%v", proto)
+	closure := new(Closure, vm.allocator)
+	closure.proto = proto
+	closure.is_native = false
+	STACK_SET(thread, int(a), closure)
 }
 

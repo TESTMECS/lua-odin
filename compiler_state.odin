@@ -80,8 +80,9 @@ PATCH_JUMP :: proc(c: ^Compiler, pc_slot: int, target_pc: int) {
 }
 COMPILER_TO_PROTOTYPE :: proc(c: ^Compiler, allocator := context.allocator) -> ^Prototype {
 	proto := new(Prototype, allocator)
-	proto.instructions = c.instructions
-	proto.constants = c.constants
+
+	proto.instructions = c.instructions[:]
+	proto.constants = c.constants[:]
 	proto.max_stack = c.max_stack
 	proto.num_params = c.nparams
 	proto.proto = make([dynamic]^Prototype, allocator)
