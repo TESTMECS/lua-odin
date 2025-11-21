@@ -1,5 +1,4 @@
 package ouau
-import "core:encoding/endian"
 import "core:math"
 // A single instruction
 Instruction :: u32
@@ -13,7 +12,7 @@ POS_OP :: 0
 POS_A :: POS_OP + SIZE_OP
 POS_C :: POS_A + SIZE_A
 POS_B :: POS_C + SIZE_C
-Opcodes :: enum byte {
+Opcodes :: enum u32 {
 	MOVE,
 	LOADK,
 	LOADBOOL,
