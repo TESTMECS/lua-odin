@@ -1,38 +1,6 @@
 package ouau
 import "core:fmt"
-KeyTag :: struct {
-	kind: u8,
-	i:    i64,
-	f:    f64,
-	s:    string,
-	p:    rawptr,
-}
-Value :: union {
-	bool,
-	f64,
-	string,
-	rawptr,
-	^Table,
-	^Closure,
-	^ReturnValue,
-}
-
-ReturnValue :: struct {
-	value: Value,
-}
-Table :: struct {
-	data:      map[KeyTag]Value,
-	sorted:    [dynamic]KeyTag,
-	dirty:     bool,
-	metatable: ^Table,
-}
-Closure :: struct {
-	is_native:   bool,
-	params:      []string,
-	body:        NODEID,
-	closure:     ^Environment,
-	native_proc: proc(args: []Value) -> Value,
-}
+// Interpreter.
 Environment :: struct {
 	values: map[string]Value,
 	sorted: [dynamic]string,
