@@ -17,7 +17,7 @@ COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	case .REPEAT:
 		unimplemented("TODO REPEAT")
 	case .TABLE:
-		unimplemented("TODO TABLE")
+		return COMPILE_TABLE(c, nodeid)
 	case .FUNCTION:
 		return COMPILE_FUNCTION(c, nodeid)
 	case .UNARY:
@@ -208,7 +208,7 @@ COMPILE_BINARY :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 		FREE_REG(c, left_reg)
 		FREE_REG(c, right_reg)
 		FREE_REG(c, dest)
-		return COMPILE_ERR(c, "Unsupported binary operator", op)
+		return COMPILE_ERR(c, "Unsupported binary operator %v", op)
 	}
 
 	FREE_REG(c, left_reg)
@@ -313,6 +313,75 @@ COMPILE_FUNCTION :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	// For now, also store the function as a global
 	func_const_idx := ADD_CONST(c, func_name)
 	EMITABX(c, .SETGLOBAL, u32(dest), func_const_idx)
+
+	return dest
+}
+
+COMPILE_TABLE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
+	// Create a new table
+	dest := ALLOC_REG(c)
+	EMITABC(c, .NEWTABLE, u32(dest), 0, 0)
+
+	// Process table elements
+	child := c.nodes.first_child[nodeid]
+	element_index := 1
+
+	for child != 0 {
+		// Check if this is a key-value pair (BINARY node with ASSIGN token)
+		if c.nodes.kind[child] == .BINARY && c.nodes.token[child] == .ASSIGN {
+			// Get key and value
+			key_node := c.nodes.first_child[child]
+			value_node := c.nodes.next_sibling[key_node]
+
+			if key_node == 0 || value_node == 0 {
+				FREE_REG(c, dest)
+				return COMPILE_ERR(c, "Table key-value pair missing key or value")
+			}
+
+			// Compile key
+			key_reg := COMPILE_NODE(c, key_node)
+			if key_reg < 0 {
+				FREE_REG(c, dest)
+				return key_reg
+			}
+
+			// Compile value
+			value_reg := COMPILE_NODE(c, value_node)
+			if value_reg < 0 {
+				FREE_REG(c, dest)
+				FREE_REG(c, key_reg)
+				return value_reg
+			}
+
+			// Set table[key] = value
+			EMITABC(c, .SETTABLE, u32(dest), u32(key_reg), u32(value_reg))
+
+			FREE_REG(c, key_reg)
+			FREE_REG(c, value_reg)
+		}
+		 else {
+			// Array-style element (just a value)
+			value_reg := COMPILE_NODE(c, child)
+			if value_reg < 0 {
+				FREE_REG(c, dest)
+				return value_reg
+			}
+
+			// Use index as key
+			index_reg := ALLOC_REG(c)
+			index_const := ADD_CONST(c, f64(element_index))
+			EMITABX(c, .LOADK, u32(index_reg), index_const)
+
+			// Set table[index] = value
+			EMITABC(c, .SETTABLE, u32(dest), u32(index_reg), u32(value_reg))
+
+			FREE_REG(c, index_reg)
+			FREE_REG(c, value_reg)
+			element_index += 1
+		}
+
+		child = c.nodes.next_sibling[child]
+	}
 
 	return dest
 }
