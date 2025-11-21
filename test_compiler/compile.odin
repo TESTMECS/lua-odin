@@ -1,6 +1,5 @@
 package compiler_test
 import compiler "../"
-import "core:fmt"
 import "core:log"
 import "core:mem/virtual"
 import "core:testing"
@@ -25,15 +24,15 @@ test_local :: proc(t: ^testing.T) {
 	c := NEW_COMPILER(&p, varena)
 	COMPILE_NODE(c, nodeid)
 	insts := c.instructions[:]
-	// for i in insts {
-	// 	fmt.printf("op: %v, a: %v, b: %v, c: %v\n", DECODE_ABC(i))
-	// }
+	for i in insts {
+		log.debugf("op: %v, a: %v, b: %v, c: %v\n", DECODE_ABC(i))
+	}
 	if op, _, _, _ := DECODE_ABC(insts[0]); op != u32(Opcodes.LOADK) {
-		fmt.println("First instruction is not LOADK")
+		log.error("First instruction is not LOADK")
 		testing.fail(t)
 	}
 	if op, _, _, _ := DECODE_ABC(insts[1]); op != u32(Opcodes.MOVE) {
-		fmt.println("Second instruction is not MOVE")
+		log.error("Second instruction is not MOVE")
 		testing.fail(t)
 	}
 }
@@ -47,6 +46,7 @@ test_block :: proc(t: ^testing.T) {
 	defer virtual.arena_destroy(v)
 	defer free_all(context.allocator)
 	varena := virtual.arena_allocator(v)
+
 
 	input := `
 	do
@@ -62,8 +62,17 @@ test_block :: proc(t: ^testing.T) {
 	c := NEW_COMPILER(&p, varena)
 	COMPILE_NODE(c, nodeid)
 	insts := c.instructions[:]
-	for i in insts {
-		fmt.printf("op: %v, a: %v, b: %v, c: %v\n", DECODE_ABC(i))
-	}
+	context.logger.lowest_level = .Debug
+	// for i in insts {
+	// 	log.debugf("op: %v, a: %v, b: %v, c: %v", DECODE_ABC(i))
+	// }
+	CHECK_DECODE_ABC(t, insts[0], Opcodes.LOADK)
+	CHECK_DECODE_ABC(t, insts[1], Opcodes.MOVE)
+	CHECK_DECODE_ABC(t, insts[2], Opcodes.LOADK)
+	CHECK_DECODE_ABC(t, insts[3], Opcodes.MOVE)
+	CHECK_DECODE_ABC(t, insts[4], Opcodes.MOVE)
+	CHECK_DECODE_ABC(t, insts[5], Opcodes.MOVE)
+	CHECK_DECODE_ABC(t, insts[6], Opcodes.ADD)
+	CHECK_DECODE_ABC(t, insts[7], Opcodes.RETURN)
 }
 

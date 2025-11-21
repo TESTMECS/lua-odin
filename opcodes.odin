@@ -13,7 +13,7 @@ POS_A :: POS_OP + SIZE_OP
 POS_C :: POS_A + SIZE_A
 POS_B :: POS_C + SIZE_C
 Opcodes :: enum u32 {
-	MOVE,
+	MOVE, // 0
 	LOADK,
 	LOADBOOL,
 	LOADNIL,
@@ -23,9 +23,9 @@ Opcodes :: enum u32 {
 	SETGLOBAL,
 	SETUPVAL,
 	SETTABLE,
-	NEWTABLE,
+	NEWTABLE, // 10
 	SELF,
-	ADD,
+	ADD, // 12
 	SUB,
 	MUL,
 	DIV,

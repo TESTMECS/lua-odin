@@ -2,7 +2,7 @@ package ouau
 import "core:fmt"
 COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	kind := c.nodes.kind[nodeid]
-	fmt.printf("Compiling node %d: %s\n", nodeid, kind)
+	// fmt.printf("Compiling node %d: %s\n", nodeid, kind)
 
 	switch kind {
 	case .BLOCK:
@@ -249,17 +249,17 @@ COMPILE_UNARY :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 COMPILE_RETURN :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	// Get the first child (return value, if any)
 	child := c.nodes.first_child[nodeid]
-	
+
 	if child == 0 {
 		// Return with no values
 		EMITABC(c, .RETURN, 0, 1, 0)
 		return -1
 	}
-	
+
 	// Compile the return value
 	value_reg := COMPILE_NODE(c, child)
 	if value_reg < 0 do return value_reg
-	
+
 	// Return with one value
 	EMITABC(c, .RETURN, u32(value_reg), 2, 0)
 	FREE_REG(c, value_reg)
