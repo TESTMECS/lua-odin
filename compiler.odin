@@ -1,40 +1,42 @@
 package ouau
+import "core:fmt"
 COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	kind := c.nodes.kind[nodeid]
+	fmt.printf("Compiling node %d: %s\n", nodeid, kind)
 
 	switch kind {
-	case .LITERAL:
-		unimplemented("TODO")
-	case .IDENTIFIER:
-		unimplemented("TODO")
-	case .ASSIGN:
-		unimplemented("TODO")
-	case .WHILE:
-		unimplemented("TODO")
-	case .REPEAT:
-		unimplemented("TODO")
-	case .TABLE:
-		unimplemented("TODO")
-	case .FUNCTION:
-		unimplemented("TODO")
-	case .UNARY:
-		unimplemented("TODO")
-	case .UBLOCK:
-		unimplemented("TODO")
-	case .BINARY:
-		unimplemented("TODO")
-	case .STRING:
-		unimplemented("TODO")
-	case .GLOBAL:
-		unimplemented("TODO")
-	case .LOCAL:
-		unimplemented("TODO")
-	case .BREAK:
-		unimplemented("TODO")
-	case .FOR:
-		unimplemented("TODO")
 	case .BLOCK:
-		unimplemented("TODO")
+		unimplemented("TODO BLOCK")
+	case .LITERAL:
+		unimplemented("TODO LITERAL")
+	case .IDENTIFIER:
+		unimplemented("TODO IDENTIFIER")
+	case .ASSIGN:
+		unimplemented("TODO ASSIGN")
+	case .WHILE:
+		unimplemented("TODO WHILE")
+	case .REPEAT:
+		unimplemented("TODO REPEAT")
+	case .TABLE:
+		unimplemented("TODO TABLE")
+	case .FUNCTION:
+		unimplemented("TODO FUNCTION")
+	case .UNARY:
+		unimplemented("TODO UNARY")
+	case .UBLOCK:
+		unimplemented("TODO UBLOCK")
+	case .BINARY:
+		unimplemented("TODO BINARY")
+	case .STRING:
+		unimplemented("TODO STRING")
+	case .GLOBAL:
+		unimplemented("TODO GLOBAL")
+	case .LOCAL:
+		unimplemented("TODO LOCAL")
+	case .BREAK:
+		unimplemented("TODO BREAK")
+	case .FOR:
+		unimplemented("TODO FOR")
 	case .DO:
 		unimplemented("TODO")
 	case .CALL:
