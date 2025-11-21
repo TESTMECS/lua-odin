@@ -1,5 +1,4 @@
 package ouau
-
 VM_EXECUTE :: proc(vm: ^VM, closure: ^Closure, args: []Value) -> Value {
 	thread := vm.current_thread
 	frame := VMFrame {
@@ -115,6 +114,7 @@ EXECUTE_MUL :: proc(vm: ^VM, a, b, c: u32) {
 }
 EXECUTE_CALL :: proc(vm: ^VM, closure: ^Closure, a, b, c: u32) -> Value {
 	thread := vm.current_thread
+	thread.call_count += 1
 	frame := VMFrame {
 		func        = closure,
 		base_reg    = thread.base + int(a),
@@ -177,6 +177,10 @@ EXECUTE_SETTABLE :: proc(vm: ^VM, a, b, c: u32) {
 	}
 }
 EXECUTE_JMP :: proc(vm: ^VM, a, b, c: u32) {
-	unimplemented("TODO")
+	thread := vm.current_thread
+	op, a, sbx := DECODE_ASBX(
+		thread.call_stack[thread.call_count].func.proto.instructions[thread.pc],
+	)
+	thread.pc += int(sbx) - 1
 }
 
