@@ -14,9 +14,6 @@ Compiler :: struct {
 	prototypes:   [dynamic]^Compiler, // nested function prototypes
 	parent:       ^Compiler, // upvalue resolution
 }
-OuauCompiler :: struct {
-	current: ^Compiler,
-}
 NEW_COMPILER :: proc(p: ^Parser, allocator := context.allocator) -> ^Compiler {
 	c := new(Compiler, allocator)
 	c.nodes = &p.nodes
@@ -80,5 +77,26 @@ PATCH_JUMP :: proc(c: ^Compiler, pc_slot: int, target_pc: int) {
 	offset := target_pc - (pc_slot + 1)
 	op, a, _ := DECODE_ASBX(c.instructions[pc_slot])
 	c.instructions[pc_slot] = MAKE_ASBX(u32(op), u32(a), i32(offset))
+}
+COMPILER_TO_PROTOTYPE :: proc(c: ^Compiler, allocator := context.allocator) -> ^Prototype {
+	proto := new(Prototype, allocator)
+	proto.instructions = c.instructions
+	proto.constants = c.constants
+	proto.max_stack = c.max_stack
+	proto.num_params = c.nparams
+	proto.proto = make([dynamic]^Prototype, allocator)
+	for child_compiler in c.prototypes {
+		child_proto := COMPILER_TO_PROTOTYPE(child_compiler, allocator)
+		append(&proto.proto, child_proto)
+	}
+	proto.upvalues = make([dynamic]^UpValueDesc, allocator)
+	for name, idx in c.upvalues {
+		desc := new(UpValueDesc, allocator)
+		desc.name = name
+		desc.in_stack = true
+		desc.index = idx
+		append(&proto.upvalues, desc)
+	}
+	return proto
 }
 

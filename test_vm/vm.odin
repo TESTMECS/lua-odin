@@ -29,9 +29,10 @@ test_vm :: proc(t: ^testing.T) {
 		gc_threshold = 1024 * 1024,
 		max_threads  = 4,
 	}
+	my_proto := COMPILER_TO_PROTOTYPE(c, varena)
 	vm := NEW_VM(&config, varena)
 	closure := new(Closure, varena)
-	closure.proto = c
+	closure.proto = my_proto
 	closure.is_native = false
 	result := VM_EXECUTE(vm, closure, {})
 	if result_val, ok := result.(f64); ok {
@@ -40,6 +41,5 @@ test_vm :: proc(t: ^testing.T) {
 	 else {
 		testing.fail(t)
 	}
-
 }
 
