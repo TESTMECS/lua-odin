@@ -44,7 +44,13 @@ EXECUTE_INSTRUCTION :: proc(vm: ^VM, inst: Instruction) -> Value {
 	case .ADD:
 		EXECUTE_ADD(vm, a, b, c)
 	case .CALL:
-		return EXECUTE_CALL(vm, a, b, c)
+		return EXECUTE_CALL(
+			vm,
+			vm.current_thread.call_stack[vm.current_thread.call_count].func,
+			a,
+			b,
+			c,
+		)
 	case .RETURN:
 		return EXECUTE_RETURN(vm, a, b, c)
 	case .JMP:
@@ -106,5 +112,71 @@ EXECUTE_MUL :: proc(vm: ^VM, a, b, c: u32) {
 		}
 	}
 	thread.globals.panic(thread, "attempt to perform arithmetic on a non-numeric value", 0)
+}
+EXECUTE_CALL :: proc(vm: ^VM, closure: ^Closure, a, b, c: u32) -> Value {
+	thread := vm.current_thread
+	frame := VMFrame {
+		func        = closure,
+		base_reg    = thread.base + int(a),
+		saved_pc    = thread.pc,
+		num_results = int(c),
+		tail_calls  = 0,
+	}
+	append(&thread.call_stack, frame)
+	thread.base = frame.base_reg
+	thread.pc = 0
+	return nil
+}
+EXECUTE_RETURN :: proc(vm: ^VM, a, b, c: u32) -> Value {
+	thread := vm.current_thread
+	if len(thread.call_stack) <= 1 {
+		if b > 0 {
+			return STACK_GET(thread, int(a))
+		}
+		return nil
+	}
+	results := make([]Value, int(b), vm.allocator)
+	for i in 0 ..< int(b) {
+		results[i] = STACK_GET(thread, int(a) + i)
+	}
+	pop(&thread.call_stack)
+	thread.call_count -= 1
+	if len(thread.call_stack) > 0 {
+		frame := &thread.call_stack[thread.call_count]
+		thread.base = frame.base_reg
+		thread.pc = frame.saved_pc + 1
+		for result, i in results {
+			STACK_SET(thread, i, result)
+		}
+	}
+	return nil
+}
+EXECUTE_GETTABLE :: proc(vm: ^VM, a, b, c: u32) {
+	thread := vm.current_thread
+	table_val := STACK_GET(thread, int(b))
+	key_val := STACK_GET(thread, int(c))
+	if table, ok := table_val.(^Table); ok {
+		key := VALUE_TO_KEY_TAG(key_val)
+		if val, exists := table.data[key]; exists {
+			STACK_SET(thread, int(a), val)
+		}
+		 else {
+			STACK_SET(thread, int(a), nil)
+		}
+	}
+}
+EXECUTE_SETTABLE :: proc(vm: ^VM, a, b, c: u32) {
+	thread := vm.current_thread
+	table_val := STACK_GET(thread, int(a))
+	key_val := STACK_GET(thread, int(b))
+	val_val := STACK_GET(thread, int(c))
+	if table, ok := table_val.(^Table); ok {
+		key := VALUE_TO_KEY_TAG(key_val)
+		table.data[key] = val_val
+		table.dirty = true
+	}
+}
+EXECUTE_JMP :: proc(vm: ^VM, a, b, c: u32) {
+	unimplemented("TODO")
 }
 
