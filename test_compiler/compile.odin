@@ -24,9 +24,9 @@ test_local :: proc(t: ^testing.T) {
 	c := NEW_COMPILER(&p, varena)
 	COMPILE_NODE(c, nodeid)
 	insts := c.instructions[:]
-	// for i in insts {
-	// 	log.debugf("op: %v, a: %v, b: %v, c: %v\n", DECODE_ABC(i))
-	// }
+	if len(insts) == 0 {
+		testing.fail(t)
+	}
 	CHECK_DECODE_ABC(t, insts[0], Opcodes.LOADK)
 	CHECK_DECODE_ABC(t, insts[1], Opcodes.MOVE)
 }
@@ -56,10 +56,10 @@ test_block :: proc(t: ^testing.T) {
 	c := NEW_COMPILER(&p, varena)
 	COMPILE_NODE(c, nodeid)
 	insts := c.instructions[:]
-	context.logger.lowest_level = .Debug
-	// for i in insts {
-	// 	log.debugf("op: %v, a: %v, b: %v, c: %v", DECODE_ABC(i))
-	// }
+	if len(insts) == 0 {
+		testing.fail(t)
+	}
+
 	CHECK_DECODE_ABC(t, insts[0], Opcodes.LOADK)
 	CHECK_DECODE_ABC(t, insts[1], Opcodes.MOVE)
 	CHECK_DECODE_ABC(t, insts[2], Opcodes.LOADK)
@@ -96,5 +96,7 @@ test_function :: proc(t: ^testing.T) {
 	if len(insts) == 0 {
 		testing.fail(t)
 	}
+	CHECK_DECODE_ABC(t, insts[0], Opcodes.CLOSURE)
+	CHECK_DECODE_ABC(t, insts[1], Opcodes.SETGLOBAL)
 }
 

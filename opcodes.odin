@@ -19,8 +19,8 @@ Opcodes :: enum u32 {
 	LOADNIL,
 	GETUPVAL,
 	GETGLOBAL,
-	GETTABLE,
-	SETGLOBAL,
+	GETTABLE, // 6
+	SETGLOBAL, // 7
 	SETUPVAL,
 	SETTABLE,
 	NEWTABLE, // 10
@@ -33,7 +33,7 @@ Opcodes :: enum u32 {
 	UNM,
 	NOT,
 	CONCAT,
-	JMP,
+	JMP, // 20
 	EQ,
 	LT,
 	LE,

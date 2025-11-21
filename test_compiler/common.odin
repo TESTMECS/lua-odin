@@ -10,4 +10,9 @@ CHECK_DECODE_ABC :: proc(t: ^testing.T, i: compiler.Instruction, op: compiler.Op
 		testing.fail(t)
 	}
 }
+DEBUG_INSTRUCTION :: proc(t: ^testing.T, i: compiler.Instruction) {
+	using compiler
+	op, a, b, c := DECODE_ABC(i)
+	log.debugf("op: %v, a: %v, b: %v, c: %v", op, a, b, c)
+}
 
