@@ -24,17 +24,11 @@ test_local :: proc(t: ^testing.T) {
 	c := NEW_COMPILER(&p, varena)
 	COMPILE_NODE(c, nodeid)
 	insts := c.instructions[:]
-	for i in insts {
-		log.debugf("op: %v, a: %v, b: %v, c: %v\n", DECODE_ABC(i))
-	}
-	if op, _, _, _ := DECODE_ABC(insts[0]); op != u32(Opcodes.LOADK) {
-		log.error("First instruction is not LOADK")
-		testing.fail(t)
-	}
-	if op, _, _, _ := DECODE_ABC(insts[1]); op != u32(Opcodes.MOVE) {
-		log.error("Second instruction is not MOVE")
-		testing.fail(t)
-	}
+	// for i in insts {
+	// 	log.debugf("op: %v, a: %v, b: %v, c: %v\n", DECODE_ABC(i))
+	// }
+	CHECK_DECODE_ABC(t, insts[0], Opcodes.LOADK)
+	CHECK_DECODE_ABC(t, insts[1], Opcodes.MOVE)
 }
 
 @(test)
