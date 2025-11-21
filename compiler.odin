@@ -39,7 +39,7 @@ COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	case .DO:
 		unimplemented("TODO")
 	case .CALL:
-		unimplemented("TODO CALL")
+		return COMPILE_CALL(c, nodeid)
 	case .RETURN:
 		return COMPILE_RETURN(c, nodeid)
 	case .IF:
@@ -489,52 +489,92 @@ COMPILE_UBLOCK :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	return last_result
 }
 
+COMPILE_CALL :: proc(c: ^Compiler, nodeid: NODEID) -> int {
+	// Get function and arguments
+	func := c.nodes.first_child[nodeid]
+	args := c.nodes.next_sibling[func]
+
+	if func == 0 {
+		return COMPILE_ERR(c, "CALL node missing function")
+	}
+
+	// Compile function expression
+	func_reg := COMPILE_NODE(c, func)
+	if func_reg < 0 do return func_reg
+
+	// Count and compile arguments
+	arg_count := 0
+	arg := args
+	for arg != 0 {
+		arg_reg := COMPILE_NODE(c, arg)
+		if arg_reg < 0 {
+			FREE_REG(c, func_reg)
+			return arg_reg
+		}
+
+		// Move argument to consecutive registers starting from func_reg + 1
+		EMITABC(c, .MOVE, u32(func_reg + arg_count + 1), u32(arg_reg), 0)
+		FREE_REG(c, arg_reg)
+
+		arg_count += 1
+		arg = c.nodes.next_sibling[arg]
+	}
+
+	// Emit CALL instruction
+	// A = func_reg, B = num_args + 1, C = num_results + 1
+	EMITABC(c, .CALL, u32(func_reg), u32(arg_count + 1), u32(2))
+
+	// Return value is in func_reg
+	FREE_REG(c, func_reg)
+	return func_reg
+}
+
 COMPILE_IF :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	// Get condition, then branch, and optional elseif/else branches
 	condition := c.nodes.first_child[nodeid]
 	then_branch := c.nodes.next_sibling[condition]
-	
+
 	if condition == 0 || then_branch == 0 {
 		return COMPILE_ERR(c, "IF node missing condition or then branch")
 	}
-	
+
 	// Compile condition
 	cond_reg := COMPILE_NODE(c, condition)
 	if cond_reg < 0 do return cond_reg
-	
+
 	// If condition is false, jump to else/elseif/end
 	else_jump := EMIT_JUMP(c)
-	
+
 	// Free condition register
 	FREE_REG(c, cond_reg)
-	
+
 	// Compile then branch
 	then_result := COMPILE_NODE(c, then_branch)
 	if then_result < 0 do return then_result
-	
+
 	// Free then result register if any
 	if then_result >= 0 do FREE_REG(c, then_result)
-	
+
 	// Jump to end after then branch (if there's an else/elseif)
 	end_jump := EMIT_JUMP(c)
-	
+
 	// Patch else jump to here (else/elseif section)
 	PATCH_JUMP(c, else_jump, len(c.instructions))
-	
+
 	// Check for elseif/else branches
 	next_branch := c.nodes.next_sibling[then_branch]
 	if next_branch != 0 {
 		// Compile elseif/else branches
 		else_result := COMPILE_NODE(c, next_branch)
 		if else_result < 0 do return else_result
-		
+
 		// Free else result register if any
 		if else_result >= 0 do FREE_REG(c, else_result)
 	}
-	
+
 	// Patch end jump to here
 	PATCH_JUMP(c, end_jump, len(c.instructions))
-	
+
 	return -1 // If statements don't produce a value
 }
 

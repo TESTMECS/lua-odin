@@ -18,7 +18,7 @@ Opcodes :: enum u32 {
 	LOADBOOL,
 	LOADNIL,
 	GETUPVAL,
-	GETGLOBAL,
+	GETGLOBAL, // 5
 	GETTABLE, // 6
 	SETGLOBAL, // 7
 	SETUPVAL,
@@ -47,7 +47,7 @@ Opcodes :: enum u32 {
 	SETLIST,
 	SETLISTO,
 	CLOSE,
-	CLOSURE,
+	CLOSURE, // 34
 }
 // OP | A | B | C OR:
 // OP | A | Bx OR:
