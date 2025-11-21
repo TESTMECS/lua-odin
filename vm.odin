@@ -199,6 +199,13 @@ EXECUTE_JMP :: proc(vm: ^VM, a, b, c: u32) {
 EXECUTE_CLOSURE :: proc(vm: ^VM, a, bx: u32) {
 	thread := vm.current_thread
 	frame := thread.call_stack[thread.call_count]
+	fmt.printf(
+		"DEBUG: call_count=%d, call_stack_len=%d\n",
+		thread.call_count,
+		len(thread.call_stack),
+	)
+	fmt.printf("DEBUG: frame.func=%p, frame.func.proto=%p\n", frame.func, frame.func.proto)
+	fmt.printf("DEBUG: proto_len=%d, bx=%d\n", len(frame.func.proto.proto), bx)
 	if int(bx) >= len(frame.func.proto.proto) {
 		fmt.printf(
 			"ERROR: Closure index %d out of bounds [0, %d]\n",
@@ -208,9 +215,9 @@ EXECUTE_CLOSURE :: proc(vm: ^VM, a, bx: u32) {
 		thread.globals.panic(thread, "CLOSURE index out of bounds", 0)
 		return
 	}
-	LOGSF(context.logger, "frame.func.proto.proto[%d]", int(bx))
+	// LOGSF(context.logger, "frame.func.proto.proto[%d]", int(bx))
 	proto := frame.func.proto.proto[int(bx)]
-	LOGSF(context.logger, "proto->%v", proto)
+	// LOGSF(context.logger, "proto->%v", proto)
 	closure := new(Closure, vm.allocator)
 	closure.proto = proto
 	closure.is_native = false

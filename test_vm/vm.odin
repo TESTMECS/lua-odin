@@ -64,8 +64,16 @@ test_block :: proc(t: ^testing.T) {
 
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
+	// DUMP_AST(&p)
 	c := NEW_COMPILER(&p, varena)
 	COMPILE_NODE(c, nodeid)
+	// In your test, after COMPILE_NODE:
+	log.info("Compiler instructions: %v", c.instructions[:])
+	log.info("Compiler constants: %v", c.constants[:])
+	log.info("Compiler prototypes count: %d", len(c.prototypes))
+	log.info("Compiler prototypes: %v", c.prototypes[:])
+
+
 	insts := c.instructions[:]
 	if len(insts) == 0 {
 		testing.fail(t)
@@ -76,7 +84,10 @@ test_block :: proc(t: ^testing.T) {
 		gc_threshold = 1024 * 1024,
 		max_threads  = 4,
 	}
-	my_proto := COMPILER_TO_PROTOTYPE(c, varena)
+	my_proto := COMPILER_TO_PROTOTYPE(c)
+	// After conversion:
+	log.info("Prototype proto count: %d", len(my_proto.proto))
+	log.info("Prototype proto: %v", my_proto.proto[:])
 	vm := NEW_VM(&config, varena)
 	closure := new(Closure, varena)
 	closure.proto = my_proto

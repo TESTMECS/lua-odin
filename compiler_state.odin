@@ -85,9 +85,11 @@ COMPILER_TO_PROTOTYPE :: proc(c: ^Compiler, allocator := context.allocator) -> ^
 	proto.constants = c.constants[:]
 	proto.max_stack = c.max_stack
 	proto.num_params = c.nparams
+
+	fmt.printf("Prototype len: %d\n", len(c.prototypes))
 	proto.proto = make([dynamic]^Prototype, allocator)
-	for child_compiler in c.prototypes {
-		child_proto := COMPILER_TO_PROTOTYPE(child_compiler, allocator)
+	for child in c.prototypes {
+		child_proto := COMPILER_TO_PROTOTYPE(child, allocator)
 		append(&proto.proto, child_proto)
 	}
 	proto.upvalues = make([dynamic]^UpValueDesc, allocator)
