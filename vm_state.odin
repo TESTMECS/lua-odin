@@ -1,18 +1,24 @@
 package ouau
+import "core:mem"
 ThreadState :: struct {
 	globals:    ^GlobalState,
-	base:       Frame,
-	call_count: int,
 	stack:      [dynamic]Value,
+	call_count: int,
 	pc:         int,
+	top:        int,
+	base:       int,
 	status:     ThreadStatus,
+	call_stack: [dynamic]VMFrame,
 }
 GlobalState :: struct {
-	builtins: [dynamic]Table,
-	registry: ^Table,
-	thread:   ^ThreadState,
-	gc_heap:  ^GC_HEAP,
-	panic:    proc(state: ^ThreadState, msg: string, level: int),
+	builtins:     [dynamic]^Table,
+	registry:     ^Table,
+	thread:       ^ThreadState,
+	gc_heap:      ^GC_HEAP,
+	panic:        proc(state: ^ThreadState, msg: string, level: int),
+	string_table: map[string]^Value,
+	gc_threshold: int,
+	gc_debt:      int,
 }
 Thread :: struct {
 	state: ^ThreadState,
@@ -37,12 +43,15 @@ CallInfo :: struct {
 	saved_pc: int,
 }
 VM :: struct {
-	global_state:   ^GlobalState,
-	current_thread: ^ThreadState,
-	all_threads:    [dynamic]^ThreadState,
-	gc_threshold:   int,
-	gc_debt:        int,
-	config:         ^VM_Config,
+	global_state:    ^GlobalState,
+	current_thread:  ^ThreadState,
+	all_threads:     [dynamic]^ThreadState,
+	gc_threshold:    int,
+	gc_debt:         int,
+	config:          ^VM_Config,
+	allocator:       mem.Allocator,
+	gc_running:      bool,
+	pause_threshold: int,
 }
 VM_Config :: struct {
 	stack_size:   int,

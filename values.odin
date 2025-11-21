@@ -19,22 +19,25 @@ ReturnValue :: struct {
 	value: Value,
 }
 Table :: struct {
-	data:      map[KeyTag]Value,
-	sorted:    [dynamic]KeyTag,
-	dirty:     bool,
-	metatable: ^Table,
-	last_free: int,
+	using header: GC_HEADER,
+	data:         map[KeyTag]Value,
+	sorted:       [dynamic]KeyTag,
+	dirty:        bool,
+	metatable:    ^Table,
+	last_free:    int,
 }
 Closure :: struct {
-	is_native:   bool,
-	params:      []string,
-	body:        NODEID,
-	closure:     ^Environment,
-	native_proc: proc(args: []Value) -> Value,
-	proto:       ^Prototype,
-	upvalues:    [dynamic]^Upvalue,
+	using header: GC_HEADER,
+	is_native:    bool,
+	params:       []string,
+	body:         NODEID,
+	closure:      ^Environment,
+	native_proc:  proc(args: []Value) -> Value,
+	proto:        ^Prototype,
+	upvalues:     [dynamic]^Upvalue,
 }
 Prototype :: struct {
+	using header: GC_HEADER,
 	instructions: [dynamic]Instruction,
 	constants:    [dynamic]Value,
 	proto:        [dynamic]^Prototype,

@@ -8,5 +8,13 @@ GC_HEAP :: struct {
 	young:    [dynamic]rawptr,
 	old:      [dynamic]rawptr,
 	memories: [dynamic]rawptr,
+	set:      [dynamic]rawptr,
+	graylist: [dynamic]rawptr,
+	gc_state: GC_STATE,
+}
+GC_STATE :: enum u8 {
+	IDLE,
+	MARK,
+	SWEEP,
 }
 
