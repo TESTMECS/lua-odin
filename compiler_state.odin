@@ -22,7 +22,6 @@ NEW_COMPILER :: proc(p: ^Parser, allocator := context.allocator) -> ^Compiler {
 	c.locals = make(map[string]int, allocator)
 	c.upvalues = make(map[string]int, allocator)
 	c.free_regs = make([dynamic]int, allocator)
-	c.prototypes = make([dynamic]^Compiler, allocator)
 	c.parent = nil
 	return c
 }
@@ -87,10 +86,11 @@ COMPILER_TO_PROTOTYPE :: proc(c: ^Compiler, allocator := context.allocator) -> ^
 	proto.num_params = c.nparams
 
 	fmt.printf("Prototype len: %d\n", len(c.prototypes))
-	proto.proto = make([dynamic]^Prototype, allocator)
-	for child in c.prototypes {
+	proto.proto = make([]^Prototype, len(c.prototypes), allocator)
+	for child, i in c.prototypes {
+		fmt.printf("Prototype NESTED %d: %v\n", i, child)
 		child_proto := COMPILER_TO_PROTOTYPE(child, allocator)
-		append(&proto.proto, child_proto)
+		proto.proto[i] = child_proto
 	}
 	proto.upvalues = make([dynamic]^UpValueDesc, allocator)
 	for name, idx in c.upvalues {

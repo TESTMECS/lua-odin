@@ -43,15 +43,15 @@ Closure :: struct {
 	params:       []string,
 	body:         NODEID,
 	closure:      ^Environment,
-	native_proc:  proc(args: []Value) -> Value,
 	proto:        ^Prototype,
 	upvalues:     [dynamic]^Upvalue,
+	native_proc:  proc(args: []Value) -> Value,
 }
 Prototype :: struct {
 	using header: GC_HEADER,
 	instructions: []Instruction,
 	constants:    []Value,
-	proto:        [dynamic]^Prototype,
+	proto:        []^Prototype,
 	upvalues:     [dynamic]^UpValueDesc,
 	max_stack:    int,
 	num_params:   int,

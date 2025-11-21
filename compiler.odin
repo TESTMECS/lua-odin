@@ -338,6 +338,7 @@ COMPILE_FUNCTION :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	proto_idx := u32(len(c.prototypes))
 	append(&c.prototypes, func_compiler)
 
+
 	// Create closure in parent
 	dest := ALLOC_REG(c)
 	EMITABX(c, .CLOSURE, u32(dest), proto_idx)
