@@ -43,7 +43,7 @@ COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	case .RETURN:
 		return COMPILE_RETURN(c, nodeid)
 	case .IF:
-		unimplemented("TODO IF")
+		return COMPILE_IF(c, nodeid)
 	case .INVALID:
 		return COMPILE_ERR(c, "Invalid node", kind)
 	}
@@ -487,6 +487,55 @@ COMPILE_UBLOCK :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 		child = next_child
 	}
 	return last_result
+}
+
+COMPILE_IF :: proc(c: ^Compiler, nodeid: NODEID) -> int {
+	// Get condition, then branch, and optional elseif/else branches
+	condition := c.nodes.first_child[nodeid]
+	then_branch := c.nodes.next_sibling[condition]
+	
+	if condition == 0 || then_branch == 0 {
+		return COMPILE_ERR(c, "IF node missing condition or then branch")
+	}
+	
+	// Compile condition
+	cond_reg := COMPILE_NODE(c, condition)
+	if cond_reg < 0 do return cond_reg
+	
+	// If condition is false, jump to else/elseif/end
+	else_jump := EMIT_JUMP(c)
+	
+	// Free condition register
+	FREE_REG(c, cond_reg)
+	
+	// Compile then branch
+	then_result := COMPILE_NODE(c, then_branch)
+	if then_result < 0 do return then_result
+	
+	// Free then result register if any
+	if then_result >= 0 do FREE_REG(c, then_result)
+	
+	// Jump to end after then branch (if there's an else/elseif)
+	end_jump := EMIT_JUMP(c)
+	
+	// Patch else jump to here (else/elseif section)
+	PATCH_JUMP(c, else_jump, len(c.instructions))
+	
+	// Check for elseif/else branches
+	next_branch := c.nodes.next_sibling[then_branch]
+	if next_branch != 0 {
+		// Compile elseif/else branches
+		else_result := COMPILE_NODE(c, next_branch)
+		if else_result < 0 do return else_result
+		
+		// Free else result register if any
+		if else_result >= 0 do FREE_REG(c, else_result)
+	}
+	
+	// Patch end jump to here
+	PATCH_JUMP(c, end_jump, len(c.instructions))
+	
+	return -1 // If statements don't produce a value
 }
 
 COMPILE_FOR :: proc(c: ^Compiler, nodeid: NODEID) -> int {

@@ -305,4 +305,40 @@ test_for :: proc(t: ^testing.T) {
 	CHECK_DECODE_ABC(t, insts[12], Opcodes.ADD)
 	CHECK_DECODE_ABC(t, insts[13], Opcodes.MOVE)
 }
+@(test)
+test_if :: proc(t: ^testing.T) {
+	using compiler
+	v := new(virtual.Arena, context.allocator)
+	err := virtual.arena_init_growing(v)
+	ensure(err == nil)
+	defer virtual.arena_destroy(v)
+	defer free_all(context.allocator)
+	varena := virtual.arena_allocator(v)
+	input := `
+	if false then
+		return 1;
+	elseif true then
+		return 3;
+	else
+		return 2;
+	end`
+
+
+	p := NEW_PARSER(input, varena)
+	nodeid := PARSE_CHUNK(&p)
+	c := NEW_COMPILER(&p, varena)
+	COMPILE_NODE(c, nodeid)
+	insts := c.instructions[:]
+	if len(insts) == 0 {
+		testing.fail(t)
+	}
+	context.logger.lowest_level = .Debug
+	for i in insts {
+		DEBUG_INSTRUCTION(t, i)
+	}
+	CHECK_DECODE_ABC(t, insts[0], Opcodes.LOADBOOL)
+	CHECK_DECODE_ABC(t, insts[1], Opcodes.JMP)
+	CHECK_DECODE_ABC(t, insts[2], Opcodes.LOADK)
+	CHECK_DECODE_ABC(t, insts[3], Opcodes.RETURN)
+}
 

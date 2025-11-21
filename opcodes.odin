@@ -40,7 +40,7 @@ Opcodes :: enum u32 {
 	TEST,
 	CALL,
 	TAILCALL,
-	RETURN,
+	RETURN, // 27
 	FORLOOP,
 	TFORLOOP,
 	TFORPREP,
