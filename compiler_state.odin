@@ -6,7 +6,7 @@ Compiler :: struct {
 	const_index:  map[Value]int, // equality hashing
 	locals:       map[string]int, // name -> register
 	upvalues:     map[string]int, // name -> upval index
-	interpreter:  ^Interpreter,
+	nodes:        ^NODES,
 	max_stack:    int,
 	nparams:      int,
 	local_count:  int, // next free register
@@ -16,6 +16,18 @@ Compiler :: struct {
 }
 OuauCompiler :: struct {
 	current: ^Compiler,
+}
+NEW_COMPILER :: proc(p: ^Parser, allocator := context.allocator) -> ^Compiler {
+	c := new(Compiler, allocator)
+	c.nodes = &p.nodes
+	c.constants = make([dynamic]Value, allocator)
+	c.const_index = make(map[Value]int, allocator)
+	c.locals = make(map[string]int, allocator)
+	c.upvalues = make(map[string]int, allocator)
+	c.free_regs = make([dynamic]int, allocator)
+	c.prototypes = make([dynamic]^Compiler, allocator)
+	c.parent = nil
+	return c
 }
 COMPILE_ERR :: proc(c: ^Compiler, msg: string, xtra: ..any) -> int {
 	if len(xtra) == 0 {
