@@ -36,6 +36,7 @@ test_vm :: proc(t: ^testing.T) {
 	closure.is_native = false
 	result := VM_EXECUTE(vm, closure, {})
 	if result_val, ok := result.(f64); ok {
+		log.info("Result is:", result)
 		testing.expect(t, result_val == 1, "result_val == 1")
 	}
 	 else {
