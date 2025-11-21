@@ -208,9 +208,9 @@ EXECUTE_CLOSURE :: proc(vm: ^VM, a, bx: u32) {
 		thread.globals.panic(thread, "CLOSURE index out of bounds", 0)
 		return
 	}
-	// LOGSF(context.logger, "frame.func.proto.proto[%d]", int(bx))
+	LOGSF(context.logger, "frame.func.proto.proto[%d]", int(bx))
 	proto := frame.func.proto.proto[int(bx)]
-	// LOGSF(context.logger, "proto->%v", proto)
+	LOGSF(context.logger, "proto->%v", proto)
 	closure := new(Closure, vm.allocator)
 	closure.proto = proto
 	closure.is_native = false
