@@ -1,9 +1,8 @@
 package ouau
-import "core:fmt"
 COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	kind := c.nodes.kind[nodeid]
 
-	switch kind {
+	#partial switch kind {
 	case .BLOCK:
 		return COMPILE_BLOCK(c, nodeid)
 	case .LITERAL:
@@ -32,12 +31,8 @@ COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 		return COMPILE_GLOBAL(c, nodeid)
 	case .LOCAL:
 		return COMPILE_LOCAL(c, nodeid)
-	case .BREAK:
-		unimplemented("TODO BREAK")
 	case .FOR:
 		return COMPILE_FOR(c, nodeid)
-	case .DO:
-		unimplemented("TODO")
 	case .CALL:
 		return COMPILE_CALL(c, nodeid)
 	case .RETURN:
