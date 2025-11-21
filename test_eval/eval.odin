@@ -4,7 +4,7 @@ import pt "../test_parser"
 import "core:mem/virtual"
 import "core:testing"
 @(test)
-test_eval :: proc(t: ^testing.T) {
+test_eval_block :: proc(t: ^testing.T) {
 	using i
 	v := new(virtual.Arena, context.allocator)
 	err := virtual.arena_init_growing(v)
@@ -30,7 +30,7 @@ test_eval :: proc(t: ^testing.T) {
 	}
 }
 @(test)
-test_eval2 :: proc(t: ^testing.T) {
+test_function :: proc(t: ^testing.T) {
 	using i
 	v := new(virtual.Arena, context.allocator)
 	err := virtual.arena_init_growing(v)
@@ -224,7 +224,6 @@ test_for_list :: proc(t: ^testing.T) {
 @(test)
 test_global :: proc(t: ^testing.T) {
 	using i
-	using pt
 	v := new(virtual.Arena, context.allocator)
 	err := virtual.arena_init_growing(v)
 	ensure(err == nil)

@@ -135,4 +135,31 @@ test_table :: proc(t: ^testing.T) {
 	CHECK_DECODE_ABC(t, insts[1], Opcodes.GETGLOBAL)
 	CHECK_DECODE_ABC(t, insts[2], Opcodes.LOADK)
 }
+@(test)
+test_global :: proc(t: ^testing.T) {
+	using compiler
+	v := new(virtual.Arena, context.allocator)
+	err := virtual.arena_init_growing(v)
+	ensure(err == nil)
+	defer virtual.arena_destroy(v)
+	defer free_all(context.allocator)
+	varena := virtual.arena_allocator(v)
+
+	input := `
+	global a = 1;
+	`
+
+
+	p := NEW_PARSER(input, varena)
+	nodeid := PARSE_CHUNK(&p)
+	c := NEW_COMPILER(&p, varena)
+	COMPILE_NODE(c, nodeid)
+	insts := c.instructions[:]
+	if len(insts) == 0 {
+		testing.fail(t)
+	}
+	for i in insts {
+		DEBUG_INSTRUCTION(t, i)
+	}
+}
 
