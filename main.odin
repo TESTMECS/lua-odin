@@ -39,13 +39,19 @@ main :: proc() {
 	case "file":
 		// Create one interpreter for the entire REPL session
 		i := NEW_INTERPRETER(nil, varena)
+		assert(user_args[1] != "")
 		file_path := user_args[1]
-		fmt.println("File path:", file_path)
 		file, ok := os.read_entire_file_from_filename(file_path, varena)
 		if !ok do OUAU_ERR("ERR: Failed to read file", err, &sb, false, 1)
 		OUAU_RUN_STRING(string(file), &sb, false, varena, i)
 	case "ast":
-		unimplemented("TODO")
+		assert(user_args[1] != "")
+		file_path := user_args[1]
+		file, ok := os.read_entire_file_from_filename(file_path, varena)
+		if !ok do OUAU_ERR("ERR: Failed to read file", err, &sb, false, 1)
+		p := NEW_PARSER(string(file), varena)
+		_ = PARSE_CHUNK(&p)
+		DUMP_AST(&p)
 	case "bytes":
 		unimplemented("TODO")
 	}
@@ -93,11 +99,29 @@ OUAU_RESULT :: proc(res: string, msg: string, sb: ^strings.Builder, is_exit := t
 		fmt.println("IS", result)
 	}
 }
-CHECK_TY :: proc(val: Value) -> bool {
-	switch v in val {
-	case bool, f64, string, rawptr, (^Table), (^Closure), (^ReturnValue):
-		return true
+DUMP_AST :: proc(p: ^Parser) {
+	fmt.println("=== AST DUMP ===")
+	for i in 0 ..< len(p.nodes.kind) {
+		fmt.printf("Node %d: %s", i, p.nodes.kind[i])
+
+		if p.nodes.name[i] != "" {
+			fmt.printf(" name='%s'", p.nodes.name[i])
+		}
+		if p.nodes.int_value[i] != 0 {
+			fmt.printf(" int=%d", p.nodes.int_value[i])
+		}
+		if p.nodes.string_value[i] != "" {
+			fmt.printf(" str='%s'", p.nodes.string_value[i])
+		}
+
+		child_count := 0
+		child := p.nodes.first_child[i]
+		for child != 0 {
+			child_count += 1
+			child = p.nodes.next_sibling[child]
+		}
+		fmt.printf(" children=%d", child_count)
+		fmt.println()
 	}
-	return false
 }
 
