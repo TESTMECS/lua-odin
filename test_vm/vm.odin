@@ -14,7 +14,7 @@ test_vm :: proc(t: ^testing.T) {
 	defer free_all(context.allocator)
 	varena := virtual.arena_allocator(v)
 
-	input := `local a = 1;`
+	input := `local a = 1; return a;`
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
 	c := NEW_COMPILER(&p, varena)

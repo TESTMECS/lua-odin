@@ -651,26 +651,6 @@ VALUE_TO_STRING :: proc(v: Value, allocator := context.allocator) -> string {
 		return "nil"
 	}
 }
-VALUE_TO_KEY_TAG :: proc(v: Value) -> KeyTag {
-	switch val in v {
-	case bool:
-		return KeyTag{kind = 3, i = cast(i64)val}
-	case f64:
-		return KeyTag{kind = 1, i = cast(i64)val}
-	case string:
-		return KeyTag{kind = 2, s = val}
-	case rawptr:
-		return KeyTag{kind = 4, p = val}
-	case ^Table:
-		return KeyTag{kind = 5, p = val}
-	case ^Closure:
-		return KeyTag{kind = 6, p = val}
-	case ^ReturnValue:
-		panic("Cannot use a return value as a table key")
-	case:
-		return KeyTag{kind = 0}
-	}
-}
 EVAL_ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	lvalue := GET_LEFT_CHILD(i, node)
 	rvalue := GET_RIGHT_CHILD(i, node)

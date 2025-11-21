@@ -17,4 +17,13 @@ GC_STATE :: enum u8 {
 	MARK,
 	SWEEP,
 }
+NEW_GC_HEAP :: proc(allocator := context.allocator) -> ^GC_HEAP {
+	heap := new(GC_HEAP, allocator)
+	heap.young = make([dynamic]rawptr, allocator)
+	heap.old = make([dynamic]rawptr, allocator)
+	heap.memories = make([dynamic]rawptr, allocator)
+	heap.graylist = make([dynamic]rawptr, allocator)
+	heap.gc_state = .IDLE
+	return heap
+}
 
