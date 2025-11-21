@@ -6,11 +6,11 @@ COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 
 	switch kind {
 	case .BLOCK:
-		unimplemented("TODO BLOCK")
+		return COMPILE_BLOCK(c, nodeid)
 	case .LITERAL:
-		unimplemented("TODO LITERAL")
+		return COMPILE_LITERAL(c, nodeid)
 	case .IDENTIFIER:
-		unimplemented("TODO IDENTIFIER")
+		return COMPILE_IDENTIFIER(c, nodeid)
 	case .ASSIGN:
 		unimplemented("TODO ASSIGN")
 	case .WHILE:
@@ -22,17 +22,17 @@ COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	case .FUNCTION:
 		unimplemented("TODO FUNCTION")
 	case .UNARY:
-		unimplemented("TODO UNARY")
+		return COMPILE_UNARY(c, nodeid)
 	case .UBLOCK:
 		unimplemented("TODO UBLOCK")
 	case .BINARY:
-		unimplemented("TODO BINARY")
+		return COMPILE_BINARY(c, nodeid)
 	case .STRING:
-		unimplemented("TODO STRING")
+		return COMPILE_STRING(c, nodeid)
 	case .GLOBAL:
 		unimplemented("TODO GLOBAL")
 	case .LOCAL:
-		unimplemented("TODO LOCAL")
+		return COMPILE_LOCAL(c, nodeid)
 	case .BREAK:
 		unimplemented("TODO BREAK")
 	case .FOR:
@@ -55,5 +55,194 @@ CHECK_KIND :: proc(c: ^Compiler, nodeid: NODEID, kind: NODE_KIND) -> bool {
 		return true
 	}
 	return false
+}
+
+COMPILE_LITERAL :: proc(c: ^Compiler, nodeid: NODEID) -> int {
+	// Check if it's a number literal
+	if c.nodes.int_value[nodeid] != 0 {
+		val := f64(c.nodes.int_value[nodeid])
+		const_idx := ADD_CONST(c, val)
+		dest := ALLOC_REG(c)
+		EMITABX(c, .LOADK, u32(dest), const_idx)
+		return dest
+	}
+	str := c.nodes.string_value[nodeid]
+	if str == "nil" {
+		dest := ALLOC_REG(c)
+		EMITABC(c, .LOADNIL, u32(dest), 0, 0)
+		return dest
+	}
+	if str == "true" {
+		dest := ALLOC_REG(c)
+		EMITABC(c, .LOADBOOL, u32(dest), 1, 0)
+		return dest
+	}
+	if str == "false" {
+		dest := ALLOC_REG(c)
+		EMITABC(c, .LOADBOOL, u32(dest), 0, 0)
+		return dest
+	}
+	return COMPILE_ERR(c, "Unknown literal type", str)
+}
+COMPILE_STRING :: proc(c: ^Compiler, nodeid: NODEID) -> int {
+	str := c.nodes.string_value[nodeid]
+	const_idx := ADD_CONST(c, str)
+	dest := ALLOC_REG(c)
+	EMITABX(c, .LOADK, u32(dest), const_idx)
+	return dest
+}
+COMPILE_LOCAL :: proc(c: ^Compiler, nodeid: NODEID) -> int {
+	// Get the first child (variable name)
+	var_node := c.nodes.first_child[nodeid]
+	if var_node == 0 {
+		return COMPILE_ERR(c, "LOCAL node has no variable name")
+	}
+	// Get variable name
+	if c.nodes.kind[var_node] != .IDENTIFIER {
+		return COMPILE_ERR(c, "Expected identifier in LOCAL declaration")
+	}
+	var_name := c.nodes.name[var_node]
+	// Allocate register for this variable
+	reg := ALLOC_REG(c)
+	c.locals[var_name] = reg
+	// Check if there's an assignment (next sibling after variables)
+	assign_node := var_node
+	for c.nodes.next_sibling[assign_node] != 0 {
+		assign_node = c.nodes.next_sibling[assign_node]
+	}
+	// If there's an assignment value, compile it
+	if assign_node != var_node {
+		value_reg := COMPILE_NODE(c, assign_node)
+		if value_reg < 0 do return value_reg
+		// Move the value to the variable's register
+		if value_reg != reg {
+			EMITABC(c, .MOVE, u32(reg), u32(value_reg), 0)
+			FREE_REG(c, value_reg)
+		}
+	}
+	return reg
+}
+COMPILE_IDENTIFIER :: proc(c: ^Compiler, nodeid: NODEID) -> int {
+	var_name := c.nodes.name[nodeid]
+	// Check if it's a local variable
+	if reg, ok := c.locals[var_name]; ok {
+		dest := ALLOC_REG(c)
+		EMITABC(c, .MOVE, u32(dest), u32(reg), 0)
+		return dest
+	}
+	// Treat as global variable
+	const_idx := ADD_CONST(c, var_name)
+	dest := ALLOC_REG(c)
+	EMITABX(c, .GETGLOBAL, u32(dest), const_idx)
+	return dest
+}
+COMPILE_BLOCK :: proc(c: ^Compiler, nodeid: NODEID) -> int {
+	child := c.nodes.first_child[nodeid]
+	last_result := -1
+	for child != 0 {
+		result := COMPILE_NODE(c, child)
+		if result < 0 do return result
+		// Free the result register unless it's the last expression
+		next_child := c.nodes.next_sibling[child]
+		if next_child != 0 && result >= 0 {
+			FREE_REG(c, result)
+		}
+		 else {
+			last_result = result
+		}
+		child = next_child
+	}
+	return last_result
+}
+COMPILE_BINARY :: proc(c: ^Compiler, nodeid: NODEID) -> int {
+	// Get left and right operands
+	left := c.nodes.first_child[nodeid]
+	right := c.nodes.next_sibling[left]
+
+	if left == 0 || right == 0 {
+		return COMPILE_ERR(c, "BINARY node missing operands")
+	}
+
+	left_reg := COMPILE_NODE(c, left)
+	if left_reg < 0 do return left_reg
+
+	right_reg := COMPILE_NODE(c, right)
+	if right_reg < 0 {
+		FREE_REG(c, left_reg)
+		return right_reg
+	}
+
+	dest := ALLOC_REG(c)
+	op := c.nodes.token[nodeid]
+
+	// Map token to opcode
+	#partial switch op {
+	case .PLUS:
+		EMITABC(c, .ADD, u32(dest), u32(left_reg), u32(right_reg))
+	case .MINUS:
+		EMITABC(c, .SUB, u32(dest), u32(left_reg), u32(right_reg))
+	case .MUL:
+		EMITABC(c, .MUL, u32(dest), u32(left_reg), u32(right_reg))
+	case .DIV:
+		EMITABC(c, .DIV, u32(dest), u32(left_reg), u32(right_reg))
+	case .EQ:
+		EMITABC(c, .EQ, 0, u32(left_reg), u32(right_reg))
+		EMITABC(c, .JMP, 0, 1, 0)
+		EMITABC(c, .LOADBOOL, u32(dest), 0, 1)
+		EMITABC(c, .LOADBOOL, u32(dest), 1, 0)
+	case .NE:
+		EMITABC(c, .EQ, 0, u32(left_reg), u32(right_reg))
+		EMITABC(c, .JMP, 0, 0, 0)
+		EMITABC(c, .LOADBOOL, u32(dest), 0, 1)
+		EMITABC(c, .LOADBOOL, u32(dest), 1, 0)
+	case .LT:
+		EMITABC(c, .LT, 0, u32(left_reg), u32(right_reg))
+		EMITABC(c, .JMP, 0, 1, 0)
+		EMITABC(c, .LOADBOOL, u32(dest), 0, 1)
+		EMITABC(c, .LOADBOOL, u32(dest), 1, 0)
+	case .LE:
+		EMITABC(c, .LE, 0, u32(left_reg), u32(right_reg))
+		EMITABC(c, .JMP, 0, 1, 0)
+		EMITABC(c, .LOADBOOL, u32(dest), 0, 1)
+		EMITABC(c, .LOADBOOL, u32(dest), 1, 0)
+	case:
+		FREE_REG(c, left_reg)
+		FREE_REG(c, right_reg)
+		FREE_REG(c, dest)
+		return COMPILE_ERR(c, "Unsupported binary operator", op)
+	}
+
+	FREE_REG(c, left_reg)
+	FREE_REG(c, right_reg)
+	return dest
+}
+
+COMPILE_UNARY :: proc(c: ^Compiler, nodeid: NODEID) -> int {
+	// Get the operand
+	operand := c.nodes.first_child[nodeid]
+	if operand == 0 {
+		return COMPILE_ERR(c, "UNARY node missing operand")
+	}
+
+	operand_reg := COMPILE_NODE(c, operand)
+	if operand_reg < 0 do return operand_reg
+
+	dest := ALLOC_REG(c)
+	op := c.nodes.token[nodeid]
+
+	// Map token to opcode
+	#partial switch op {
+	case .MINUS:
+		EMITABC(c, .UNM, u32(dest), u32(operand_reg), 0)
+	case .NOT:
+		EMITABC(c, .NOT, u32(dest), u32(operand_reg), 0)
+	case:
+		FREE_REG(c, operand_reg)
+		FREE_REG(c, dest)
+		return COMPILE_ERR(c, "Unsupported unary operator", op)
+	}
+
+	FREE_REG(c, operand_reg)
+	return dest
 }
 

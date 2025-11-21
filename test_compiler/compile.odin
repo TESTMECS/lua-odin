@@ -1,5 +1,6 @@
 package compiler_test
 import compiler "../"
+import "core:fmt"
 import "core:log"
 import "core:mem/virtual"
 import "core:testing"
@@ -23,6 +24,17 @@ test_compiler :: proc(t: ^testing.T) {
 	nodeid := PARSE_CHUNK(&p)
 	c := NEW_COMPILER(&p, varena)
 	COMPILE_NODE(c, nodeid)
-	log.info("Testing")
+	insts := c.instructions[:]
+	// for i in insts {
+	// 	fmt.printf("op: %v, a: %v, b: %v, c: %v\n", DECODE_ABC(i))
+	// }
+	if op, _, _, _ := DECODE_ABC(insts[0]); op != 1 {
+		fmt.println("First instruction is not LOADK")
+		testing.fail(t)
+	}
+	if op, _, _, _ := DECODE_ABC(insts[1]); op != 0 {
+		fmt.println("Second instruction is not MOVE")
+		testing.fail(t)
+	}
 }
 
