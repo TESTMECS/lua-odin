@@ -29,7 +29,7 @@ COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	case .STRING:
 		return COMPILE_STRING(c, nodeid)
 	case .GLOBAL:
-		unimplemented("TODO GLOBAL")
+		return COMPILE_GLOBAL(c, nodeid)
 	case .LOCAL:
 		return COMPILE_LOCAL(c, nodeid)
 	case .BREAK:
@@ -315,6 +315,35 @@ COMPILE_FUNCTION :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	EMITABX(c, .SETGLOBAL, u32(dest), func_const_idx)
 
 	return dest
+}
+
+COMPILE_GLOBAL :: proc(c: ^Compiler, nodeid: NODEID) -> int {
+	// Get the first child (variable name)
+	var_node := c.nodes.first_child[nodeid]
+	if var_node == 0 {
+		return COMPILE_ERR(c, "GLOBAL node has no variable name")
+	}
+	// Get variable name
+	if c.nodes.kind[var_node] != .IDENTIFIER {
+		return COMPILE_ERR(c, "Expected identifier in GLOBAL declaration")
+	}
+	var_name := c.nodes.name[var_node]
+	// Check if there's an assignment (next sibling after variables)
+	assign_node := var_node
+	for c.nodes.next_sibling[assign_node] != 0 {
+		assign_node = c.nodes.next_sibling[assign_node]
+	}
+	// If there's an assignment value, compile it
+	if assign_node != var_node {
+		value_reg := COMPILE_NODE(c, assign_node)
+		if value_reg < 0 do return value_reg
+		// Store the value as a global
+		func_const_idx := ADD_CONST(c, var_name)
+		EMITABX(c, .SETGLOBAL, u32(value_reg), func_const_idx)
+		FREE_REG(c, value_reg)
+		return value_reg
+	}
+	return COMPILE_ERR(c, "GLOBAL declaration missing assignment value")
 }
 
 COMPILE_TABLE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
