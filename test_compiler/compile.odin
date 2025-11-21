@@ -165,4 +165,100 @@ test_global :: proc(t: ^testing.T) {
 	CHECK_DECODE_ABC(t, insts[0], Opcodes.LOADK)
 	CHECK_DECODE_ABC(t, insts[1], Opcodes.SETGLOBAL)
 }
+@(test)
+test_while :: proc(t: ^testing.T) {
+	using compiler
+	v := new(virtual.Arena, context.allocator)
+	err := virtual.arena_init_growing(v)
+	ensure(err == nil)
+	defer virtual.arena_destroy(v)
+	defer free_all(context.allocator)
+	varena := virtual.arena_allocator(v)
+	input := `
+	local a = 0;
+	local b = true;
+	while b do
+		a = a + 1
+		b = false
+	end
+	return a;
+	`
+
+
+	p := NEW_PARSER(input, varena)
+	nodeid := PARSE_CHUNK(&p)
+	c := NEW_COMPILER(&p, varena)
+	COMPILE_NODE(c, nodeid)
+	insts := c.instructions[:]
+	if len(insts) == 0 {
+		testing.fail(t)
+	}
+	// context.logger.lowest_level = .Debug
+	// for i in insts {
+	// 	DEBUG_INSTRUCTION(t, i)
+	// }
+	CHECK_DECODE_ABC(t, insts[0], Opcodes.LOADK)
+	CHECK_DECODE_ABC(t, insts[1], Opcodes.MOVE)
+	CHECK_DECODE_ABC(t, insts[2], Opcodes.LOADBOOL)
+	CHECK_DECODE_ABC(t, insts[3], Opcodes.MOVE)
+	CHECK_DECODE_ABC(t, insts[4], Opcodes.MOVE)
+	CHECK_DECODE_ABC(t, insts[5], Opcodes.JMP)
+	CHECK_DECODE_ABC(t, insts[6], Opcodes.MOVE)
+	CHECK_DECODE_ABC(t, insts[7], Opcodes.MOVE)
+	CHECK_DECODE_ABC(t, insts[8], Opcodes.LOADK)
+	CHECK_DECODE_ABC(t, insts[9], Opcodes.ADD)
+	CHECK_DECODE_ABC(t, insts[10], Opcodes.MOVE)
+	CHECK_DECODE_ABC(t, insts[11], Opcodes.MOVE)
+	CHECK_DECODE_ABC(t, insts[12], Opcodes.LOADBOOL)
+	CHECK_DECODE_ABC(t, insts[13], Opcodes.MOVE)
+	CHECK_DECODE_ABC(t, insts[14], Opcodes.JMP)
+}
+@(test)
+test_repeat :: proc(t: ^testing.T) {
+	using compiler
+	v := new(virtual.Arena, context.allocator)
+	err := virtual.arena_init_growing(v)
+	ensure(err == nil)
+	defer virtual.arena_destroy(v)
+	defer free_all(context.allocator)
+	varena := virtual.arena_allocator(v)
+	input := `
+	local a = 0;
+	local b = true;
+	repeat
+		a = a + 1
+		b = false
+	until b
+	return a;
+	`
+
+
+	p := NEW_PARSER(input, varena)
+	nodeid := PARSE_CHUNK(&p)
+	c := NEW_COMPILER(&p, varena)
+	COMPILE_NODE(c, nodeid)
+	insts := c.instructions[:]
+	if len(insts) == 0 {
+		testing.fail(t)
+	}
+	// context.logger.lowest_level = .Debug
+	// for i in insts {
+	// 	DEBUG_INSTRUCTION(t, i)
+	// }
+	CHECK_DECODE_ABC(t, insts[0], Opcodes.LOADK)
+	CHECK_DECODE_ABC(t, insts[1], Opcodes.MOVE)
+	CHECK_DECODE_ABC(t, insts[2], Opcodes.LOADBOOL)
+	CHECK_DECODE_ABC(t, insts[3], Opcodes.MOVE)
+	CHECK_DECODE_ABC(t, insts[4], Opcodes.MOVE)
+	CHECK_DECODE_ABC(t, insts[5], Opcodes.MOVE)
+	CHECK_DECODE_ABC(t, insts[6], Opcodes.LOADK)
+	CHECK_DECODE_ABC(t, insts[7], Opcodes.ADD)
+	CHECK_DECODE_ABC(t, insts[8], Opcodes.MOVE)
+	CHECK_DECODE_ABC(t, insts[9], Opcodes.MOVE)
+	CHECK_DECODE_ABC(t, insts[10], Opcodes.LOADBOOL)
+	CHECK_DECODE_ABC(t, insts[11], Opcodes.MOVE)
+	CHECK_DECODE_ABC(t, insts[12], Opcodes.MOVE)
+	CHECK_DECODE_ABC(t, insts[13], Opcodes.MOVE)
+	CHECK_DECODE_ABC(t, insts[14], Opcodes.JMP)
+}
 

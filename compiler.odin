@@ -11,11 +11,11 @@ COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	case .IDENTIFIER:
 		return COMPILE_IDENTIFIER(c, nodeid)
 	case .ASSIGN:
-		unimplemented("TODO ASSIGN")
+		return COMPILE_ASSIGN(c, nodeid)
 	case .WHILE:
-		unimplemented("TODO WHILE")
+		return COMPILE_WHILE(c, nodeid)
 	case .REPEAT:
-		unimplemented("TODO REPEAT")
+		return COMPILE_REPEAT(c, nodeid)
 	case .TABLE:
 		return COMPILE_TABLE(c, nodeid)
 	case .FUNCTION:
@@ -23,7 +23,7 @@ COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	case .UNARY:
 		return COMPILE_UNARY(c, nodeid)
 	case .UBLOCK:
-		unimplemented("TODO UBLOCK")
+		return COMPILE_UBLOCK(c, nodeid)
 	case .BINARY:
 		return COMPILE_BINARY(c, nodeid)
 	case .STRING:
@@ -79,6 +79,13 @@ COMPILE_LITERAL :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	if str == "false" {
 		dest := ALLOC_REG(c)
 		EMITABC(c, .LOADBOOL, u32(dest), 0, 0)
+		return dest
+	}
+	// Handle empty string case
+	if len(str) == 0 {
+		dest := ALLOC_REG(c)
+		const_idx := ADD_CONST(c, "")
+		EMITABX(c, .LOADK, u32(dest), const_idx)
 		return dest
 	}
 	return COMPILE_ERR(c, "Unknown literal type", str)
@@ -204,6 +211,36 @@ COMPILE_BINARY :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 		EMITABC(c, .JMP, 0, 1, 0)
 		EMITABC(c, .LOADBOOL, u32(dest), 0, 1)
 		EMITABC(c, .LOADBOOL, u32(dest), 1, 0)
+	case .ASSIGN:
+		// Handle assignment: left = right
+		if c.nodes.kind[left] == .IDENTIFIER {
+			var_name := c.nodes.name[left]
+			
+			// Check if it's a local variable
+			if reg, ok := c.locals[var_name]; ok {
+				// Move the value to the local variable's register
+				if right_reg != reg {
+					EMITABC(c, .MOVE, u32(reg), u32(right_reg), 0)
+				}
+				FREE_REG(c, left_reg)
+				FREE_REG(c, right_reg)
+				FREE_REG(c, dest)
+				return reg
+			}
+			
+			// Treat as global variable assignment
+			const_idx := ADD_CONST(c, var_name)
+			EMITABX(c, .SETGLOBAL, u32(right_reg), const_idx)
+			FREE_REG(c, left_reg)
+			FREE_REG(c, right_reg)
+			FREE_REG(c, dest)
+			return right_reg
+		}
+		
+		FREE_REG(c, left_reg)
+		FREE_REG(c, right_reg)
+		FREE_REG(c, dest)
+		return COMPILE_ERR(c, "Unsupported assignment target in binary")
 	case:
 		FREE_REG(c, left_reg)
 		FREE_REG(c, right_reg)
@@ -315,6 +352,180 @@ COMPILE_FUNCTION :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	EMITABX(c, .SETGLOBAL, u32(dest), func_const_idx)
 
 	return dest
+}
+
+COMPILE_ASSIGN :: proc(c: ^Compiler, nodeid: NODEID) -> int {
+	// Get left and right operands
+	left := c.nodes.first_child[nodeid]
+	right := c.nodes.next_sibling[left]
+	
+	if left == 0 || right == 0 {
+		return COMPILE_ERR(c, "ASSIGN node missing operands")
+	}
+	
+	// Compile the right side (value)
+	value_reg := COMPILE_NODE(c, right)
+	if value_reg < 0 do return value_reg
+	
+	// Handle assignment to variable
+	if c.nodes.kind[left] == .IDENTIFIER {
+		var_name := c.nodes.name[left]
+		
+		// Check if it's a local variable
+		if reg, ok := c.locals[var_name]; ok {
+			// Move the value to the local variable's register
+			if value_reg != reg {
+				EMITABC(c, .MOVE, u32(reg), u32(value_reg), 0)
+			}
+			FREE_REG(c, value_reg)
+			return reg
+		}
+		
+		// Treat as global variable assignment
+		const_idx := ADD_CONST(c, var_name)
+		EMITABX(c, .SETGLOBAL, u32(value_reg), const_idx)
+		FREE_REG(c, value_reg)
+		return value_reg
+	}
+	
+	// Handle assignment to table field (e.g., table.field = value)
+	if c.nodes.kind[left] == .BINARY && c.nodes.token[left] == .DOT {
+		// Get table and field
+		table_node := c.nodes.first_child[left]
+		field_node := c.nodes.next_sibling[table_node]
+		
+		if table_node == 0 || field_node == 0 {
+			FREE_REG(c, value_reg)
+			return COMPILE_ERR(c, "Table assignment missing table or field")
+		}
+		
+		// Compile table
+		table_reg := COMPILE_NODE(c, table_node)
+		if table_reg < 0 {
+			FREE_REG(c, value_reg)
+			return table_reg
+		}
+		
+		// Compile field
+		field_reg := COMPILE_NODE(c, field_node)
+		if field_reg < 0 {
+			FREE_REG(c, value_reg)
+			FREE_REG(c, table_reg)
+			return field_reg
+		}
+		
+		// Set table[field] = value
+		EMITABC(c, .SETTABLE, u32(table_reg), u32(field_reg), u32(value_reg))
+		
+		FREE_REG(c, table_reg)
+		FREE_REG(c, field_reg)
+		FREE_REG(c, value_reg)
+		return value_reg
+	}
+	
+	FREE_REG(c, value_reg)
+	return COMPILE_ERR(c, "Unsupported assignment target")
+}
+
+COMPILE_REPEAT :: proc(c: ^Compiler, nodeid: NODEID) -> int {
+	// Get body (first child)
+	body := c.nodes.first_child[nodeid]
+	
+	if body == 0 {
+		return COMPILE_ERR(c, "REPEAT node missing body")
+	}
+	
+	// The condition is the next sibling of the REPEAT node
+	condition := c.nodes.next_sibling[nodeid]
+	
+	if condition == 0 {
+		return COMPILE_ERR(c, "REPEAT node missing condition")
+	}
+	
+	// Record the start of the loop (where body starts)
+	loop_start := len(c.instructions)
+	
+	// Compile the loop body first
+	body_result := COMPILE_NODE(c, body)
+	if body_result < 0 do return body_result
+	
+	// Free body result register if any
+	if body_result >= 0 do FREE_REG(c, body_result)
+	
+	// Compile the condition
+	cond_reg := COMPILE_NODE(c, condition)
+	if cond_reg < 0 do return cond_reg
+	
+	// If condition is false, jump back to loop start
+	// In Lua, repeat-until continues when condition is false
+	EMITABC(c, .TEST, u32(cond_reg), 0, 0)  // Test if condition is false
+	back_jump := EMIT_JUMP(c)
+	PATCH_JUMP(c, back_jump, loop_start)
+	
+	// Free condition register
+	FREE_REG(c, cond_reg)
+	
+	return -1 // Repeat loops don't produce a value
+}
+
+COMPILE_UBLOCK :: proc(c: ^Compiler, nodeid: NODEID) -> int {
+	// UBLOCK is likely an "unscoped block" - similar to BLOCK but without creating a new scope
+	// For now, treat it the same as BLOCK
+	child := c.nodes.first_child[nodeid]
+	last_result := -1
+	for child != 0 {
+		result := COMPILE_NODE(c, child)
+		if result < 0 do return result
+		// Free the result register unless it's the last expression
+		next_child := c.nodes.next_sibling[child]
+		if next_child != 0 && result >= 0 {
+			FREE_REG(c, result)
+		}
+		 else {
+			last_result = result
+		}
+		child = next_child
+	}
+	return last_result
+}
+
+COMPILE_WHILE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
+	// Get condition and body
+	condition := c.nodes.first_child[nodeid]
+	body := c.nodes.next_sibling[condition]
+	
+	if condition == 0 || body == 0 {
+		return COMPILE_ERR(c, "WHILE node missing condition or body")
+	}
+	
+	// Record the start of the loop (where condition is evaluated)
+	loop_start := len(c.instructions)
+	
+	// Compile the condition
+	cond_reg := COMPILE_NODE(c, condition)
+	if cond_reg < 0 do return cond_reg
+	
+	// If condition is false, jump to end of loop
+	exit_jump := EMIT_JUMP(c)
+	
+	// Free condition register
+	FREE_REG(c, cond_reg)
+	
+	// Compile the loop body
+	body_result := COMPILE_NODE(c, body)
+	if body_result < 0 do return body_result
+	
+	// Free body result register if any
+	if body_result >= 0 do FREE_REG(c, body_result)
+	
+	// Jump back to condition evaluation
+	back_jump := EMIT_JUMP(c)
+	PATCH_JUMP(c, back_jump, loop_start)
+	
+	// Patch the exit jump to jump to here (after the loop)
+	PATCH_JUMP(c, exit_jump, len(c.instructions))
+	
+	return -1 // While loops don't produce a value
 }
 
 COMPILE_GLOBAL :: proc(c: ^Compiler, nodeid: NODEID) -> int {
