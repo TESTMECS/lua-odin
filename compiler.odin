@@ -35,7 +35,7 @@ COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	case .BREAK:
 		unimplemented("TODO BREAK")
 	case .FOR:
-		unimplemented("TODO FOR")
+		return COMPILE_FOR(c, nodeid)
 	case .DO:
 		unimplemented("TODO")
 	case .CALL:
@@ -215,7 +215,7 @@ COMPILE_BINARY :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 		// Handle assignment: left = right
 		if c.nodes.kind[left] == .IDENTIFIER {
 			var_name := c.nodes.name[left]
-			
+
 			// Check if it's a local variable
 			if reg, ok := c.locals[var_name]; ok {
 				// Move the value to the local variable's register
@@ -227,7 +227,7 @@ COMPILE_BINARY :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 				FREE_REG(c, dest)
 				return reg
 			}
-			
+
 			// Treat as global variable assignment
 			const_idx := ADD_CONST(c, var_name)
 			EMITABX(c, .SETGLOBAL, u32(right_reg), const_idx)
@@ -236,7 +236,7 @@ COMPILE_BINARY :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 			FREE_REG(c, dest)
 			return right_reg
 		}
-		
+
 		FREE_REG(c, left_reg)
 		FREE_REG(c, right_reg)
 		FREE_REG(c, dest)
@@ -358,19 +358,19 @@ COMPILE_ASSIGN :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	// Get left and right operands
 	left := c.nodes.first_child[nodeid]
 	right := c.nodes.next_sibling[left]
-	
+
 	if left == 0 || right == 0 {
 		return COMPILE_ERR(c, "ASSIGN node missing operands")
 	}
-	
+
 	// Compile the right side (value)
 	value_reg := COMPILE_NODE(c, right)
 	if value_reg < 0 do return value_reg
-	
+
 	// Handle assignment to variable
 	if c.nodes.kind[left] == .IDENTIFIER {
 		var_name := c.nodes.name[left]
-		
+
 		// Check if it's a local variable
 		if reg, ok := c.locals[var_name]; ok {
 			// Move the value to the local variable's register
@@ -380,32 +380,32 @@ COMPILE_ASSIGN :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 			FREE_REG(c, value_reg)
 			return reg
 		}
-		
+
 		// Treat as global variable assignment
 		const_idx := ADD_CONST(c, var_name)
 		EMITABX(c, .SETGLOBAL, u32(value_reg), const_idx)
 		FREE_REG(c, value_reg)
 		return value_reg
 	}
-	
+
 	// Handle assignment to table field (e.g., table.field = value)
 	if c.nodes.kind[left] == .BINARY && c.nodes.token[left] == .DOT {
 		// Get table and field
 		table_node := c.nodes.first_child[left]
 		field_node := c.nodes.next_sibling[table_node]
-		
+
 		if table_node == 0 || field_node == 0 {
 			FREE_REG(c, value_reg)
 			return COMPILE_ERR(c, "Table assignment missing table or field")
 		}
-		
+
 		// Compile table
 		table_reg := COMPILE_NODE(c, table_node)
 		if table_reg < 0 {
 			FREE_REG(c, value_reg)
 			return table_reg
 		}
-		
+
 		// Compile field
 		field_reg := COMPILE_NODE(c, field_node)
 		if field_reg < 0 {
@@ -413,16 +413,16 @@ COMPILE_ASSIGN :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 			FREE_REG(c, table_reg)
 			return field_reg
 		}
-		
+
 		// Set table[field] = value
 		EMITABC(c, .SETTABLE, u32(table_reg), u32(field_reg), u32(value_reg))
-		
+
 		FREE_REG(c, table_reg)
 		FREE_REG(c, field_reg)
 		FREE_REG(c, value_reg)
 		return value_reg
 	}
-	
+
 	FREE_REG(c, value_reg)
 	return COMPILE_ERR(c, "Unsupported assignment target")
 }
@@ -430,41 +430,41 @@ COMPILE_ASSIGN :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 COMPILE_REPEAT :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	// Get body (first child)
 	body := c.nodes.first_child[nodeid]
-	
+
 	if body == 0 {
 		return COMPILE_ERR(c, "REPEAT node missing body")
 	}
-	
+
 	// The condition is the next sibling of the REPEAT node
 	condition := c.nodes.next_sibling[nodeid]
-	
+
 	if condition == 0 {
 		return COMPILE_ERR(c, "REPEAT node missing condition")
 	}
-	
+
 	// Record the start of the loop (where body starts)
 	loop_start := len(c.instructions)
-	
+
 	// Compile the loop body first
 	body_result := COMPILE_NODE(c, body)
 	if body_result < 0 do return body_result
-	
+
 	// Free body result register if any
 	if body_result >= 0 do FREE_REG(c, body_result)
-	
+
 	// Compile the condition
 	cond_reg := COMPILE_NODE(c, condition)
 	if cond_reg < 0 do return cond_reg
-	
+
 	// If condition is false, jump back to loop start
 	// In Lua, repeat-until continues when condition is false
-	EMITABC(c, .TEST, u32(cond_reg), 0, 0)  // Test if condition is false
+	EMITABC(c, .TEST, u32(cond_reg), 0, 0) // Test if condition is false
 	back_jump := EMIT_JUMP(c)
 	PATCH_JUMP(c, back_jump, loop_start)
-	
+
 	// Free condition register
 	FREE_REG(c, cond_reg)
-	
+
 	return -1 // Repeat loops don't produce a value
 }
 
@@ -489,42 +489,118 @@ COMPILE_UBLOCK :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	return last_result
 }
 
+COMPILE_FOR :: proc(c: ^Compiler, nodeid: NODEID) -> int {
+	// Get loop variable name from node
+	var_name := c.nodes.name[nodeid]
+
+	// Get start, end, and body from children
+	start_val := c.nodes.first_child[nodeid]
+	end_val := c.nodes.next_sibling[start_val]
+	body := c.nodes.next_sibling[end_val]
+
+	if start_val == 0 || end_val == 0 || body == 0 {
+		return COMPILE_ERR(c, "FOR node missing required components")
+	}
+
+	// Allocate register for loop variable
+	var_reg := ALLOC_REG(c)
+	c.locals[var_name] = var_reg
+
+	// Compile start value
+	start_reg := COMPILE_NODE(c, start_val)
+	if start_reg < 0 do return start_reg
+
+	// Compile end value
+	end_reg := COMPILE_NODE(c, end_val)
+	if end_reg < 0 {
+		FREE_REG(c, start_reg)
+		return end_reg
+	}
+
+	// Default step is 1
+	step_reg := ALLOC_REG(c)
+	one_const := ADD_CONST(c, 1.0)
+	EMITABX(c, .LOADK, u32(step_reg), one_const)
+
+	// Initialize loop variable
+	EMITABC(c, .MOVE, u32(var_reg), u32(start_reg), 0)
+
+	// Record loop start for jump back
+	loop_start := len(c.instructions)
+
+	// Check if loop variable <= end value (for positive step)
+	// This is a simplified version - real Lua for loops are more complex
+	EMITABC(c, .LE, 0, u32(var_reg), u32(end_reg))
+
+	// Jump to end if condition is false
+	exit_jump := EMIT_JUMP(c)
+
+	// Compile loop body
+	body_result := COMPILE_NODE(c, body)
+	if body_result < 0 {
+		FREE_REG(c, start_reg)
+		FREE_REG(c, end_reg)
+		FREE_REG(c, step_reg)
+		return body_result
+	}
+
+	// Free body result register if any
+	if body_result >= 0 do FREE_REG(c, body_result)
+
+	// Increment loop variable: var = var + step
+	EMITABC(c, .ADD, u32(var_reg), u32(var_reg), u32(step_reg))
+
+	// Jump back to condition check
+	back_jump := EMIT_JUMP(c)
+	PATCH_JUMP(c, back_jump, loop_start)
+
+	// Patch exit jump to here
+	PATCH_JUMP(c, exit_jump, len(c.instructions))
+
+	// Clean up
+	FREE_REG(c, start_reg)
+	FREE_REG(c, end_reg)
+	FREE_REG(c, step_reg)
+
+	return -1 // For loops don't produce a value
+}
+
 COMPILE_WHILE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	// Get condition and body
 	condition := c.nodes.first_child[nodeid]
 	body := c.nodes.next_sibling[condition]
-	
+
 	if condition == 0 || body == 0 {
 		return COMPILE_ERR(c, "WHILE node missing condition or body")
 	}
-	
+
 	// Record the start of the loop (where condition is evaluated)
 	loop_start := len(c.instructions)
-	
+
 	// Compile the condition
 	cond_reg := COMPILE_NODE(c, condition)
 	if cond_reg < 0 do return cond_reg
-	
+
 	// If condition is false, jump to end of loop
 	exit_jump := EMIT_JUMP(c)
-	
+
 	// Free condition register
 	FREE_REG(c, cond_reg)
-	
+
 	// Compile the loop body
 	body_result := COMPILE_NODE(c, body)
 	if body_result < 0 do return body_result
-	
+
 	// Free body result register if any
 	if body_result >= 0 do FREE_REG(c, body_result)
-	
+
 	// Jump back to condition evaluation
 	back_jump := EMIT_JUMP(c)
 	PATCH_JUMP(c, back_jump, loop_start)
-	
+
 	// Patch the exit jump to jump to here (after the loop)
 	PATCH_JUMP(c, exit_jump, len(c.instructions))
-	
+
 	return -1 // While loops don't produce a value
 }
 

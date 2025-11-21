@@ -36,7 +36,7 @@ Opcodes :: enum u32 {
 	JMP, // 20
 	EQ,
 	LT,
-	LE,
+	LE, // 23
 	TEST,
 	CALL,
 	TAILCALL,
