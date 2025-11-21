@@ -55,8 +55,8 @@ Opcodes :: enum byte {
 // OP | A | sBx
 // Each defn set {Move, 2|0|0}
 Definition :: struct {
-	name:  string,
-	width: Format,
+	name:   string,
+	format: Format,
 }
 Format :: enum {
 	FORMAT_ABC,
@@ -115,33 +115,56 @@ LOOKUP :: proc(op: Opcodes) -> (Definition, bool) {
 	if def.name == "" do return Definition{}, false
 	return def, true
 }
-// MAKE_INSTRUCTION :: proc(
-// 	allocator := context.allocator,
-// 	op: Opcodes,
-// 	operands: ..int,
-// ) -> (i: Instructions) {
-// 	def, ok := LOOKUP(op)
-// 	if !ok do return nil
-// 	inst_len := 1
-// 	if len(def.width) > 0 {
-// 		for w in def.width {
-// 			inst_len += w
-// 		}
-// 	}
-// 	i, err := make(Instructions, 0, allocator)
-// 	ensure(err == nil)
-// 	errr := resize(&instruction, inst_len)
-// 	ensure(errr == nil)
-// 	instruction[0] = u8(op)
-// 	offset := 1
-// 	for o, i in operands {
-// 		width := def.width[i]
-// 		switch width {
-// 		case 3:
-// 		case 2:
-// 		case 1:
-// 		}
-// 	}
-// 	return
-// }
+MAKE_ABC :: proc(op, a, b, c: u32) -> Instruction {
+	if op > MASK_OP || a > MASK_A || b > MASK_B || c > MASK_C do panic("field out of range @MAKE_ABC")
+	return(
+		Instruction((op & MASK_OP) << POS_OP) |
+		Instruction((a & MASK_A) << POS_A) |
+		Instruction((c & MASK_C) << POS_C) |
+		Instruction((b & MASK_B) << POS_B) \
+	)
+}
+MAKE_ABX :: proc(op, a, bx: u32) -> Instruction {
+	if op > MASK_OP || a > MASK_A || bx > MASK_Bx do panic("field out of range @MAKE_ABX")
+	return(
+		Instruction((op & MASK_OP) << POS_OP) |
+		Instruction((a & MASK_A) << POS_A) |
+		Instruction((bx & MASK_Bx) << POS_C) \
+	)
+}
+MAKE_ASBX :: proc(op, a: u32, sbx: i32) -> Instruction {
+	biased := u32(sbx + i32(BxBIAS))
+	return MAKE_ABX(op, a, biased)
+}
+DECODE_ABC :: proc(i: Instruction) -> (op, a, b, c: u32) {
+	op = u32((i >> POS_OP) & Instruction(MASK_OP))
+	a = u32((i >> POS_A) & Instruction(MASK_A))
+	c = u32((i >> POS_C) & Instruction(MASK_C))
+	b = u32((i >> POS_B) & Instruction(MASK_B))
+	return
+}
+DECODE_ABX :: proc(i: Instruction) -> (op, a, bx: u32) {
+	op = u32((i >> POS_OP) & Instruction(MASK_OP))
+	a = u32((i >> POS_A) & Instruction(MASK_A))
+	bx = u32((i >> POS_C) & Instruction(MASK_Bx))
+	return
+}
+DECODE_ASBX :: proc(i: Instruction) -> (u32, u32, i32) {
+	op, a, bx := DECODE_ABX(i)
+	sbx := i32(bx) - i32(BxBIAS)
+	return op, a, sbx
+}
+MAKE_INSTRUCTION :: proc(op: Opcodes, operands: ..int) -> Instruction {
+	def, ok := LOOKUP(op)
+	if !ok do return 0
+	switch def.format {
+	case .FORMAT_ABC:
+		return MAKE_ABC(u32(op), u32(operands[0]), u32(operands[1]), u32(operands[2]))
+	case .FORMAT_ABx:
+		return MAKE_ABX(u32(op), u32(operands[0]), u32(operands[1]))
+	case .FORMAT_AsBx:
+		return MAKE_ASBX(u32(op), u32(operands[0]), i32(operands[1]))
+	}
+	return 0
+}
 
