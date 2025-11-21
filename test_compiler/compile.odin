@@ -93,9 +93,8 @@ test_function :: proc(t: ^testing.T) {
 	c := NEW_COMPILER(&p, varena)
 	COMPILE_NODE(c, nodeid)
 	insts := c.instructions[:]
-	context.logger.lowest_level = .Debug
-	for i in insts {
-		log.debugf("op: %v, a: %v, b: %v, c: %v", DECODE_ABC(i))
+	if len(insts) == 0 {
+		testing.fail(t)
 	}
 }
 

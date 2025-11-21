@@ -2,7 +2,6 @@ package ouau
 import "core:fmt"
 COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	kind := c.nodes.kind[nodeid]
-	// fmt.printf("Compiling node %d: %s\n", nodeid, kind)
 
 	switch kind {
 	case .BLOCK:
@@ -20,7 +19,7 @@ COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	case .TABLE:
 		unimplemented("TODO TABLE")
 	case .FUNCTION:
-		unimplemented("TODO FUNCTION")
+		return COMPILE_FUNCTION(c, nodeid)
 	case .UNARY:
 		return COMPILE_UNARY(c, nodeid)
 	case .UBLOCK:
@@ -264,5 +263,57 @@ COMPILE_RETURN :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	EMITABC(c, .RETURN, u32(value_reg), 2, 0)
 	FREE_REG(c, value_reg)
 	return -1
+}
+COMPILE_FUNCTION :: proc(c: ^Compiler, nodeid: NODEID) -> int {
+	// Create a new compiler for the function prototype
+	func_compiler := NEW_COMPILER(nil, context.allocator)
+	func_compiler.parent = c
+	func_compiler.nodes = c.nodes
+
+	// Get function name
+	func_name := c.nodes.name[nodeid]
+
+	// Get parameters and body
+	child := c.nodes.first_child[nodeid]
+	param_count := 0
+
+	// Process parameters (identifiers before the body)
+	for child != 0 && c.nodes.kind[child] == .IDENTIFIER {
+		param_name := c.nodes.name[child]
+		param_reg := ALLOC_REG(func_compiler)
+		func_compiler.locals[param_name] = param_reg
+		param_count += 1
+		child = c.nodes.next_sibling[child]
+	}
+
+	func_compiler.nparams = param_count
+
+	// The remaining child should be the function body
+	if child == 0 {
+		return COMPILE_ERR(c, "FUNCTION node missing body")
+	}
+
+	// Compile the function body
+	body_result := COMPILE_NODE(func_compiler, child)
+	// RETURN statements return -1, which is fine for function bodies
+	// Only treat as error if it's a different negative value
+	if body_result < -1 do return body_result
+
+	// Add return instruction at the end if not already present
+	EMITABC(func_compiler, .RETURN, 0, 1, 0)
+
+	// Add function prototype to the parent's prototypes
+	proto_idx := u32(len(c.prototypes))
+	append(&c.prototypes, func_compiler)
+
+	// Create closure in parent
+	dest := ALLOC_REG(c)
+	EMITABX(c, .CLOSURE, u32(dest), proto_idx)
+
+	// For now, also store the function as a global
+	func_const_idx := ADD_CONST(c, func_name)
+	EMITABX(c, .SETGLOBAL, u32(dest), func_const_idx)
+
+	return dest
 }
 
