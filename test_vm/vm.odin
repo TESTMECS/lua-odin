@@ -11,7 +11,7 @@ config := vm.VM_Config {
 	call_depth   = 32,
 	gc_threshold = 1024 * 1024,
 	max_threads  = 4,
-	debug_level  = 1,
+	debug_level  = 2,
 	trace_gc     = true,
 	trace_stack  = false,
 }
