@@ -16,6 +16,7 @@ import "core:mem"
 	 <@Thread, @ThreadState, @ThreadStatus|Threads State.>
 */
 STACK_LIMIT :: 1024 * 1024
+
 GlobalState :: struct {
 	thread:       ^ThreadState,
 	registry:     ^Table,
@@ -26,6 +27,8 @@ GlobalState :: struct {
 	builtins:     [dynamic]^Table, // builtin functions
 	gc_threshold: int,
 }
+
+@(require_results)
 NEW_GLOBAL_STATE :: proc(allocator := context.allocator) -> ^GlobalState {
 	gs := new(GlobalState, allocator)
 	gs.builtins = make([dynamic]^Table, allocator)
@@ -38,6 +41,7 @@ NEW_GLOBAL_STATE :: proc(allocator := context.allocator) -> ^GlobalState {
 	gs.gc_threshold = 1024 * 1024
 	return gs
 }
+
 StringTable :: struct {
 	hash:  [dynamic]^String,
 	size:  int,
@@ -63,6 +67,7 @@ Compiler :: struct {
 	prototypes:   [dynamic]^Prototype, // nested function prototypes
 	parent:       ^Prototype, // upvalue resolution
 }
+@(require_results)
 NEW_COMPILER :: proc(bytecode: ^NODES, allocator := context.allocator) -> ^Compiler {
 	c := new(Compiler, allocator)
 	c.nodes = bytecode
@@ -114,6 +119,7 @@ GC_STATE :: enum u8 {
 	MARK,
 	SWEEP,
 }
+@(require_results)
 NEW_GC_HEAP :: proc(allocator := context.allocator) -> ^GC_HEAP {
 	heap := new(GC_HEAP, allocator)
 	heap.young = make([dynamic]^GCObject, allocator)
@@ -131,11 +137,13 @@ VMFrame :: struct {
 	num_results: int,
 	tail_calls:  int,
 }
+
 CallInfo :: struct {
 	func:     ^Closure,
 	base:     int,
 	saved_pc: int,
 }
+
 VM :: struct {
 	global_state:    ^GlobalState,
 	current_thread:  ^ThreadState,
@@ -147,6 +155,7 @@ VM :: struct {
 	gc_running:      bool,
 	pause_threshold: int,
 }
+@(require_results)
 NEW_VM :: proc(config: ^VM_Config, allocator := context.allocator) -> ^VM {
 	vm := new(VM, allocator)
 	vm.config = config
@@ -188,7 +197,7 @@ ThreadState :: struct {
 	base:        int,
 	call_stack:  [dynamic]VMFrame,
 }
-
+@(require_results)
 NEW_THREAD :: proc(
 	gs: ^GlobalState,
 	stack_size: int,

@@ -1,6 +1,7 @@
 package test_vm
 
 import vm "../"
+import "core:log"
 import "core:mem/virtual"
 import "core:testing"
 
@@ -21,17 +22,29 @@ test_vm :: proc(t: ^testing.T) {
 	defer free_all(context.allocator)
 	varena := virtual.arena_allocator(v)
 
-	input := `local a = 1; return a;`
+	input := `
+	do
+		local a = 1;
+		return a;
+	end
+	`
+
 
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
+
 	new_nodes := new_clone(p.nodes, varena)
 	c := NEW_COMPILER(new_nodes, varena)
+
 	COMPILE_NODE(c, nodeid)
 	insts := c.instructions[:]
+
 	if len(insts) == 0 {
 		testing.fail(t)
 	}
+
+	vm := NEW_VM(&config)
+	log.info("VM %v", vm)
 
 
 }

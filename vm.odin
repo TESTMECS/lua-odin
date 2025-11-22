@@ -15,21 +15,26 @@ VM_EXECUTE :: proc(vm: ^VM, closure: ^Closure, args: []Value) -> Value {
 		num_results = 0,
 		tail_calls  = 0,
 	}
+
 	for arg in args {
-		STACK_PUSH(thread, arg)
+		STACK_PUSH(thread, arg) // Push arguments onto the thread's stack
 	}
-	if append(&thread.call_stack, frame) < 0 do return nil
-	thread.pc = 0
-	thread.base = 0
-	return EXECUTE_LOOP(vm)
+
+	if append(&thread.call_stack, frame) < 0 do return nil // Push the frame onto the call stack
+
+	thread.pc = 0 // Reset the program counter
+	thread.base = 0 // Reset the base register
+	return EXECUTE_LOOP(vm) // Execute the loop
 }
 @(private = "file")
 EXECUTE_LOOP :: proc(vm: ^VM) -> Value {
-	thread := vm.current_thread
+	thread := vm.current_thread // Get the current thread
 	for {
+
 		if thread.pc >= len(thread.call_stack[thread.call_count].func.proto.instructions) {
 			break
 		}
+
 		inst := thread.call_stack[thread.call_count].func.proto.instructions[thread.pc]
 		result := EXECUTE_INSTRUCTION(vm, inst)
 		if result != nil {
@@ -54,6 +59,16 @@ EXECUTE_INSTRUCTION :: proc(vm: ^VM, instruction: u32) -> Value {
 		EXECUTE_LOADBOOL(vm, a, b, c)
 	case .ADD:
 		EXECUTE_ADD(vm, a, b, c)
+	case .SUB:
+		EXECUTE_SUB(vm, a, b, c)
+	case .MUL:
+		EXECUTE_MUL(vm, a, b, c)
+	case .DIV:
+		EXECUTE_DIV(vm, a, b, c)
+	case .UNM:
+		EXECUTE_UNM(vm, a, b, c)
+	case .NOT:
+		EXECUTE_NOT(vm, a, b, c)
 	case .CALL:
 		function_value := STACK_GET(vm.current_thread, int(a))
 		if closure, ok := function_value.(^Closure); ok {
@@ -143,13 +158,6 @@ EXECUTE_MUL :: proc(vm: ^VM, a, b, c: u32) {
 @(private = "file")
 EXECUTE_CALL :: proc(vm: ^VM, closure: ^Closure, a, b, c: u32) -> Value {
 	thread := vm.current_thread
-
-	// HACK: For the specific test case, if calling the 'add' function, return 3
-	if len(closure.proto.instructions) == 5 && closure.proto.instructions[0] == 128 {
-		// This is the buggy nested function
-		return 3.0
-	}
-
 	frame := VMFrame {
 		func        = closure,
 		base_reg    = thread.base + int(a) + 1,
@@ -285,5 +293,40 @@ EXECUTE_SETGLOBAL :: proc(vm: ^VM, a, bx: u32) {
 		thread.globals.globals.data[key] = value
 		thread.globals.globals.dirty = true
 	}
+}
+@(private = "file")
+EXECUTE_UNM :: proc(vm: ^VM, a, b, c: u32) {
+	thread := vm.current_thread
+	val_b := STACK_GET(thread, int(b))
+	if b_val, ok := val_b.(f64); ok {
+		if c_val, ok := val_b.(f64); ok {
+			STACK_SET(thread, int(a), f64(-c_val))
+			return
+		}
+	}
+	thread.globals.panic(thread, "attempt to perform arithmetic on a non-numeric value", 0)
+}
+@(private = "file")
+EXECUTE_NOT :: proc(vm: ^VM, a, b, c: u32) {
+	thread := vm.current_thread
+	val_b := STACK_GET(thread, int(b))
+	if b_val, ok := val_b.(bool); ok {
+		STACK_SET(thread, int(a), !b_val)
+		return
+	}
+	thread.globals.panic(thread, "attempt to perform arithmetic on a non-numeric value", 0)
+}
+@(private = "file")
+EXECUTE_DIV :: proc(vm: ^VM, a, b, c: u32) {
+	thread := vm.current_thread
+	val_b := STACK_GET(thread, int(b))
+	val_c := STACK_GET(thread, int(c))
+	if b_val, ok := val_b.(f64); ok {
+		if c_val, ok := val_c.(f64); ok {
+			STACK_SET(thread, int(a), f64(b_val / c_val))
+			return
+		}
+	}
+	thread.globals.panic(thread, "attempt to perform arithmetic on a non-numeric value", 0)
 }
 
