@@ -5,21 +5,27 @@ import "core:math"
 	 Copyright(C) 2025 TESTMEE
 	 This file defines the helper functions for ./opcodes.odin
  */
-// bx POS_C .. POS_B + SIZE_B - 1 (14-31)
+
+// (1 << n) - 1
 MASK :: proc(n: int) -> u32 {return (u32(1) << u32(n)) - u32(1)}
+
 MASK_OP := MASK(SIZE_OP)
 MASK_A := MASK(SIZE_A)
 MASK_B := MASK(SIZE_B)
 MASK_C := MASK(SIZE_C)
 MASK_Bx := MASK(SIZE_Bx)
+
+// (1 << bx - 1) - 1 / (2^17) - 1
 BxBIAS := (1 << (SIZE_Bx - 1)) - 1 / math.pow2_f64(17) - 1
+
 LOOKUP :: proc(op: Opcodes) -> (Definition, bool) {
-	def := Definition__Table__[op]
+	def := Definition__Table__[op] // Look in definition table from ./opcodes.odin
 	if def.name == "" do return Definition{}, false
 	return def, true
 }
 
 MAKE_ABC :: proc(operation, register_a, register_b, register_c: u32) -> u32 {
+	// ('Arg[i] & MASK_'ARG[i]) << POS_'ARG[i]) 'bitwise-or ...
 	if operation > MASK_OP || register_a > MASK_A || register_b > MASK_B || register_c > MASK_C do panic("field out of range @MAKE_ABC")
 	return(
 		u32((operation & MASK_OP) << POS_OP) |
