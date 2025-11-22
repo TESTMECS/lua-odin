@@ -23,6 +23,7 @@ GlobalState :: struct {
 	string_table: StringTable,
 	gc:           ^GC_HEAP,
 	globals:      ^Table,
+	debug_level:  int,
 	panic:        proc(state: ^ThreadState, msg: string, level: int),
 	builtins:     [dynamic]^Table, // builtin functions
 	gc_threshold: int,
@@ -41,7 +42,6 @@ NEW_GLOBAL_STATE :: proc(allocator := context.allocator) -> ^GlobalState {
 	gs.gc_threshold = 1024 * 1024
 	return gs
 }
-
 StringTable :: struct {
 	hash:  [dynamic]^String,
 	size:  int,
@@ -171,6 +171,10 @@ VM_Config :: struct {
 	call_depth:   int,
 	gc_threshold: int,
 	max_threads:  int,
+	// Debug
+	debug_level:  int, // 0 = off, 1 = basic, 2 = full, 3 = trace
+	trace_gc:     bool,
+	trace_stack:  bool,
 }
 
 Thread :: struct {

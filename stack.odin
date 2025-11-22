@@ -1,5 +1,6 @@
 package ouau
 import "core:fmt"
+import "core:log"
 /*
 	 ./stack.odin
 	 Copyright(C) 2025 TESTMEE
@@ -34,6 +35,7 @@ STACK_GET :: proc(thread: ^ThreadState, idx: int) -> Value {
 }
 STACK_SET :: proc(thread: ^ThreadState, idx: int, value: Value) {
 	actual_idx := thread.base + idx
+
 	if actual_idx < 0 || actual_idx >= len(thread.stack) {
 		fmt.eprintf(
 			"SEGFAULT: STACK_SET idx %d out of bounds [0, %d]\n",
@@ -42,8 +44,12 @@ STACK_SET :: proc(thread: ^ThreadState, idx: int, value: Value) {
 		)
 		panic("stack bounds error")
 	}
+
+	if thread.globals.debug_level >= 2 do log.debugf("STACK_SET: idx %d, value %v <. Was %v .>", actual_idx, value, thread.stack[actual_idx])
+
 	thread.stack[actual_idx] = value
 	if actual_idx >= thread.top {
+		if thread.globals.debug_level >= 2 do log.debugf("STACK_SET: top = %d", actual_idx)
 		thread.top = actual_idx + 1
 	}
 }

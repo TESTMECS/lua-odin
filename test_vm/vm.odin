@@ -11,7 +11,11 @@ config := vm.VM_Config {
 	call_depth   = 32,
 	gc_threshold = 1024 * 1024,
 	max_threads  = 4,
+	debug_level  = 1,
+	trace_gc     = true,
+	trace_stack  = false,
 }
+
 @(test)
 test_block :: proc(t: ^testing.T) {
 	using vm
@@ -68,6 +72,7 @@ test_block :: proc(t: ^testing.T) {
 	result_value := VM_EXECUTE(vm, my_closure, {})
 	log.info("Result value: %v", result_value)
 }
+
 @(test)
 test_function :: proc(t: ^testing.T) {
 	using vm

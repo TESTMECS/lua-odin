@@ -1,9 +1,134 @@
 package ouau
+import "core:fmt"
+import "core:log"
 /*
 	 ./vm.odin
 	 Copyright(C) 2025 TESTMEE
 	 Defines the VM functions for Ouau.
 */
+
+@(private = "file")
+DEBUG_VM_STATE :: proc(vm: ^VM, msg: string) {
+	thread := vm.current_thread
+	log.infof("VM State [%s]:", msg)
+	log.infof("  PC: %d, Base: %d, Top: %d", thread.pc, thread.base, thread.top)
+	log.infof(
+		"  Call Count: %d, Stack Size: %d/%d",
+		thread.call_count,
+		thread.top,
+		len(thread.stack),
+	)
+	log.infof(
+		"  GC State: %v, Young: %d, Old: %d",
+		vm.global_state.gc.state,
+		len(vm.global_state.gc.young),
+		len(vm.global_state.gc.old),
+	)
+}
+
+@(private = "file")
+DEBUG_STACK :: proc(vm: ^VM, msg: string) {
+	thread := vm.current_thread
+	log.infof("Stack [%s]:", msg)
+	log.infof("  Contents (top %d):", thread.top)
+	for i in 0 ..< thread.top {
+		val := thread.stack[i]
+		log.infof("    [%d]: %v", i, val)
+	}
+}
+
+@(private = "file")
+DEBUG_REGISTERS :: proc(vm: ^VM, msg: string, start: int, count: int) {
+	thread := vm.current_thread
+	log.infof("Registers [%s] (base %d, count %d):", msg, thread.base, count)
+	for i in start ..< start + count {
+		if i < thread.top {
+			val := thread.stack[i]
+			log.infof("    R%d: %v", i - thread.base, val)
+		}
+		 else {
+			log.infof("    R%d: <uninitialized>", i - thread.base)
+		}
+	}
+}
+@(private = "file")
+DEBUG_CALL_STACK :: proc(vm: ^VM, msg: string) {
+	thread := vm.current_thread
+	log.infof("Call Stack [%s] (depth %d):", msg, thread.call_count)
+	for frame, i in thread.call_stack {
+		log.infof(
+			"  Frame %d: func=%p, base=%d, pc=%d",
+			i,
+			frame.func,
+			frame.base_reg,
+			frame.saved_pc,
+		)
+	}
+}
+@(private = "file")
+DEBUG_GC_STATS :: proc(vm: ^VM, msg: string) {
+	gc := vm.global_state.gc
+	log.infof("GC [%s]:", msg)
+	log.infof("  State: %v", gc.state)
+	log.infof("  Young Objects: %d, Old Objects: %d", len(gc.young), len(gc.old))
+	log.infof("  Remembered Set: %d, Gray Queue: %d", len(gc.remembered_set), len(gc.gray))
+
+	// Log object types if needed
+	young_count := make(map[GCType]int, vm.allocator)
+	old_count := make(map[GCType]int, vm.allocator)
+
+	for obj in gc.young {
+		young_count[obj.header.gctype] += 1
+	}
+	for obj in gc.old {
+		old_count[obj.header.gctype] += 1
+	}
+
+	log.infof("  Young by type: %v", young_count)
+	log.infof("  Old by type: %v", old_count)
+}
+@(private = "file")
+DEBUG_OBJECT :: proc(vm: ^VM, msg: string, obj: ^GCObject) {
+	log.infof(
+		"Object [%s]: %p (type=%v, marked=%v, gen=%d)",
+		msg,
+		obj,
+		obj.header.gctype,
+		obj.header.marked,
+		obj.header.generation,
+	)
+}
+@(private = "file")
+VM_ERROR :: proc(vm: ^VM, thread: ^ThreadState, msg: string, details: ..any) {
+	log.errorf("VM Error: %s", msg)
+	if len(details) > 0 {
+		for i, detail in details {
+			log.errorf("  Detail %d: %v", i, detail)
+		}
+	}
+
+	// Enhanced panic with context
+	if thread.globals.panic != nil {
+		thread.globals.panic(thread, msg, 1)
+	}
+	 else {
+		fmt.printf("PANIC: %s\n", msg)
+		panic(msg)
+	}
+}
+@(private = "file")
+DEBUG_INSTRUCTION :: proc(vm: ^VM, inst: u32, result: Value) {
+	op, a, b, c := DECODE_ABC(inst)
+	op_name := Opcodes(op)
+	log.debugf("Executing: %s (op=%d, a=%d, b=%d, c=%d)", op_name, op, a, b, c)
+	if result != nil {
+		log.debugf("  Result: %v", result)
+	}
+	if vm.config.debug_level >= 2 {
+		// Log state after instruction
+		DEBUG_REGISTERS(vm, "After", 0, 8)
+	}
+}
 @(require_results)
 VM_EXECUTE :: proc(vm: ^VM, closure: ^Closure, args: []Value) -> Value {
 	thread := vm.current_thread // Get current thread
@@ -26,21 +151,39 @@ VM_EXECUTE :: proc(vm: ^VM, closure: ^Closure, args: []Value) -> Value {
 	thread.base = 0 // Reset the base register
 	return EXECUTE_LOOP(vm) // Execute the loop
 }
+
 @(private = "file")
 EXECUTE_LOOP :: proc(vm: ^VM) -> Value {
 	thread := vm.current_thread // Get the current thread
+	if vm.config.debug_level >= 1 {
+		DEBUG_VM_STATE(vm, "Starting Execution Loop")
+	}
+	instruction_count := 0
 	for {
-
 		if thread.pc >= len(thread.call_stack[thread.call_count].func.proto.instructions) {
+			if vm.config.debug_level >= 1 do log.infof("Execution Completed: %d instructions", instruction_count)
 			break
+		}
+
+		if vm.config.debug_level >= 2 {
+			DEBUG_CALL_STACK(vm, "Before instruction")
 		}
 
 		inst := thread.call_stack[thread.call_count].func.proto.instructions[thread.pc]
 		result := EXECUTE_INSTRUCTION(vm, inst)
+
+		if vm.config.debug_level >= 2 {
+			DEBUG_INSTRUCTION(vm, inst, result)
+		}
+
 		if result != nil {
+			if vm.config.debug_level >= 1 {
+				VM_ERROR(vm, thread, "Execution ERROR", result)
+			}
 			return result
 		}
 		thread.pc += 1
+		instruction_count += 1
 	}
 	return nil
 }
@@ -98,7 +241,10 @@ EXECUTE_INSTRUCTION :: proc(vm: ^VM, instruction: u32) -> Value {
 		op, a, bx := DECODE_ABX(instruction)
 		EXECUTE_SETGLOBAL(vm, a, bx)
 	case .LOADNIL:
-		return nil
+		thread := vm.current_thread
+		for i in int(a) ..< int(a) + int(b) + 1 {
+			STACK_SET(thread, i, nil)
+		}
 	case .GETUPVAL:
 		unimplemented("TODO")
 	case .SETUPVAL:
@@ -108,7 +254,9 @@ EXECUTE_INSTRUCTION :: proc(vm: ^VM, instruction: u32) -> Value {
 	case .SETTABLE:
 		unimplemented("TODO")
 	case .NEWTABLE:
-		unimplemented("TODO")
+		thread := vm.current_thread
+		table := NEW_TABLE(vm.allocator)
+		STACK_SET(thread, int(a), table)
 	case .SELF:
 		unimplemented("TODO")
 	case .CONCAT:
@@ -275,12 +423,6 @@ EXECUTE_JMP :: proc(vm: ^VM, a, b, c: u32) {
 EXECUTE_CLOSURE :: proc(vm: ^VM, a, bx: u32) {
 	thread := vm.current_thread
 	frame := thread.call_stack[thread.call_count]
-	if int(bx) >= len(frame.func.proto.proto) {
-		// This is a compiler bug - nested function shouldn't have CLOSURE
-		// For now, just ignore this instruction and set closure to nil
-		STACK_SET(thread, int(a), nil)
-		return
-	}
 	proto := frame.func.proto.proto[int(bx)]
 	if proto == nil {
 		thread.globals.panic(thread, "CLOSURE proto is nil", 0)
