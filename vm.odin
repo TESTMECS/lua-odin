@@ -47,7 +47,7 @@ EXECUTE_LOOP :: proc(vm: ^VM) -> Value {
 @(private = "file")
 EXECUTE_INSTRUCTION :: proc(vm: ^VM, instruction: u32) -> Value {
 	op, a, b, c := DECODE_ABC(instruction)
-	#partial switch Opcodes(op) {
+	switch Opcodes(op) {
 	case .MOVE:
 		EXECUTE_MOVE(vm, a, b, c)
 	case .LOADK:
@@ -57,6 +57,12 @@ EXECUTE_INSTRUCTION :: proc(vm: ^VM, instruction: u32) -> Value {
 		EXECUTE_CLOSURE(vm, a, bx)
 	case .LOADBOOL:
 		EXECUTE_LOADBOOL(vm, a, b, c)
+	case .EQ:
+		EXECUTE_EQ(vm, a, b, c)
+	case .LT:
+		EXECUTE_LT(vm, a, b, c)
+	case .LE:
+		EXECUTE_LE(vm, a, b, c)
 	case .ADD:
 		EXECUTE_ADD(vm, a, b, c)
 	case .SUB:
@@ -91,6 +97,40 @@ EXECUTE_INSTRUCTION :: proc(vm: ^VM, instruction: u32) -> Value {
 	case .SETGLOBAL:
 		op, a, bx := DECODE_ABX(instruction)
 		EXECUTE_SETGLOBAL(vm, a, bx)
+	case .LOADNIL:
+		return nil
+	case .GETUPVAL:
+		unimplemented("TODO")
+	case .SETUPVAL:
+		unimplemented("TODO")
+	case .GETTABLE:
+		unimplemented("TODO")
+	case .SETTABLE:
+		unimplemented("TODO")
+	case .NEWTABLE:
+		unimplemented("TODO")
+	case .SELF:
+		unimplemented("TODO")
+	case .CONCAT:
+		unimplemented("TODO")
+	case .POW:
+		unimplemented("TODO")
+	case .FORLOOP:
+		unimplemented("TODO")
+	case .TFORLOOP:
+		unimplemented("TODO")
+	case .TFORPREP:
+		unimplemented("TODO")
+	case .SETLIST:
+		unimplemented("TODO")
+	case .SETLISTO:
+		unimplemented("TODO")
+	case .CLOSE:
+		unimplemented("TODO")
+	case .TAILCALL:
+		unimplemented("TODO")
+	case .TEST:
+		unimplemented("TODO")
 	case:
 		return nil
 	}
@@ -191,11 +231,7 @@ EXECUTE_RETURN :: proc(vm: ^VM, a, b, c: u32) -> Value {
 		thread.base = frame.base_reg
 		thread.pc = frame.saved_pc // + 1
 		for result, i in results {
-			STACK_SET(
-				thread,
-				int(frame.func.proto.instructions[frame.saved_pc - 1] >> 8) & 0xFF + i,
-				result,
-			)
+			STACK_SET(thread, int(a) + i, result)
 		}
 	}
 	return nil
@@ -302,7 +338,7 @@ EXECUTE_UNM :: proc(vm: ^VM, a, b, c: u32) {
 		STACK_SET(thread, int(a), f64(-b_val))
 		return
 	}
-	thread.globals.panic(thread, "attempt to perform arithmetic on a non-numeric value", 0)
+	thread.globals.panic(thread, "attempt to preform logical operation on a non-numeric value", 0)
 }
 @(private = "file")
 EXECUTE_NOT :: proc(vm: ^VM, a, b, c: u32) {
@@ -322,6 +358,45 @@ EXECUTE_DIV :: proc(vm: ^VM, a, b, c: u32) {
 	if b_val, ok := val_b.(f64); ok {
 		if c_val, ok := val_c.(f64); ok {
 			STACK_SET(thread, int(a), f64(b_val / c_val))
+			return
+		}
+	}
+	thread.globals.panic(thread, "attempt to perform arithmetic on a non-numeric value", 0)
+}
+@(private = "file")
+EXECUTE_EQ :: proc(vm: ^VM, a, b, c: u32) {
+	thread := vm.current_thread
+	val_b := STACK_GET(thread, int(b))
+	val_c := STACK_GET(thread, int(c))
+	if b_val, ok := val_b.(f64); ok {
+		if c_val, ok := val_c.(f64); ok {
+			STACK_SET(thread, int(a), b_val == c_val)
+			return
+		}
+	}
+	thread.globals.panic(thread, "attempt to perform arithmetic on a non-numeric value", 0)
+}
+@(private = "file")
+EXECUTE_LT :: proc(vm: ^VM, a, b, c: u32) {
+	thread := vm.current_thread
+	val_b := STACK_GET(thread, int(b))
+	val_c := STACK_GET(thread, int(c))
+	if b_val, ok := val_b.(f64); ok {
+		if c_val, ok := val_c.(f64); ok {
+			STACK_SET(thread, int(a), b_val < c_val)
+			return
+		}
+	}
+	thread.globals.panic(thread, "attempt to perform arithmetic on a non-numeric value", 0)
+}
+@(private = "file")
+EXECUTE_LE :: proc(vm: ^VM, a, b, c: u32) {
+	thread := vm.current_thread
+	val_b := STACK_GET(thread, int(b))
+	val_c := STACK_GET(thread, int(c))
+	if b_val, ok := val_b.(f64); ok {
+		if c_val, ok := val_c.(f64); ok {
+			STACK_SET(thread, int(a), b_val <= c_val)
 			return
 		}
 	}

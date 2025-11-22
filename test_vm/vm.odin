@@ -43,10 +43,30 @@ test_vm :: proc(t: ^testing.T) {
 		testing.fail(t)
 	}
 
-	vm := NEW_VM(&config)
-	log.info("VM %v", vm)
+	vm: ^VM = NEW_VM(&config)
+	// log.info("VM %v", vm)
 
+	main_proto := Prototype {
+		header = GC_HEADER{marked = false, generation = 0, gctype = .PROTOTYPE},
+		instructions = insts,
+		constants = c.constants[:],
+		proto = c.prototypes[:],
+		upvalues = {},
+		max_stack = c.max_stack,
+		num_params = 0,
+	}
+	my_closure := new(Closure, varena)
+	my_closure.header = GC_HEADER {
+		marked     = false,
+		generation = 0,
+		gctype     = .CLOSURE,
+	}
+	my_closure.is_native = false
+	my_closure.proto = &main_proto
+	my_closure.upvalues = {}
 
+	result_value := VM_EXECUTE(vm, my_closure, {})
+	log.info("Result value: %v", result_value)
 }
 @(test)
 test_block :: proc(t: ^testing.T) {
