@@ -99,10 +99,10 @@ test_function :: proc(t: ^testing.T) {
 	// DUMP_AST(&p)
 	c := NEW_COMPILER(clone_nodes, varena)
 	COMPILE_NODE(c, nodeid)
-	// log.info("1. Compiler instructions: %v", c.instructions[:])
-	// log.info("2. Compiler constants: %v", c.constants[:])
-	// log.info("3. Compiler prototypes count: %d", len(c.prototypes))
-	// log.info("Compiler prototypes: %v", c.prototypes[:])
+	log.info("1. Compiler instructions: %v", c.instructions[:])
+	log.info("2. Compiler constants: %v", c.constants[:])
+	log.info("3. Compiler prototypes count: %d", len(c.prototypes))
+	log.info("Compiler prototypes: %v", c.prototypes[:])
 	insts := c.instructions[:]
 	if len(insts) == 0 {
 		testing.fail(t)
