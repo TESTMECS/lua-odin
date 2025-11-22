@@ -299,10 +299,8 @@ EXECUTE_UNM :: proc(vm: ^VM, a, b, c: u32) {
 	thread := vm.current_thread
 	val_b := STACK_GET(thread, int(b))
 	if b_val, ok := val_b.(f64); ok {
-		if c_val, ok := val_b.(f64); ok {
-			STACK_SET(thread, int(a), f64(-c_val))
-			return
-		}
+		STACK_SET(thread, int(a), f64(-b_val))
+		return
 	}
 	thread.globals.panic(thread, "attempt to perform arithmetic on a non-numeric value", 0)
 }
