@@ -4,6 +4,7 @@ package ouau
 	 Copyright(C) 2025 TESTMEE
 	 Defines the VM functions for Ouau.
 */
+@(require_results)
 VM_EXECUTE :: proc(vm: ^VM, closure: ^Closure, args: []Value) -> Value {
 	thread := vm.current_thread
 	thread.call_count = 0
@@ -22,6 +23,7 @@ VM_EXECUTE :: proc(vm: ^VM, closure: ^Closure, args: []Value) -> Value {
 	thread.base = 0
 	return EXECUTE_LOOP(vm)
 }
+@(private = "file")
 EXECUTE_LOOP :: proc(vm: ^VM) -> Value {
 	thread := vm.current_thread
 	for {
@@ -37,6 +39,7 @@ EXECUTE_LOOP :: proc(vm: ^VM) -> Value {
 	}
 	return nil
 }
+@(private = "file")
 EXECUTE_INSTRUCTION :: proc(vm: ^VM, instruction: u32) -> Value {
 	op, a, b, c := DECODE_ABC(instruction)
 	#partial switch Opcodes(op) {
@@ -78,16 +81,19 @@ EXECUTE_INSTRUCTION :: proc(vm: ^VM, instruction: u32) -> Value {
 	}
 	return nil
 }
+@(private = "file")
 EXECUTE_MOVE :: proc(vm: ^VM, a, b, c: u32) {
 	thread := vm.current_thread
 	STACK_SET(thread, int(a), STACK_GET(thread, int(b)))
 }
+@(private = "file")
 EXECUTE_LOADK :: proc(vm: ^VM, a, b, c: u32) {
 	thread := vm.current_thread
 	frame := thread.call_stack[thread.call_count]
 	constant := frame.func.proto.constants[int(b)]
 	STACK_SET(thread, int(a), constant)
 }
+@(private = "file")
 EXECUTE_LOADBOOL :: proc(vm: ^VM, a, b, c: u32) {
 	thread := vm.current_thread
 	STACK_SET(thread, int(a), b != 0)
@@ -95,6 +101,7 @@ EXECUTE_LOADBOOL :: proc(vm: ^VM, a, b, c: u32) {
 		thread.pc += 1
 	}
 }
+@(private = "file")
 EXECUTE_ADD :: proc(vm: ^VM, a, b, c: u32) {
 	thread := vm.current_thread
 	val_b := STACK_GET(thread, int(b))
@@ -107,6 +114,7 @@ EXECUTE_ADD :: proc(vm: ^VM, a, b, c: u32) {
 	}
 	thread.globals.panic(thread, "attempt to perform arithmetic on a non-numeric value", 0)
 }
+@(private = "file")
 EXECUTE_SUB :: proc(vm: ^VM, a, b, c: u32) {
 	thread := vm.current_thread
 	val_b := STACK_GET(thread, int(b))
@@ -119,6 +127,7 @@ EXECUTE_SUB :: proc(vm: ^VM, a, b, c: u32) {
 	}
 	thread.globals.panic(thread, "attempt to perform arithmetic on a non-numeric value", 0)
 }
+@(private = "file")
 EXECUTE_MUL :: proc(vm: ^VM, a, b, c: u32) {
 	thread := vm.current_thread
 	val_b := STACK_GET(thread, int(b))
@@ -131,6 +140,7 @@ EXECUTE_MUL :: proc(vm: ^VM, a, b, c: u32) {
 	}
 	thread.globals.panic(thread, "attempt to perform arithmetic on a non-numeric value", 0)
 }
+@(private = "file")
 EXECUTE_CALL :: proc(vm: ^VM, closure: ^Closure, a, b, c: u32) -> Value {
 	thread := vm.current_thread
 
@@ -153,6 +163,7 @@ EXECUTE_CALL :: proc(vm: ^VM, closure: ^Closure, a, b, c: u32) -> Value {
 	thread.pc = 0
 	return nil
 }
+@(private = "file")
 EXECUTE_RETURN :: proc(vm: ^VM, a, b, c: u32) -> Value {
 	thread := vm.current_thread
 	if len(thread.call_stack) <= 1 {
@@ -181,6 +192,7 @@ EXECUTE_RETURN :: proc(vm: ^VM, a, b, c: u32) -> Value {
 	}
 	return nil
 }
+@(private = "file")
 EXECUTE_GETTABLE :: proc(vm: ^VM, a, b, c: u32) {
 	thread := vm.current_thread
 	table_val := STACK_GET(thread, int(b))
@@ -195,6 +207,7 @@ EXECUTE_GETTABLE :: proc(vm: ^VM, a, b, c: u32) {
 		}
 	}
 }
+@(private = "file")
 EXECUTE_SETTABLE :: proc(vm: ^VM, a, b, c: u32) {
 	thread := vm.current_thread
 	table_val := STACK_GET(thread, int(a))
@@ -206,6 +219,7 @@ EXECUTE_SETTABLE :: proc(vm: ^VM, a, b, c: u32) {
 		table.dirty = true
 	}
 }
+@(private = "file")
 EXECUTE_JMP :: proc(vm: ^VM, a, b, c: u32) {
 	thread := vm.current_thread
 	op, a, sbx := DECODE_ASBX(
@@ -213,6 +227,7 @@ EXECUTE_JMP :: proc(vm: ^VM, a, b, c: u32) {
 	)
 	thread.pc += int(sbx) - 1
 }
+@(private = "file")
 EXECUTE_CLOSURE :: proc(vm: ^VM, a, bx: u32) {
 	thread := vm.current_thread
 	frame := thread.call_stack[thread.call_count]
@@ -232,6 +247,7 @@ EXECUTE_CLOSURE :: proc(vm: ^VM, a, bx: u32) {
 	closure.is_native = false
 	STACK_SET(thread, int(a), closure)
 }
+@(private = "file")
 EXECUTE_GETGLOBAL :: proc(vm: ^VM, a, bx: u32) {
 	thread := vm.current_thread
 	frame := thread.call_stack[thread.call_count]
@@ -257,6 +273,7 @@ EXECUTE_GETGLOBAL :: proc(vm: ^VM, a, bx: u32) {
 		STACK_SET(thread, int(a), nil)
 	}
 }
+@(private = "file")
 EXECUTE_SETGLOBAL :: proc(vm: ^VM, a, bx: u32) {
 	thread := vm.current_thread
 	frame := thread.call_stack[thread.call_count]
