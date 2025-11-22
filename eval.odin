@@ -7,21 +7,20 @@ import "core:strings"
 	 ./eval.odin
 	 Copyright(C) 2025 TESTMEE
 	 Defines the interpreter functions for Ouau.
-	 <@Frame, @Interpreter, @Environment|Environments.>
+	 <@Frame, @Environment, @Interpreter| Frame manages the call stack for the current environment in the Interpreter.>
 */
 Frame :: struct {
 	env:         ^Environment,
 	return_addr: NODEID,
 	result:      Value,
 }
-
 Interpreter :: struct {
 	globals:    map[string]Value,
 	current:    ^Environment,
 	nodes:      ^NODES,
 	call_stack: [dynamic]^Frame,
 }
-
+@(require_results)
 NEW_INTERPRETER :: proc(nodes: ^NODES, allocator := context.allocator) -> ^Interpreter {
 	i := new(Interpreter, allocator)
 	i.nodes = nodes
@@ -31,26 +30,14 @@ NEW_INTERPRETER :: proc(nodes: ^NODES, allocator := context.allocator) -> ^Inter
 	INIT_BUILTINS(i)
 	return i
 }
-INTERPRET :: proc(i: ^Interpreter, root: NODEID) -> Value {
-	child := i.nodes.first_child[root]
-	last_val: Value
-	for child != 0 {
-		v := EVAL(i, child)
-		if ret, ok := v.(^ReturnValue); ok {
-			return ret.value
-		}
-		last_val = v
-		child = i.nodes.next_sibling[child]
-	}
-	return last_val
-}
-INIT_BUILTINS :: proc(i: ^Interpreter) {
+@(private = "file")
+INIT_BUILTINS :: proc(interpreter: ^Interpreter) {
 	print_fn := new(Closure)
 	print_fn.is_native = true
 	print_fn.native_proc = BUILTIN_PRINT
-	i.globals["print"] = print_fn
+	interpreter.globals["print"] = print_fn
 }
-
+@(private = "file")
 BUILTIN_PRINT :: proc(args: []Value) -> Value {
 	for arg in args {
 		fmt.print(arg)
@@ -58,51 +45,64 @@ BUILTIN_PRINT :: proc(args: []Value) -> Value {
 	fmt.println()
 	return nil
 }
-
+@(require_results)
+INTERPRET :: proc(interpreter: ^Interpreter, root: NODEID) -> Value {
+	child := interpreter.nodes.first_child[root]
+	last_val: Value
+	for child != 0 {
+		v := EVAL(interpreter, child)
+		if ret, ok := v.(^ReturnValue); ok {
+			return ret.value
+		}
+		last_val = v
+		child = interpreter.nodes.next_sibling[child]
+	}
+	return last_val
+}
 Environment :: struct {
 	values: map[string]Value,
 	sorted: [dynamic]string,
 	dirty:  bool,
 	outer:  ^Environment,
 }
+@(private = "file")
 NEW_ENVIRONMENT :: proc(outer: ^Environment, allocator := context.allocator) -> ^Environment {
 	env := new(Environment, allocator)
 	env.outer = outer
 	env.values = make(map[string]Value, allocator)
 	return env
 }
-
+@(private = "file")
 ENV_GET :: proc(env: ^Environment, name: string) -> (Value, bool) {
-	e := env
-	for e != nil {
-		if v, ok := e.values[name]; ok {
+	my_env := env // assign to local to avoid shadowing.
+	for my_env != nil {
+		if v, ok := my_env.values[name]; ok {
 			return v, true
 		}
-		e = e.outer
+		my_env = my_env.outer
 	}
 	return nil, false
 }
-
+@(private = "file")
 ENV_SET :: proc(env: ^Environment, name: string, v: Value) {
 	env.values[name] = v
 	env.dirty = true
 }
-
+@(private = "file")
 ENV_SET_UPWARD :: proc(env: ^Environment, name: string, v: Value) {
-	e := env
-	for e != nil {
-		if _, ok := e.values[name]; ok {
-			e.values[name] = v
-			e.dirty = true
+	my_env := env // assign to local to avoid shadowing.
+	for my_env != nil {
+		if _, ok := my_env.values[name]; ok {
+			my_env.values[name] = v
+			my_env.dirty = true
 			return
 		}
-		e = e.outer
+		my_env = my_env.outer
 	}
-
 	env.values[name] = v
 	env.dirty = true
 }
-
+@(private = "file")
 ENV_RESORT :: proc(env: ^Environment) {
 	if !env.dirty do return
 	env_len := len(env.sorted)
@@ -111,14 +111,12 @@ ENV_RESORT :: proc(env: ^Environment) {
 	for k in env.values {
 		append(&env.sorted, k)
 	}
-
 	slice.sort_by(env.sorted[:], proc(a, b: string) -> bool {
 		return a < b
 	})
-
 	env.dirty = false
 }
-
+@(private = "file")
 EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	kind := i.nodes.kind[node]
 	#partial switch kind {
@@ -143,7 +141,7 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	case .GLOBAL:
 		return EVAL_GLOBAL(i, node)
 	case .BREAK:
-		return EVAL_BREAK(i, node)
+		return nil
 	case .RETURN:
 		return EVAL_RETURN(i, node)
 	case .CALL:
@@ -182,6 +180,7 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	}
 	return nil
 }
+@(private = "file")
 EVAL_BLOCK :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	child := i.nodes.first_child[node]
 	last_result: Value
@@ -195,6 +194,7 @@ EVAL_BLOCK :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	}
 	return last_result
 }
+@(private = "file")
 EVAL_UBLOCK :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	child := i.nodes.first_child[node]
 	block_result := EVAL(i, child)
@@ -205,6 +205,7 @@ EVAL_UBLOCK :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	condition := EVAL(i, child)
 	return condition
 }
+@(private = "file")
 EVAL_IF :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	child := i.nodes.first_child[node]
 	cond := EVAL(i, child)
@@ -226,6 +227,7 @@ EVAL_IF :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	}
 	return nil
 }
+@(private = "file")
 EVAL_WHILE :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	child := i.nodes.first_child[node]
 	cond_node := child
@@ -240,6 +242,7 @@ EVAL_WHILE :: proc(i: ^Interpreter, node: NODEID) -> Value {
 
 	return nil
 }
+@(private = "file")
 EVAL_REPEAT :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	child := i.nodes.first_child[node]
 	ublock_node := child
@@ -255,15 +258,17 @@ EVAL_REPEAT :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	}
 	return nil
 }
+@(private = "file")
 EVAL_DO :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	child := i.nodes.first_child[node]
 	return EVAL(i, child)
 }
+@(private = "file")
 EVAL_FUNCTION :: proc(i: ^Interpreter, node: NODEID, allocator := context.allocator) -> Value {
 	fn := new(Closure, allocator)
 	fn.is_native = false
 	fn.params = EXTRACT_PARAMS(i, node)
-	fn.body = get_function_body(i, node)
+	fn.body = GET_FUNCTION_BODY(i, node)
 	fn.closure = i.current
 
 	name := i.nodes.name[node]
@@ -274,24 +279,21 @@ EVAL_FUNCTION :: proc(i: ^Interpreter, node: NODEID, allocator := context.alloca
 
 	return fn
 }
+@(private = "file")
 EVAL_FOR :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	var_name := i.nodes.name[node]
 	child := i.nodes.first_child[node]
-
 	// Numeric for loop: init, limit, [step], body
 	init := EVAL(i, child)
 	child = i.nodes.next_sibling[child]
 	limit := EVAL(i, child)
 	child = i.nodes.next_sibling[child]
-
-
 	step: Value = 1.0
 	// Check if there's a step expression before the body
 	if child != 0 && i.nodes.kind[child] != .BLOCK {
 		step = EVAL(i, child)
 		child = i.nodes.next_sibling[child]
 	}
-
 	ENV_SET(i.current, var_name, init)
 	for {
 		current_val, _ := ENV_GET(i.current, var_name)
@@ -308,6 +310,7 @@ EVAL_FOR :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	}
 	return nil
 }
+@(private = "file")
 EVAL_LOCAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	child := i.nodes.first_child[node]
 	vars: [dynamic]string
@@ -333,9 +336,7 @@ EVAL_LOCAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	}
 	return last_value
 }
-EVAL_BREAK :: proc(i: ^Interpreter, node: NODEID) -> Value {
-	return nil
-}
+@(private = "file")
 EVAL_RETURN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	child := i.nodes.first_child[node]
 	val: Value
@@ -350,6 +351,7 @@ EVAL_RETURN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	ret_val.value = val
 	return ret_val
 }
+@(private = "file")
 EVAL_CALL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	fn_child := GET_FUNCTION_CHILD(i, node)
 	fn_val := EVAL(i, fn_child)
@@ -371,6 +373,7 @@ EVAL_CALL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		return CALL_USER_FUNCTION(i, fn_val_closure, args)
 	}
 }
+@(private = "file")
 EVAL_UNARY :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	child := i.nodes.first_child[node]
 	operand := EVAL(i, child)
@@ -411,6 +414,7 @@ EVAL_UNARY :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		return nil
 	}
 }
+@(private = "file")
 EVAL_BINARY :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	left := EVAL(i, GET_LEFT_CHILD(i, node))
 	right := EVAL(i, GET_RIGHT_CHILD(i, node))
@@ -487,9 +491,11 @@ EVAL_BINARY :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	}
 	return nil
 }
+@(private = "file")
 EVAL_STRING :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	return i.nodes.string_value[node]
 }
+@(private = "file")
 EVAL_TABLE :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	table := new(Table)
 	table.data = make(map[KeyTag]Value)
@@ -516,23 +522,26 @@ EVAL_TABLE :: proc(i: ^Interpreter, node: NODEID) -> Value {
 
 	return table
 }
+@(private = "file")
 GET_FUNCTION_CHILD :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
 	return i.nodes.first_child[node]
 }
+@(private = "file")
 GET_ARGUMENTS_CHILD :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
 	fn_child := i.nodes.first_child[node]
 	arg_child := i.nodes.next_sibling[fn_child]
 	return arg_child
 }
+@(private = "file")
 GET_LEFT_CHILD :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
 	return i.nodes.first_child[node]
 }
-
+@(private = "file")
 GET_RIGHT_CHILD :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
 	left := i.nodes.first_child[node]
 	return i.nodes.next_sibling[left]
 }
-
+@(private = "file")
 EXTRACT_PARAMS :: proc(i: ^Interpreter, node: NODEID, allocator := context.allocator) -> []string {
 	params := make([dynamic]string, allocator)
 
@@ -546,8 +555,8 @@ EXTRACT_PARAMS :: proc(i: ^Interpreter, node: NODEID, allocator := context.alloc
 
 	return params[:]
 }
-
-get_function_body :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
+@(private = "file")
+GET_FUNCTION_BODY :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
 	child := i.nodes.first_child[node]
 	// Skip parameters
 	for child != 0 && i.nodes.kind[child] == .IDENTIFIER {
@@ -556,7 +565,7 @@ get_function_body :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
 	// The next child should be the block
 	return child
 }
-
+@(private = "file")
 IS_TRUTHY :: proc(PValue: Value) -> bool {
 	switch v in PValue {
 	case bool:
@@ -576,7 +585,7 @@ IS_TRUTHY :: proc(PValue: Value) -> bool {
 	}
 	return false
 }
-
+@(private = "file")
 CALL_USER_FUNCTION :: proc(i: ^Interpreter, fn: ^Closure, args: []Value) -> Value {
 	env := NEW_ENVIRONMENT(fn.closure)
 	for param, i in fn.params {
@@ -594,7 +603,7 @@ CALL_USER_FUNCTION :: proc(i: ^Interpreter, fn: ^Closure, args: []Value) -> Valu
 	}
 	return nil // No explicit return
 }
-
+@(private = "file")
 EVAL_EXPRESSION_LIST :: proc(i: ^Interpreter, node: NODEID) -> []Value {
 	values: [dynamic]Value
 
@@ -617,7 +626,7 @@ EVAL_EXPRESSION_LIST :: proc(i: ^Interpreter, node: NODEID) -> []Value {
 
 	return values[:]
 }
-
+@(private = "file")
 EVAL_COMPARE :: proc(left, right: Value, op: Token) -> bool {
 	#partial switch op {
 	case .EQ:
@@ -659,7 +668,7 @@ EVAL_COMPARE :: proc(left, right: Value, op: Token) -> bool {
 	}
 	panic("unreachable")
 }
-
+@(private = "file")
 EVAL_PLUS :: proc(left, right: Value) -> Value {
 	if left_str, left_ok := left.(string); left_ok {
 		if right_str, right_ok := right.(string); right_ok {
@@ -680,7 +689,7 @@ EVAL_PLUS :: proc(left, right: Value) -> Value {
 	}
 	return lvalue + rvalue
 }
-
+@(private = "file")
 EVAL_MINUS :: proc(left, right: Value) -> Value {
 	#partial switch ty in left {
 	case f64:
@@ -689,7 +698,7 @@ EVAL_MINUS :: proc(left, right: Value) -> Value {
 		return nil
 	}
 }
-
+@(private = "file")
 EVAL_MUL :: proc(left, right: Value) -> Value {
 	#partial switch ty in left {
 	case f64:
@@ -698,7 +707,7 @@ EVAL_MUL :: proc(left, right: Value) -> Value {
 		return nil
 	}
 }
-
+@(private = "file")
 EVAL_DIV :: proc(left, right: Value) -> Value {
 	#partial switch ty in left {
 	case f64:
@@ -707,11 +716,11 @@ EVAL_DIV :: proc(left, right: Value) -> Value {
 		return nil
 	}
 }
-
+@(private = "file")
 EVAL_MOD :: proc(left, right: Value) -> Value {
 	return math.mod_f64(left.(f64), right.(f64))
 }
-
+@(private = "file")
 EVAL_BITWISE :: proc(left, right: Value, op: Token) -> Value {
 	left_int := cast(i64)left.(f64)
 	right_int := cast(i64)right.(f64)
@@ -730,7 +739,7 @@ EVAL_BITWISE :: proc(left, right: Value, op: Token) -> Value {
 	}
 	return 0.0
 }
-
+@(private = "file")
 COMPARE_TABLE :: proc(left, right: ^Table) -> bool {
 	if left == right {
 		return true
@@ -754,36 +763,11 @@ COMPARE_TABLE :: proc(left, right: ^Table) -> bool {
 
 	return true
 }
-
+@(private = "file")
 COMPARE_CLOSURE :: proc(left, right: ^Closure) -> bool {
 	return left == right
 }
-
-VALUE_TO_STRING :: proc(v: Value, allocator := context.allocator) -> string {
-	sb := strings.builder_make(allocator)
-	defer strings.builder_destroy(&sb)
-	#partial switch val in v {
-	case bool:
-		return val ? "true" : "false"
-	case f64:
-		strings.write_f64(&sb, val, 'f')
-		ret_val := strings.to_string(sb)
-		return ret_val
-	case string:
-		return val
-	case rawptr:
-		return "userdata"
-	case ^Table:
-		return "table"
-	case ^Closure:
-		return "closure"
-	case ^ReturnValue:
-		return VALUE_TO_STRING(val.value)
-	case:
-		return "nil"
-	}
-}
-
+@(private = "file")
 EVAL_ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	lvalue := GET_LEFT_CHILD(i, node)
 	rvalue := GET_RIGHT_CHILD(i, node)
@@ -844,7 +828,7 @@ EVAL_ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	}
 	return nil
 }
-
+@(private = "file")
 EVAL_GLOBAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	child := i.nodes.first_child[node]
 	vars: [dynamic]string
