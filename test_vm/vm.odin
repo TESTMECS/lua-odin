@@ -123,5 +123,8 @@ test_function :: proc(t: ^testing.T) {
 	my_closure.proto = &main_proto
 	my_closure.upvalues = {}
 	result_value := VM_EXECUTE(vm, my_closure, {})
+	if result_value == nil {
+		testing.fail(t)
+	}
 }
 
