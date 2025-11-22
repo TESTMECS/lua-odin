@@ -58,8 +58,8 @@ Format :: enum {
 	FORMAT_ABx,
 	FORMAT_AsBx,
 }
-
-Definition__Table__ :: [Opcodes]Definition {
+@(rodata)
+Definition__Table__ := [Opcodes]Definition {
 	.MOVE      = {"MOVE", .FORMAT_ABC},
 	.LOADK     = {"LOADK", .FORMAT_ABx},
 	.LOADBOOL  = {"LOADBOOL", .FORMAT_ABC},

@@ -1,6 +1,7 @@
 package ouau
 import "core:fmt"
 import "core:math"
+import "core:slice"
 import "core:strings"
 /*
 	 ./eval.odin
