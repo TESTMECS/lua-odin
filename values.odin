@@ -64,7 +64,6 @@ UpValueDesc :: struct {
 	in_stack: bool,
 	index:    int,
 }
-
 VALUE_TO_KEY_TAG :: proc(v: Value) -> KeyTag {
 	switch val in v {
 	case bool:
@@ -85,7 +84,32 @@ VALUE_TO_KEY_TAG :: proc(v: Value) -> KeyTag {
 		return KeyTag{kind = 0}
 	}
 }
-
+@(private)
+VALUE_TO_STRING :: proc(v: Value, allocator := context.allocator) -> string {
+	sb := strings.builder_make(allocator)
+	defer strings.builder_destroy(&sb)
+	#partial switch val in v {
+	case bool:
+		return val ? "true" : "false"
+	case f64:
+		strings.write_f64(&sb, val, 'f')
+		ret_val := strings.to_string(sb)
+		return ret_val
+	case string:
+		return val
+	case rawptr:
+		return "userdata"
+	case ^Table:
+		return "table"
+	case ^Closure:
+		return "closure"
+	case ^ReturnValue:
+		return VALUE_TO_STRING(val.value)
+	case:
+		return "nil"
+	}
+}
+@(cold)
 compare_keytag :: proc(a, b: KeyTag) -> bool {
 	if a.kind != b.kind {
 		return a.kind < b.kind
@@ -128,31 +152,6 @@ compare_keytag :: proc(a, b: KeyTag) -> bool {
 		return cast(u64)checka < cast(u64)checkb
 	}
 	return false
-}
-@(private)
-VALUE_TO_STRING :: proc(v: Value, allocator := context.allocator) -> string {
-	sb := strings.builder_make(allocator)
-	defer strings.builder_destroy(&sb)
-	#partial switch val in v {
-	case bool:
-		return val ? "true" : "false"
-	case f64:
-		strings.write_f64(&sb, val, 'f')
-		ret_val := strings.to_string(sb)
-		return ret_val
-	case string:
-		return val
-	case rawptr:
-		return "userdata"
-	case ^Table:
-		return "table"
-	case ^Closure:
-		return "closure"
-	case ^ReturnValue:
-		return VALUE_TO_STRING(val.value)
-	case:
-		return "nil"
-	}
 }
 @(cold)
 hash_keytag :: proc(k: KeyTag) -> u64 {
