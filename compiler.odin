@@ -1,9 +1,9 @@
 package ouau
 /*
-	 ./compiler.odin
-	 Copyright(C) 2025 TESTMEE
-	 Defines the compiler functions for Ouau.
- */
+*	 ./compiler.odin
+*	 Copyright(C) 2025 TESTMEE
+*	 Defines the compiler functions for Ouau.
+*/
 COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	kind := c.nodes.kind[nodeid]
 	#partial switch kind {

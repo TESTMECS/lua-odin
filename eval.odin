@@ -4,10 +4,10 @@ import "core:math"
 import "core:slice"
 import "core:strings"
 /*
-	 ./eval.odin
-	 Copyright(C) 2025 TESTMEE
-	 Defines the interpreter functions for Ouau.
-	 <@Frame, @Environment, @Interpreter| Frame manages the call stack for the current environment in the Interpreter.>
+*	 ./eval.odin
+*	 Copyright(C) 2025 TESTMEE
+*	 Defines the interpreter functions for Ouau.
+*	 <@Frame, @Environment, @Interpreter| Frame manages the call stack for the current environment in the Interpreter.>
 */
 Frame :: struct {
 	env:         ^Environment,

@@ -4,6 +4,11 @@ import "core:fmt"
 import "core:mem/virtual"
 import "core:os"
 import "core:strings"
+/*
+*	 ./main.odin
+*	 Copyright(C) 2025 TESTMEE
+*	 This file defines the main functions for Ouau CLI.
+*/
 HELP_MSG :: "Usage: lua-odin <file|repl|ast|regs> <file>"
 PROMPT :: "(Ouau)$ "
 EXIT_MSG :: "Bye!"

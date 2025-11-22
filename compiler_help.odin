@@ -1,9 +1,9 @@
 package ouau
 import "core:fmt"
 /*
-	 ./compiler_help.odin
-	 Copyright(C) 2025 TESTMEE
-	 This file defines the helper functions for ./compiler.odin
+*	 ./compiler_help.odin
+*	 Copyright(C) 2025 TESTMEE
+*	 This file defines the helper functions for ./compiler.odin
 */
 COMPILE_ERR :: proc(c: ^Compiler, msg: string, xtra: ..any) -> int {
 	if len(xtra) == 0 {

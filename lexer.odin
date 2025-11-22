@@ -1,9 +1,9 @@
 package ouau
 /*
-	 ./lexer.odin
-	 Copyright(C) 2025 TESTMEE
-	 Defines the lexer functions for Ouau.
-	 @Lexer
+*	 ./lexer.odin
+*	 Copyright(C) 2025 TESTMEE
+*	 Defines the lexer functions for Ouau.
+*	 @Lexer
 */
 Lexer :: struct {
 	input:    []u8,
