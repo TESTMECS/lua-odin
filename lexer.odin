@@ -1,4 +1,17 @@
 package ouau
+/*
+	 ./lexer.odin
+	 Copyright(C) 2025 TESTMEE
+	 Defines the lexer functions for Ouau.
+	 @Lexer
+*/
+Lexer :: struct {
+	input:    []u8,
+	pos:      int,
+	read_pos: int,
+	ch:       u8,
+	NEXT:     proc(l: ^Lexer) -> Token_def,
+}
 NEW_LEXER :: proc(input: string) -> Lexer {
 	l := Lexer {
 		ch       = 0,

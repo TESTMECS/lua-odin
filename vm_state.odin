@@ -1,36 +1,4 @@
 package ouau
-import "core:mem"
-
-VMFrame :: struct {
-	func:        ^Closure,
-	return_addr: int,
-	base_reg:    int,
-	saved_pc:    int,
-	num_results: int,
-	tail_calls:  int,
-}
-CallInfo :: struct {
-	func:     ^Closure,
-	base:     int,
-	saved_pc: int,
-}
-VM :: struct {
-	global_state:    ^GlobalState,
-	current_thread:  ^ThreadState,
-	all_threads:     [dynamic]^ThreadState,
-	gc_threshold:    int,
-	gc_debt:         int,
-	config:          ^VM_Config,
-	allocator:       mem.Allocator,
-	gc_running:      bool,
-	pause_threshold: int,
-}
-VM_Config :: struct {
-	stack_size:   int,
-	call_depth:   int,
-	gc_threshold: int,
-	max_threads:  int,
-}
 
 NEW_VM :: proc(config: ^VM_Config, allocator := context.allocator) -> ^VM {
 	vm := new(VM, allocator)

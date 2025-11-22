@@ -1,5 +1,9 @@
 package ouau
-import "core:fmt"
+/*
+	 ./vm.odin
+	 Copyright(C) 2025 TESTMEE
+	 Defines the VM functions for Ouau.
+*/
 VM_EXECUTE :: proc(vm: ^VM, closure: ^Closure, args: []Value) -> Value {
 	thread := vm.current_thread
 	thread.call_count = 0

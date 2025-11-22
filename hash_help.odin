@@ -1,7 +1,6 @@
 package ouau
 import "core:hash"
-hash_keytag :: proc(k: KeyTag) -> u64
-{
+hash_keytag :: proc(k: KeyTag) -> u64 {
 	using hash
 	buf: [64]u8 // plenty for controlled encoding
 	idx := 0
@@ -10,8 +9,7 @@ hash_keytag :: proc(k: KeyTag) -> u64
 	buf[idx] = k.kind
 	idx += 1
 
-	switch k.kind
-	{
+	switch k.kind {
 	case 0:
 		// string
 		// write length (u32)
@@ -19,8 +17,7 @@ hash_keytag :: proc(k: KeyTag) -> u64
 		transmute_u32_to_bytes(buf[idx:], len)
 		idx += 4
 		// write string bytes
-		for b, i in k.s
-		{
+		for b, i in k.s {
 			buf[idx] = k.s[i]
 			idx += 1
 		}
@@ -64,24 +61,20 @@ hash_keytag :: proc(k: KeyTag) -> u64
 
 	return fnv64a(buf[:idx])
 }
-transmute_u32_to_bytes :: proc(dst: []u8, v: u32)
-{
+transmute_u32_to_bytes :: proc(dst: []u8, v: u32) {
 	dst[0] = u8(v >> 0)
 	dst[1] = u8(v >> 8)
 	dst[2] = u8(v >> 16)
 	dst[3] = u8(v >> 24)
 }
 
-transmute_i64_to_bytes :: proc(dst: []u8, v: i64)
-{
+transmute_i64_to_bytes :: proc(dst: []u8, v: i64) {
 	u := transmute(u64)v
 	transmute_u64_to_bytes(dst, u)
 }
 
-transmute_u64_to_bytes :: proc(dst: []u8, v: u64)
-{
-	for i in 0 ..< 8
-	{
+transmute_u64_to_bytes :: proc(dst: []u8, v: u64) {
+	for i in 0 ..< 8 {
 		dst[i] = u8(v >> uint(i * 8))
 	}
 }

@@ -1,5 +1,10 @@
 package ouau
 import "core:fmt"
+/*
+	 ./stack.odin
+	 Copyright(C) 2025 TESTMEE
+	 Defines the stack functions for Ouau.
+*/
 STACK_CHECK :: proc(vm: ^VM, needed: int) -> bool {
 	thread := vm.current_thread
 	available := len(thread.stack) - thread.top

@@ -1,7 +1,10 @@
 package ouau
-
-import "core:fmt"
-
+/*
+	 ./tokens.odin
+	 Copyright(C) 2025 TESTMEE
+	 Defines the tokens for Ouau.
+	 @Token, @Token_def
+*/
 Token :: enum u8 {
 	EOF,
 	ILLEGAL,

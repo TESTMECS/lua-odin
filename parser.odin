@@ -1,5 +1,104 @@
 package ouau
 import "core:strconv"
+/*
+	 ./parser.odin
+	 Copyright(C) 2025 TESTMEE
+	 This file defines the parser functions for Ouau.
+	 @NODEID, @NODE_KIND, @NODES, @Precedence, @Parser
+*/
+NODEID :: u32
+NODE_KIND :: enum u8 {
+	INVALID,
+	BLOCK,
+	UBLOCK,
+	IF,
+	WHILE,
+	ASSIGN,
+	FUNCTION,
+	CALL,
+	LITERAL,
+	IDENTIFIER,
+	UNARY,
+	BINARY,
+	STRING,
+	GLOBAL,
+	TABLE,
+	REPEAT,
+	DO,
+	FOR,
+	LOCAL,
+	RETURN,
+	BREAK,
+}
+NODES :: struct {
+	kind:         [dynamic]NODE_KIND,
+	first_child:  [dynamic]NODEID,
+	next_sibling: [dynamic]NODEID,
+	token:        [dynamic]Token,
+	int_value:    [dynamic]i64,
+	string_value: [dynamic]string,
+	name:         [dynamic]string,
+}
+Precedence :: enum u8 {
+	LOWEST,
+	ASSIGN,
+	EQUALS,
+	LESSGREATER,
+	SUM,
+	PRODUCT,
+	PREFIX,
+	CALL,
+	INDEX,
+}
+Parser :: struct {
+	pos:     int,
+	nodes:   NODES,
+	lexer:   Lexer,
+	current: Token_def,
+	peek:    Token_def,
+}
+@(rodata)
+PRECEDENCES := #partial [Token]Precedence {
+	.ASSIGN = .ASSIGN,
+	.EQ     = .EQUALS,
+	.NE     = .EQUALS,
+	.NEQ    = .EQUALS,
+	.LE     = .LESSGREATER,
+	.LT     = .LESSGREATER,
+	.GE     = .LESSGREATER,
+	.GT     = .LESSGREATER,
+	.PLUS   = .SUM,
+	.MINUS  = .SUM,
+	.MUL    = .PRODUCT,
+	.DIV    = .PRODUCT,
+	.MOD    = .PRODUCT,
+	.POW    = .PRODUCT,
+	.POUND  = .PREFIX,
+	.OPEN   = .CALL,
+	.DOT    = .CALL,
+	.BOPEN  = .INDEX,
+	.BCLOSE = .LOWEST,
+}
+NODES_INIT :: proc(p: ^NODES, allocator := context.allocator) {
+	//@@Initalize the Nodes with the given.
+	p.kind = make([dynamic]NODE_KIND, 0)
+	p.first_child = make([dynamic]NODEID, 0)
+	p.next_sibling = make([dynamic]NODEID, 0)
+	p.token = make([dynamic]Token, 0)
+	p.int_value = make([dynamic]i64, 0)
+	p.string_value = make([dynamic]string, 0)
+	p.name = make([dynamic]string, 0)
+}
+NEW_PARSER :: proc(input: string, allocator := context.allocator) -> (p: Parser) {
+	//@@Create a new parser with a new set of nodes.
+	p = Parser {
+		pos   = 0,
+		nodes = NODES{},
+		lexer = NEW_LEXER(input),
+	}
+	NODES_INIT(&p.nodes, allocator)
+	return
+}
 NEW_NODE :: proc(p: ^Parser, k: NODE_KIND) -> NODEID {
 	id := cast(NODEID)len(p.nodes.kind)
 	append(&p.nodes.kind, k)
@@ -26,24 +125,6 @@ ADD_CHILD :: proc(p: ^Parser, parent, child: NODEID) {
 		}
 		p.nodes.next_sibling[n] = child
 	}
-}
-NODES_INIT :: proc(p: ^NODES, allocator := context.allocator) {
-	p.kind = make([dynamic]NODE_KIND, 0)
-	p.first_child = make([dynamic]NODEID, 0)
-	p.next_sibling = make([dynamic]NODEID, 0)
-	p.token = make([dynamic]Token, 0)
-	p.int_value = make([dynamic]i64, 0)
-	p.string_value = make([dynamic]string, 0)
-	p.name = make([dynamic]string, 0)
-}
-NEW_PARSER :: proc(input: string, allocator := context.allocator) -> (p: Parser) {
-	p = Parser {
-		pos   = 0,
-		nodes = NODES{},
-		lexer = NEW_LEXER(input),
-	}
-	NODES_INIT(&p.nodes, allocator)
-	return
 }
 EXPECT :: proc(p: ^Parser, kind: Token) -> bool {
 	if p.current.kind == kind {
