@@ -162,9 +162,11 @@ VM_EXECUTE :: proc(vm: ^VM, closure: ^Closure, args: []Value) -> Value {
 @(private = "file")
 EXECUTE_LOOP :: proc(vm: ^VM) -> Value {
 	thread := vm.current_thread // Get the current thread
+
 	if vm.config.debug_level >= 1 {
 		DEBUG_VM_STATE(vm, "Starting Execution Loop")
 	}
+
 	instruction_count := 0
 	for {
 		if instruction_count >= MAX_INSTRUCTIONS {
