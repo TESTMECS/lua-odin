@@ -12,6 +12,7 @@ Lexer :: struct {
 	ch:       u8,
 	NEXT:     proc(l: ^Lexer) -> Token_def,
 }
+@(require_results)
 NEW_LEXER :: proc(input: string) -> Lexer {
 	l := Lexer {
 		ch       = 0,
@@ -23,6 +24,7 @@ NEW_LEXER :: proc(input: string) -> Lexer {
 	EAT(&l)
 	return l
 }
+@(require_results)
 NEXT :: proc(l: ^Lexer) -> Token_def {
 	tok: Token_def
 	SKIP_WHITESPACE(l)
