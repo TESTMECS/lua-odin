@@ -1,5 +1,11 @@
 package ouau
 import "core:hash"
+import "core:strings"
+/*
+	 ./values.odin
+	 Copyright(C) 2025 TESTMEE
+	 <@KeyTag, @Value, @ReturnValue, @Closure, @Table, @Upvalue, @UpValueDesc> 
+ */
 KeyTag :: struct {
 	kind: u8,
 	i:    i64,

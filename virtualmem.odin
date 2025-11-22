@@ -1,5 +1,6 @@
 package ouau
 import "core:mem"
+
 Memory_Pool :: struct {
 	allocator:        mem.Allocator,
 	// Type-specific pools

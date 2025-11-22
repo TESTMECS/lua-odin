@@ -4,19 +4,21 @@ import "core:fmt"
 import "core:mem/virtual"
 import "core:os"
 import "core:strings"
+HELP_MSG :: "Usage: lua-odin <file|repl|ast|regs> <file>"
+PROMPT :: "(Ouau)$ "
+EXIT_MSG :: "Bye!"
 main :: proc() {
-	// Arena
-	v: virtual.Arena
-	err := virtual.arena_init_growing(&v)
+	v := new(virtual.Arena, context.allocator)
+	err := virtual.arena_init_growing(v)
 	ensure(err == nil)
-	varena := virtual.arena_allocator(&v)
-	defer virtual.arena_destroy(&v)
+	varena := virtual.arena_allocator(v)
+	defer virtual.arena_destroy(v)
 	//
 	sb := strings.builder_make(varena)
 	defer strings.builder_destroy(&sb)
 	// ARGS
 	if len(os.args) < 2 {
-		fmt.println("Usage: lua-odin <file|repl|ast|bytes> <file>")
+		fmt.println(HELP_MSG)
 		os.exit(1)
 	}
 	//
@@ -28,12 +30,28 @@ main :: proc() {
 		xtra_args := user_args[1:]
 		i := NEW_INTERPRETER(nil, varena)
 		for {
-			fmt.println("Ouau=>> ")
-			line, err := bufio.reader_read_string(&reader, '\n', varena)
-			if err != nil do OUAU_ERR("ERR: Failed to read input", err, &sb, false, 1)
-			line = strings.trim_space(line)
-			if line == "exit" do OUAU_RESULT("", "Bye!", &sb, true)
-			OUAU_RUN_STRING(line, &sb, false, varena, i)
+			fmt.println(PROMPT)
+			input_builder := strings.builder_make(varena)
+			defer strings.builder_destroy(&input_builder)
+			for {
+				line, err := bufio.reader_read_string(&reader, '\n', varena)
+				if err != nil do OUAU_ERR("ERR: Failed to read input", err, &sb, false, 1)
+				line = strings.trim_space(line)
+				if strings.has_suffix(line, "\\") {
+					line = strings.trim_suffix(line, "\\")
+					strings.write_string(&input_builder, line)
+					strings.write_byte(&input_builder, '\n')
+					fmt.print("...")
+					continue
+				}
+				 else {
+					strings.write_string(&input_builder, line)
+					break
+				}
+			}
+			complete_input := strings.to_string(input_builder)
+			if complete_input == "exit" do OUAU_RESULT("", EXIT_MSG, &sb, true)
+			OUAU_RUN_STRING(complete_input, &sb, false, varena, i)
 		}
 	case "file":
 		// Create one interpreter for the entire REPL session
@@ -51,7 +69,7 @@ main :: proc() {
 		p := NEW_PARSER(string(file), varena)
 		_ = PARSE_CHUNK(&p)
 		DUMP_AST(&p)
-	case "bytes":
+	case "regs":
 		unimplemented("TODO")
 	}
 }
