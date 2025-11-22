@@ -1,5 +1,6 @@
 package ouau
-/* opcodes.odin
+/* 
+*	 opcodes.odin
 * Copyright(C) 2025 TESTMEE
 * This file define the @Opcodes and @Definition__Table__ used for the Ouau virtual machine.
 */

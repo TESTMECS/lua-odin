@@ -1,11 +1,10 @@
 package ouau
 import "core:math"
 /*
-	 opcodes_help.odin
-	 Copyright(C) 2025 TESTMEE
-	 This file defines the helper functions for ./opcodes.odin
- */
-
+*	 opcodes_help.odin
+*	 Copyright(C) 2025 TESTMEE
+*	 This file defines the helper functions for ./opcodes.odin
+*/
 // (1 << n) - 1
 MASK :: proc(n: int) -> u32 {return (u32(1) << u32(n)) - u32(1)}
 
@@ -25,7 +24,7 @@ LOOKUP :: proc(op: Opcodes) -> (Definition, bool) {
 }
 
 MAKE_ABC :: proc(operation, register_a, register_b, register_c: u32) -> u32 {
-	// ('Arg[i] & MASK_'ARG[i]) << POS_'ARG[i]) 'bitwise-or ...
+	// ('i & MASK_'i) << POS_'i) 'bitwise-or ...
 	if operation > MASK_OP || register_a > MASK_A || register_b > MASK_B || register_c > MASK_C do panic("field out of range @MAKE_ABC")
 	return(
 		u32((operation & MASK_OP) << POS_OP) |
