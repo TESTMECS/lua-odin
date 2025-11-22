@@ -13,7 +13,7 @@ config := vm.VM_Config {
 	max_threads  = 4,
 }
 @(test)
-test_vm :: proc(t: ^testing.T) {
+test_block :: proc(t: ^testing.T) {
 	using vm
 	v := new(virtual.Arena, context.allocator)
 	err := virtual.arena_init_growing(v)
@@ -69,7 +69,7 @@ test_vm :: proc(t: ^testing.T) {
 	log.info("Result value: %v", result_value)
 }
 @(test)
-test_block :: proc(t: ^testing.T) {
+test_function :: proc(t: ^testing.T) {
 	using vm
 	v := new(virtual.Arena, context.allocator)
 	err := virtual.arena_init_growing(v)
@@ -102,5 +102,26 @@ test_block :: proc(t: ^testing.T) {
 	if len(insts) == 0 {
 		testing.fail(t)
 	}
+	vm: ^VM = NEW_VM(&config)
+	// log.info("VM %v", vm)
+	main_proto := Prototype {
+		header = GC_HEADER{marked = false, generation = 0, gctype = .PROTOTYPE},
+		instructions = insts,
+		constants = c.constants[:],
+		proto = c.prototypes[:],
+		upvalues = {},
+		max_stack = c.max_stack,
+		num_params = 0,
+	}
+	my_closure := new(Closure, varena)
+	my_closure.header = GC_HEADER {
+		marked     = false,
+		generation = 0,
+		gctype     = .CLOSURE,
+	}
+	my_closure.is_native = false
+	my_closure.proto = &main_proto
+	my_closure.upvalues = {}
+	result_value := VM_EXECUTE(vm, my_closure, {})
 }
 
