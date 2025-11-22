@@ -14,9 +14,18 @@ Compiler :: struct {
 	prototypes:   [dynamic]^Compiler, // nested function prototypes
 	parent:       ^Compiler, // upvalue resolution
 }
-NEW_COMPILER :: proc(p: ^Parser, allocator := context.allocator) -> ^Compiler {
+Prototype :: struct {
+	using header: GC_HEADER,
+	instructions: []Instruction,
+	constants:    []Value,
+	proto:        []^Prototype,
+	upvalues:     [dynamic]^UpValueDesc,
+	max_stack:    int,
+	num_params:   int,
+}
+NEW_COMPILER :: proc(bytecode: ^NODES, allocator := context.allocator) -> ^Compiler {
 	c := new(Compiler, allocator)
-	c.nodes = &p.nodes
+	c.nodes = bytecode
 	c.constants = make([dynamic]Value, allocator)
 	c.const_index = make(map[Value]int, allocator)
 	c.locals = make(map[string]int, allocator)
@@ -79,6 +88,8 @@ PATCH_JUMP :: proc(c: ^Compiler, pc_slot: int, target_pc: int) {
 }
 COMPILER_TO_PROTOTYPE :: proc(c: ^Compiler, allocator := context.allocator) -> ^Prototype {
 	proto := new(Prototype, allocator)
+	proto.marked = false
+	proto.generation = 0
 
 	proto.instructions = c.instructions[:]
 	proto.constants = c.constants[:]
@@ -89,6 +100,7 @@ COMPILER_TO_PROTOTYPE :: proc(c: ^Compiler, allocator := context.allocator) -> ^
 	proto.proto = make([]^Prototype, len(c.prototypes), allocator)
 	for child, i in c.prototypes {
 		fmt.printf("Prototype NESTED %d: %v\n", i, child)
+		fmt.printf("Child constants: %v\n", child.constants[:])
 		child_proto := COMPILER_TO_PROTOTYPE(child, allocator)
 		proto.proto[i] = child_proto
 	}

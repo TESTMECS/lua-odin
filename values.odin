@@ -47,15 +47,6 @@ Closure :: struct {
 	upvalues:     [dynamic]^Upvalue,
 	native_proc:  proc(args: []Value) -> Value,
 }
-Prototype :: struct {
-	using header: GC_HEADER,
-	instructions: []Instruction,
-	constants:    []Value,
-	proto:        []^Prototype,
-	upvalues:     [dynamic]^UpValueDesc,
-	max_stack:    int,
-	num_params:   int,
-}
 Upvalue :: struct {
 	value:  ^Value,
 	closed: ^Value,

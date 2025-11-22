@@ -17,6 +17,7 @@ GlobalState :: struct {
 	gc_heap:      ^GC_HEAP,
 	panic:        proc(state: ^ThreadState, msg: string, level: int),
 	string_table: map[string]^Value,
+	globals:      ^Table,
 	gc_threshold: int,
 	gc_debt:      int,
 }
@@ -75,6 +76,7 @@ NEW_GLOBAL_STATE :: proc(allocator := context.allocator) -> ^GlobalState {
 	gs.string_table = make(map[string]^Value, allocator)
 	gs.gc_heap = NEW_GC_HEAP(allocator)
 	gs.registry = NEW_TABLE(allocator)
+	gs.globals = NEW_TABLE(allocator)
 	gs.gc_threshold = 1024 * 1024
 	return gs
 }

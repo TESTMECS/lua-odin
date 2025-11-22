@@ -17,7 +17,8 @@ test_vm :: proc(t: ^testing.T) {
 	input := `local a = 1; return a;`
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
-	c := NEW_COMPILER(&p, varena)
+	new_nodes := new_clone(p.nodes, varena)
+	c := NEW_COMPILER(new_nodes, varena)
 	COMPILE_NODE(c, nodeid)
 	insts := c.instructions[:]
 	if len(insts) == 0 {
@@ -64,15 +65,15 @@ test_block :: proc(t: ^testing.T) {
 
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
+	clone_nodes := new_clone(p.nodes, varena)
 	// DUMP_AST(&p)
-	c := NEW_COMPILER(&p, varena)
+	c := NEW_COMPILER(clone_nodes, varena)
 	COMPILE_NODE(c, nodeid)
 	// In your test, after COMPILE_NODE:
-	log.info("Compiler instructions: %v", c.instructions[:])
-	log.info("Compiler constants: %v", c.constants[:])
-	log.info("Compiler prototypes count: %d", len(c.prototypes))
+	log.info("1. Compiler instructions: %v", c.instructions[:])
+	log.info("2. Compiler constants: %v", c.constants[:])
+	log.info("3. Compiler prototypes count: %d", len(c.prototypes))
 	log.info("Compiler prototypes: %v", c.prototypes[:])
-
 
 	insts := c.instructions[:]
 	if len(insts) == 0 {
@@ -84,7 +85,7 @@ test_block :: proc(t: ^testing.T) {
 		gc_threshold = 1024 * 1024,
 		max_threads  = 4,
 	}
-	my_proto := COMPILER_TO_PROTOTYPE(c)
+	my_proto := COMPILER_TO_PROTOTYPE(c, varena)
 	// After conversion:
 	log.info("Prototype proto count: %d", len(my_proto.proto))
 	log.info("Prototype proto: %v", my_proto.proto[:])
