@@ -6,7 +6,7 @@ import "core:log"
 	 Copyright(C) 2025 TESTMEE
 	 Defines the VM functions for Ouau.
 */
-
+MAX_INSTRUCTIONS :: 1024 * 1024
 @(private = "file")
 DEBUG_VM_STATE :: proc(vm: ^VM, msg: string) {
 	thread := vm.current_thread
@@ -133,6 +133,13 @@ DEBUG_INSTRUCTION :: proc(vm: ^VM, inst: u32, result: Value) {
 VM_EXECUTE :: proc(vm: ^VM, closure: ^Closure, args: []Value) -> Value {
 	thread := vm.current_thread // Get current thread
 	thread.call_count = 0 // reset call count
+
+	for i in 0 ..< len(thread.stack) {
+		thread.stack[i] = nil
+	}
+
+	thread.top = 0
+	thread.base = 0 // Reset the base register
 	frame := VMFrame { 	// Create a new frame.
 		func        = closure,
 		base_reg    = 0,
@@ -148,7 +155,7 @@ VM_EXECUTE :: proc(vm: ^VM, closure: ^Closure, args: []Value) -> Value {
 	if append(&thread.call_stack, frame) < 0 do return nil // Push the frame onto the call stack
 
 	thread.pc = 0 // Reset the program counter
-	thread.base = 0 // Reset the base register
+	// thread.base = 0
 	return EXECUTE_LOOP(vm) // Execute the loop
 }
 
@@ -160,6 +167,10 @@ EXECUTE_LOOP :: proc(vm: ^VM) -> Value {
 	}
 	instruction_count := 0
 	for {
+		if instruction_count >= MAX_INSTRUCTIONS {
+			VM_ERROR(vm, thread, "Execution ERROR", "Too many instructions executed")
+			break
+		}
 		if thread.pc >= len(thread.call_stack[thread.call_count].func.proto.instructions) {
 			if vm.config.debug_level >= 1 do log.infof("Execution Completed: %d instructions", instruction_count)
 			break
