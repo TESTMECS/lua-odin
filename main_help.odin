@@ -4,9 +4,9 @@ import "core:mem"
 import "core:os"
 import "core:strings"
 /*
-	 ./main_help.odin
-	 Copyright(C) 2025 TESTMEE
-	 Help functions for Ouau.
+*	 ./main_help.odin
+*	 Copyright(C) 2025 TESTMEE
+*	 Help functions for Ouau.
 */
 OUAU_RUN_STRING :: proc(
 	input: string,

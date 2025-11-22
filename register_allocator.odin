@@ -1,5 +1,9 @@
 package ouau
-
+/*
+	 ./register_allocator.odin
+	 Copyright(C) 2025 TESTMEE
+	 Defines the register allocator functions for Ouau.
+*/
 Register_Allocator :: struct {
 	free_regs: [dynamic]int,
 	used_regs: [dynamic]int,

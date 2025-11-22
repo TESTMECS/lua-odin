@@ -89,6 +89,13 @@ NEW_PARSER :: proc(input: string, allocator := context.allocator) -> (p: Parser)
 	NODES_INIT(&p.nodes, allocator)
 	return
 }
+@(require_results)
+PARSE_CHUNK :: proc(p: ^Parser) -> NODEID {
+	ADVANCE(p)
+	ADVANCE(p)
+
+	return PARSE_BLOCK(p)
+}
 @(private = "file")
 NODES_INIT :: proc(p: ^NODES, allocator := context.allocator) {
 	p.kind = make([dynamic]NODE_KIND, 0)
@@ -141,13 +148,7 @@ EXPECT :: proc(p: ^Parser, kind: Token) -> bool {
 	}
 	return false
 }
-@(private = "file")
-PARSE_CHUNK :: proc(p: ^Parser) -> NODEID {
-	ADVANCE(p)
-	ADVANCE(p)
 
-	return PARSE_BLOCK(p)
-}
 @(private = "file")
 PARSE_BLOCK :: proc(p: ^Parser) -> NODEID {
 	block := NEW_NODE(p, .BLOCK)
