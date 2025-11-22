@@ -6,9 +6,9 @@ package ouau
 */
 @(require_results)
 VM_EXECUTE :: proc(vm: ^VM, closure: ^Closure, args: []Value) -> Value {
-	thread := vm.current_thread
-	thread.call_count = 0
-	frame := VMFrame {
+	thread := vm.current_thread // Get current thread
+	thread.call_count = 0 // reset call count
+	frame := VMFrame { 	// Create a new frame.
 		func        = closure,
 		base_reg    = 0,
 		saved_pc    = 0,
