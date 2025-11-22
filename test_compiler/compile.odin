@@ -1,6 +1,5 @@
 package compiler_test
 import compiler "../"
-import "core:fmt"
 import "core:mem/virtual"
 import "core:testing"
 
