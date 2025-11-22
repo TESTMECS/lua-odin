@@ -7,7 +7,7 @@ import "core:strconv"
 	 @NODEID, @NODE_KIND, @NODES, @Precedence, @Parser
 */
 NODEID :: u32
-NODE_KIND :: enum u8 {
+NODE_KIND :: enum {
 	INVALID,
 	BLOCK,
 	UBLOCK,
@@ -79,18 +79,8 @@ PRECEDENCES := #partial [Token]Precedence {
 	.BOPEN  = .INDEX,
 	.BCLOSE = .LOWEST,
 }
-NODES_INIT :: proc(p: ^NODES, allocator := context.allocator) {
-	//@@Initalize the Nodes with the given.
-	p.kind = make([dynamic]NODE_KIND, 0)
-	p.first_child = make([dynamic]NODEID, 0)
-	p.next_sibling = make([dynamic]NODEID, 0)
-	p.token = make([dynamic]Token, 0)
-	p.int_value = make([dynamic]i64, 0)
-	p.string_value = make([dynamic]string, 0)
-	p.name = make([dynamic]string, 0)
-}
+@(require_results)
 NEW_PARSER :: proc(input: string, allocator := context.allocator) -> (p: Parser) {
-	//@@Create a new parser with a new set of nodes.
 	p = Parser {
 		pos   = 0,
 		nodes = NODES{},
@@ -99,8 +89,20 @@ NEW_PARSER :: proc(input: string, allocator := context.allocator) -> (p: Parser)
 	NODES_INIT(&p.nodes, allocator)
 	return
 }
+@(private = "file")
+NODES_INIT :: proc(p: ^NODES, allocator := context.allocator) {
+	p.kind = make([dynamic]NODE_KIND, 0)
+	p.first_child = make([dynamic]NODEID, 0)
+	p.next_sibling = make([dynamic]NODEID, 0)
+	p.token = make([dynamic]Token, 0)
+	p.int_value = make([dynamic]i64, 0)
+	p.string_value = make([dynamic]string, 0)
+	p.name = make([dynamic]string, 0)
+}
+@(private = "file")
 NEW_NODE :: proc(p: ^Parser, k: NODE_KIND) -> NODEID {
 	id := cast(NODEID)len(p.nodes.kind)
+
 	append(&p.nodes.kind, k)
 	append(&p.nodes.first_child, NODEID(0))
 	append(&p.nodes.next_sibling, NODEID(0))
@@ -108,24 +110,30 @@ NEW_NODE :: proc(p: ^Parser, k: NODE_KIND) -> NODEID {
 	append(&p.nodes.int_value, 0)
 	append(&p.nodes.string_value, "")
 	append(&p.nodes.name, "")
+
 	return id
 }
+@(private = "file")
 ADVANCE :: proc(p: ^Parser) {
 	p.current = p.peek
 	p.peek = NEXT(&p.lexer)
 }
+@(private = "file")
 ADD_CHILD :: proc(p: ^Parser, parent, child: NODEID) {
 	if p.nodes.first_child[parent] == 0 {
 		p.nodes.first_child[parent] = child
 	}
 	 else {
 		n := p.nodes.first_child[parent]
+
 		for p.nodes.next_sibling[n] != 0 {
 			n = p.nodes.next_sibling[n]
 		}
+
 		p.nodes.next_sibling[n] = child
 	}
 }
+@(private = "file")
 EXPECT :: proc(p: ^Parser, kind: Token) -> bool {
 	if p.current.kind == kind {
 		ADVANCE(p)
@@ -133,28 +141,37 @@ EXPECT :: proc(p: ^Parser, kind: Token) -> bool {
 	}
 	return false
 }
+@(private = "file")
 PARSE_CHUNK :: proc(p: ^Parser) -> NODEID {
 	ADVANCE(p)
 	ADVANCE(p)
 
 	return PARSE_BLOCK(p)
 }
+@(private = "file")
 PARSE_BLOCK :: proc(p: ^Parser) -> NODEID {
 	block := NEW_NODE(p, .BLOCK)
+
 	for {
 		if p.current.kind == .SEMI {
 			ADVANCE(p)
 			continue
 		}
+
 		tk := p.current.kind
 		block_end := tk == .END || tk == .ELSE || tk == .ELSEIF || tk == .EOF
+
 		if block_end do break
+
 		ADD_CHILD(p, block, PARSE_STMT(p))
 	}
+
 	return block
 }
+@(private = "file")
 PARSE_STMT :: proc(p: ^Parser) -> NODEID {
 	tk := p.current.kind
+
 	if tk == .WHILE do return PARSE_WHILE(p)
 	if tk == .REPEAT do return PARSE_REPEAT(p)
 	if tk == .DO do return PARSE_DO(p)
@@ -166,63 +183,86 @@ PARSE_STMT :: proc(p: ^Parser) -> NODEID {
 	if tk == .BREAK do return PARSE_BREAK(p)
 	if tk == .RETURN do return PARSE_RETURN(p)
 	if tk == .OPEN do return PARSE_CALL(p)
+
 	return PARSE_EXPRESSION_STATEMENT(p)
 }
+@(private = "file")
 PARSE_CALL :: proc(p: ^Parser) -> NODEID {
 	EXPECT(p, .OPEN)
 	args := PARSE_EXPLIST(p)
+
 	EXPECT(p, .CLOSE)
 	call := NEW_NODE(p, .CALL)
+
 	for arg in args do ADD_CHILD(p, call, arg)
+
 	return call
 }
+@(private = "file")
 PARSE_WHILE :: proc(p: ^Parser) -> NODEID {
 	EXPECT(p, .WHILE)
 	node := NEW_NODE(p, .WHILE)
 	cond := PARSE_EXP(p)
+
 	EXPECT(p, .DO)
 	body := PARSE_BLOCK(p)
+
 	EXPECT(p, .END)
 	ADD_CHILD(p, node, cond)
 	ADD_CHILD(p, node, body)
+
 	return node
 }
+@(private = "file")
 PARSE_IF :: proc(p: ^Parser) -> NODEID {
 	EXPECT(p, .IF)
 	root := NEW_NODE(p, .IF)
 	cond := PARSE_EXP(p)
+
 	EXPECT(p, .THEN)
 	blk := PARSE_BLOCK(p)
+
 	ADD_CHILD(p, root, cond)
 	ADD_CHILD(p, root, blk)
+
 	for p.current.kind == .ELSEIF {
 		ADVANCE(p)
 		econd := PARSE_EXP(p)
 		EXPECT(p, .THEN)
+
 		eblk := PARSE_BLOCK(p)
 		ADD_CHILD(p, root, econd)
 		ADD_CHILD(p, root, eblk)
 	}
+
 	if p.current.kind == .ELSE {
 		ADVANCE(p)
 		eblk := PARSE_BLOCK(p)
 		ADD_CHILD(p, root, eblk)
 	}
 	EXPECT(p, .END)
+
 	return root
 }
+@(private = "file")
 PARSE_EXP :: proc(p: ^Parser) -> NODEID {
 	return PARSE_PRECEDENCE(p, .LOWEST)
 }
+@(private = "file")
 PARSE_PRECEDENCE :: proc(p: ^Parser, precedence: Precedence) -> NODEID {
 	left := PARSE_PREFIX_EXP(p)
+
 	for {
 		current_prec := GET_PRECEDENCE(p.current.kind)
+
 		if precedence >= current_prec do break
+
 		left = PARSE_INFIX(p, left)
 	}
+
 	return left
 }
+@(private = "file")
 GET_PRECEDENCE :: proc(tok: Token) -> Precedence {
 	#partial switch tok {
 	case .ASSIGN:
@@ -261,93 +301,124 @@ GET_PRECEDENCE :: proc(tok: Token) -> Precedence {
 		return .LOWEST
 	}
 }
+@(private = "file")
 PARSE_INFIX :: proc(p: ^Parser, left: NODEID) -> NODEID {
 	tok := p.current.kind
+
 	if tok == .OPEN {
 		ADVANCE(p)
 		args := make([dynamic]NODEID)
+
 		if p.current.kind != .CLOSE {
 			append(&args, PARSE_EXP(p))
+
 			for p.current.kind == .COMMA {
 				ADVANCE(p)
 				append(&args, PARSE_EXP(p))
 			}
 		}
+
 		EXPECT(p, .CLOSE)
 		node := NEW_NODE(p, .CALL)
 		ADD_CHILD(p, node, left)
+
 		for arg in args do ADD_CHILD(p, node, arg)
+
 		return node
 	}
 	if tok == .DOT {
 		ADVANCE(p)
+
 		if p.current.kind == .IDENTIFIER {
 			right := NEW_NODE(p, .IDENTIFIER)
 			p.nodes.name[right] = string(p.current.text)
 			ADVANCE(p)
+
 			node := NEW_NODE(p, .BINARY)
 			p.nodes.token[node] = tok
+
 			ADD_CHILD(p, node, left)
 			ADD_CHILD(p, node, right)
+
 			return node
 		}
 	}
+
 	if tok == .BOPEN {
 		ADVANCE(p)
 		right := PARSE_PRECEDENCE(p, .LOWEST)
 		EXPECT(p, .BCLOSE)
+
 		node := NEW_NODE(p, .BINARY)
 		p.nodes.token[node] = tok
+
 		ADD_CHILD(p, node, left)
 		ADD_CHILD(p, node, right)
+
 		return node
 	}
+
 	ADVANCE(p)
+
 	right := PARSE_PRECEDENCE(p, GET_PRECEDENCE(tok))
 	node := NEW_NODE(p, .BINARY)
 	p.nodes.token[node] = tok
+
 	ADD_CHILD(p, node, left)
 	ADD_CHILD(p, node, right)
 	return node
 }
+@(private = "file")
 PARSE_PRIMARY :: proc(p: ^Parser) -> NODEID {
 	tk := p.current.kind
+
 	if tk == .NUMBER {
 		id := NEW_NODE(p, .LITERAL)
 		val, _ := strconv.parse_i64(string(p.current.text))
 		p.nodes.int_value[id] = val
 		ADVANCE(p)
+
 		return id
 	}
+
 	if tk == .STRING {
 		id := NEW_NODE(p, .STRING)
 		p.nodes.string_value[id] = string(p.current.text)
 		ADVANCE(p)
+
 		return id
 	}
+
 	if tk == .IDENTIFIER {
 		id := NEW_NODE(p, .IDENTIFIER)
 		p.nodes.name[id] = string(p.current.text)
 		ADVANCE(p)
+
 		return id
 	}
+
 	if tk == .NIL || tk == .TRUE || tk == .FALSE {
 		id := NEW_NODE(p, .LITERAL)
 		p.nodes.string_value[id] = string(p.current.text)
 		ADVANCE(p)
+
 		return id
 	}
 	if tk == .OPEN {
 		ADVANCE(p)
 		exp := PARSE_EXP(p)
 		EXPECT(p, .CLOSE)
+
 		return exp
 	}
+
 	if tk == .TOPEN {
 		return PARSE_TABLE(p)
 	}
+
 	return NEW_NODE(p, .INVALID)
 }
+@(private = "file")
 PARSE_EXPRESSION_STATEMENT :: proc(p: ^Parser) -> NODEID {
 	left := PARSE_EXP(p)
 
@@ -362,60 +433,82 @@ PARSE_EXPRESSION_STATEMENT :: proc(p: ^Parser) -> NODEID {
 
 	return left
 }
+@(private = "file")
 PEEK_PRECEDENCE :: proc(p: ^Parser) -> Precedence {
 	return PRECEDENCES[p.peek.kind]
 }
+@(private = "file")
 PARSE_PREFIX_EXP :: proc(p: ^Parser) -> NODEID {
 	tk := p.current.kind
+
 	if tk == .NOT || tk == .MINUS || tk == .POUND || tk == .BANG {
 		node := NEW_NODE(p, .UNARY)
 		p.nodes.token[node] = p.current.kind
 		ADVANCE(p)
+
 		right := PARSE_PREFIX_EXP(p)
 		ADD_CHILD(p, node, right)
+
 		return node
 	}
+
 	return PARSE_PRIMARY(p)
 }
+@(private = "file")
 PARSE_EXPLIST :: proc(p: ^Parser) -> []NODEID {
 	exps := make([dynamic]NODEID)
 	append(&exps, PARSE_EXP(p))
+
 	for p.current.kind == .COMMA {
 		ADVANCE(p)
 		append(&exps, PARSE_EXP(p))
 	}
+
 	return exps[:]
 }
+@(private = "file")
 PARSE_REPEAT :: proc(p: ^Parser) -> NODEID {
 	EXPECT(p, .REPEAT)
 	node := NEW_NODE(p, .REPEAT)
+
 	ublock := PARSE_UBLOCK(p)
 	ADD_CHILD(p, node, ublock)
+
 	return node
 }
+@(private = "file")
 PARSE_UBLOCK :: proc(p: ^Parser) -> NODEID {
 	block := NEW_NODE(p, .BLOCK)
 	for {
+
 		if p.current.kind == .SEMI {
 			ADVANCE(p)
 			continue
 		}
+
 		if p.current.kind == .UNTIL do break
+
 		ADD_CHILD(p, block, PARSE_STMT(p))
 	}
+
 	EXPECT(p, .UNTIL)
+
 	cond := PARSE_EXP(p)
 	node := NEW_NODE(p, .UBLOCK)
+
 	ADD_CHILD(p, node, block)
 	ADD_CHILD(p, node, cond)
+
 	return node
 }
+@(private = "file")
 PARSE_DO :: proc(p: ^Parser) -> NODEID {
 	EXPECT(p, .DO)
 	body := PARSE_BLOCK(p)
 	EXPECT(p, .END)
 	return body
 }
+@(private = "file")
 PARSE_FUNCTION :: proc(p: ^Parser) -> NODEID {
 	EXPECT(p, .FUNCTION)
 	name := p.current.text
@@ -456,6 +549,7 @@ PARSE_FUNCTION :: proc(p: ^Parser) -> NODEID {
 	ADD_CHILD(p, node, body)
 	return node
 }
+@(private = "file")
 PARSE_FOR :: proc(p: ^Parser) -> NODEID {
 	EXPECT(p, .FOR)
 	var_name := string(p.current.text)
@@ -506,6 +600,7 @@ PARSE_FOR :: proc(p: ^Parser) -> NODEID {
 	}
 	return node
 }
+@(private = "file")
 PARSE_LOCAL :: proc(p: ^Parser) -> NODEID {
 	EXPECT(p, .LOCAL)
 	node := NEW_NODE(p, .LOCAL)
@@ -533,10 +628,12 @@ PARSE_LOCAL :: proc(p: ^Parser) -> NODEID {
 
 	return node
 }
+@(private = "file")
 PARSE_BREAK :: proc(p: ^Parser) -> NODEID {
 	EXPECT(p, .BREAK)
 	return NEW_NODE(p, .BREAK)
 }
+@(private = "file")
 PARSE_RETURN :: proc(p: ^Parser) -> NODEID {
 	EXPECT(p, .RETURN)
 	node := NEW_NODE(p, .RETURN)
@@ -548,11 +645,15 @@ PARSE_RETURN :: proc(p: ^Parser) -> NODEID {
 
 	return node
 }
+@(private = "file")
 PARSE_TABLE :: proc(p: ^Parser) -> NODEID {
 	EXPECT(p, .TOPEN)
 	table := NEW_NODE(p, .TABLE)
+
 	if p.current.kind != .TCLOSE {
+
 		for {
+
 			if p.current.kind == .OPEN {
 				ADVANCE(p)
 				key := PARSE_EXP(p)
@@ -583,12 +684,15 @@ PARSE_TABLE :: proc(p: ^Parser) -> NODEID {
 			}
 
 			if p.current.kind != .COMMA && p.current.kind != .SEMI do break
+
 			ADVANCE(p)
 		}
 	}
+
 	EXPECT(p, .TCLOSE)
 	return table
 }
+@(private = "file")
 PARSE_GLOBAL :: proc(p: ^Parser) -> NODEID {
 	EXPECT(p, .GLOBAL)
 	node := NEW_NODE(p, .GLOBAL)
