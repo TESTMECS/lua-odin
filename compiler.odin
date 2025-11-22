@@ -150,7 +150,10 @@ COMPILE_BLOCK :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	last_result := -1
 	for child != 0 {
 		result := COMPILE_NODE(c, child)
-		if result < 0 do return result
+		// RETURN and FUNCTION statements return -1, which is not an error in blocks
+		if result < 0 && c.nodes.kind[child] != .RETURN && c.nodes.kind[child] != .FUNCTION {
+			return result
+		}
 		// Free the result register unless it's the last expression
 		next_child := c.nodes.next_sibling[child]
 		if next_child != 0 && result >= 0 {
@@ -291,7 +294,49 @@ COMPILE_RETURN :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 }
 @(private = "file")
 COMPILE_FUNCTION :: proc(c: ^Compiler, nodeid: NODEID) -> int {
-	unimplemented("TODO")
+	func_name := c.nodes.name[nodeid]
+
+	// Get function body (first child)
+	body := c.nodes.first_child[nodeid]
+	if body == 0 {
+		return COMPILE_ERR(c, "FUNCTION node missing body")
+	}
+
+	prototype := new(Prototype, context.allocator)
+	prototype.header.gctype = .PROTOTYPE
+	prototype.header.marked = false
+	prototype.header.generation = 0
+
+	function_compiler := NEW_COMPILER(c.nodes, context.allocator)
+	saved_locals := c.locals
+	saved_local_count := c.local_count
+
+	function_compiler.locals = make(map[string]int, context.allocator)
+	function_compiler.local_count = 0
+
+	body_result := COMPILE_NODE(function_compiler, body)
+
+	// For functions, body_result < 0 is normal (due to RETURN), so don't return early
+	prototype.instructions = function_compiler.instructions[:]
+	prototype.constants = function_compiler.constants[:]
+	prototype.max_stack = function_compiler.max_stack
+	prototype.num_params = 0
+
+	proto_index := len(c.prototypes)
+	append(&c.prototypes, prototype)
+
+	c.locals = saved_locals
+	c.local_count = saved_local_count
+
+	dest := ALLOC_REG(c)
+	EMITABX(c, .CLOSURE, u32(dest), u32(proto_index))
+
+	function_const_idx := ADD_CONST(c, func_name)
+	EMITABX(c, .SETGLOBAL, u32(dest), function_const_idx)
+
+	FREE_REG(c, dest)
+
+	return dest
 }
 @(private = "file")
 COMPILE_ASSIGN :: proc(c: ^Compiler, nodeid: NODEID) -> int {
