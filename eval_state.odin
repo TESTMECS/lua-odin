@@ -1,23 +1,26 @@
 package ouau
 import "core:fmt"
-// Interpreter.
+
 Environment :: struct {
 	values: map[string]Value,
 	sorted: [dynamic]string,
 	dirty:  bool,
 	outer:  ^Environment,
 }
+
 Frame :: struct {
 	env:         ^Environment,
 	return_addr: NODEID,
 	result:      Value,
 }
+
 Interpreter :: struct {
 	globals:    map[string]Value,
 	current:    ^Environment,
 	nodes:      ^NODES,
 	call_stack: [dynamic]^Frame,
 }
+
 NEW_INTERPRETER :: proc(nodes: ^NODES, allocator := context.allocator) -> ^Interpreter {
 	i := new(Interpreter, allocator)
 	i.nodes = nodes

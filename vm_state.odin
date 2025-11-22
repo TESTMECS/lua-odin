@@ -1,35 +1,6 @@
 package ouau
 import "core:mem"
-ThreadState :: struct {
-	globals:    ^GlobalState,
-	stack:      [dynamic]Value,
-	call_count: int,
-	pc:         int,
-	top:        int,
-	base:       int,
-	status:     ThreadStatus,
-	call_stack: [dynamic]VMFrame,
-}
-GlobalState :: struct {
-	builtins:     [dynamic]^Table,
-	registry:     ^Table,
-	thread:       ^ThreadState,
-	gc_heap:      ^GC_HEAP,
-	panic:        proc(state: ^ThreadState, msg: string, level: int),
-	string_table: map[string]^Value,
-	globals:      ^Table,
-	gc_threshold: int,
-	gc_debt:      int,
-}
-Thread :: struct {
-	state: ^ThreadState,
-}
-ThreadStatus :: enum {
-	OK,
-	ERR,
-	YIELD,
-	SUSPENDED,
-}
+
 VMFrame :: struct {
 	func:        ^Closure,
 	return_addr: int,
@@ -60,6 +31,7 @@ VM_Config :: struct {
 	gc_threshold: int,
 	max_threads:  int,
 }
+
 NEW_VM :: proc(config: ^VM_Config, allocator := context.allocator) -> ^VM {
 	vm := new(VM, allocator)
 	vm.config = config
@@ -73,8 +45,10 @@ NEW_VM :: proc(config: ^VM_Config, allocator := context.allocator) -> ^VM {
 NEW_GLOBAL_STATE :: proc(allocator := context.allocator) -> ^GlobalState {
 	gs := new(GlobalState, allocator)
 	gs.builtins = make([dynamic]^Table, allocator)
-	gs.string_table = make(map[string]^Value, allocator)
-	gs.gc_heap = NEW_GC_HEAP(allocator)
+	gs.string_table.hash = make([dynamic]^String, allocator)
+	gs.string_table.size = 0
+	gs.string_table.count = 0
+	gs.gc = NEW_GC_HEAP(allocator)
 	gs.registry = NEW_TABLE(allocator)
 	gs.globals = NEW_TABLE(allocator)
 	gs.gc_threshold = 1024 * 1024
@@ -87,12 +61,14 @@ NEW_THREAD :: proc(
 ) -> ^ThreadState {
 	ts := new(ThreadState, allocator)
 	ts.globals = gs
-	ts.stack = make([dynamic]Value, stack_size, allocator)
+	ts.stack = make([dynamic]Value, allocator)
+	resize(&ts.stack, stack_size)
 	ts.call_stack = make([dynamic]VMFrame, allocator)
 	ts.status = .OK
 	ts.top = 0
 	ts.base = 0
 	ts.pc = 0
+	ts.call_count = 0
 	return ts
 }
 

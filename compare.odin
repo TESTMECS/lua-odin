@@ -1,20 +1,15 @@
 package ouau
-
-compare_keytag :: proc(a, b: KeyTag) -> bool
-{
+compare_keytag :: proc(a, b: KeyTag) -> bool {
 	// first: compare kind
-	if a.kind != b.kind
-	{
+	if a.kind != b.kind {
 		return a.kind < b.kind
 	}
 
 	// kinds equal → compare payload
-	switch a.kind
-	{
+	switch a.kind {
 	case 0:
 		// string
-		if a.s != b.s
-		{
+		if a.s != b.s {
 			return a.s < b.s // lexicographic
 		}
 		return false // equal

@@ -4,13 +4,13 @@ STACK_CHECK :: proc(vm: ^VM, needed: int) -> bool {
 	thread := vm.current_thread
 	available := len(thread.stack) - thread.top
 	if available < needed {
-		resize(&thread.stack, len(thread.stack) * 2)
+		if resize(&thread.stack, len(thread.stack) * 2) != .None do return false
 	}
 	return true
 }
 STACK_PUSH :: proc(thread: ^ThreadState, val: Value) {
 	if thread.top >= len(thread.stack) {
-		resize(&thread.stack, len(thread.stack) * 2)
+		if resize(&thread.stack, len(thread.stack) * 2) != .None do return
 	}
 	thread.stack[thread.top] = val
 	thread.top += 1

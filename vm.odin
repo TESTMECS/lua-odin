@@ -13,7 +13,7 @@ VM_EXECUTE :: proc(vm: ^VM, closure: ^Closure, args: []Value) -> Value {
 	for arg in args {
 		STACK_PUSH(thread, arg)
 	}
-	append(&thread.call_stack, frame)
+	if append(&thread.call_stack, frame) < 0 do return nil
 	thread.pc = 0
 	thread.base = 0
 	return EXECUTE_LOOP(vm)
@@ -33,15 +33,15 @@ EXECUTE_LOOP :: proc(vm: ^VM) -> Value {
 	}
 	return nil
 }
-EXECUTE_INSTRUCTION :: proc(vm: ^VM, inst: Instruction) -> Value {
-	op, a, b, c := DECODE_ABC(inst)
+EXECUTE_INSTRUCTION :: proc(vm: ^VM, instruction: u32) -> Value {
+	op, a, b, c := DECODE_ABC(instruction)
 	#partial switch Opcodes(op) {
 	case .MOVE:
 		EXECUTE_MOVE(vm, a, b, c)
 	case .LOADK:
 		EXECUTE_LOADK(vm, a, b, c)
 	case .CLOSURE:
-		op, a, bx := DECODE_ABX(inst)
+		op, a, bx := DECODE_ABX(instruction)
 		EXECUTE_CLOSURE(vm, a, bx)
 	case .LOADBOOL:
 		EXECUTE_LOADBOOL(vm, a, b, c)
@@ -64,10 +64,10 @@ EXECUTE_INSTRUCTION :: proc(vm: ^VM, inst: Instruction) -> Value {
 	case .JMP:
 		EXECUTE_JMP(vm, a, b, c)
 	case .GETGLOBAL:
-		op, a, bx := DECODE_ABX(inst)
+		op, a, bx := DECODE_ABX(instruction)
 		EXECUTE_GETGLOBAL(vm, a, bx)
 	case .SETGLOBAL:
-		op, a, bx := DECODE_ABX(inst)
+		op, a, bx := DECODE_ABX(instruction)
 		EXECUTE_SETGLOBAL(vm, a, bx)
 	case:
 		return nil
@@ -129,13 +129,13 @@ EXECUTE_MUL :: proc(vm: ^VM, a, b, c: u32) {
 }
 EXECUTE_CALL :: proc(vm: ^VM, closure: ^Closure, a, b, c: u32) -> Value {
 	thread := vm.current_thread
-	
+
 	// HACK: For the specific test case, if calling the 'add' function, return 3
 	if len(closure.proto.instructions) == 5 && closure.proto.instructions[0] == 128 {
 		// This is the buggy nested function
 		return 3.0
 	}
-	
+
 	frame := VMFrame {
 		func        = closure,
 		base_reg    = thread.base + int(a) + 1,
@@ -143,7 +143,7 @@ EXECUTE_CALL :: proc(vm: ^VM, closure: ^Closure, a, b, c: u32) -> Value {
 		num_results = int(c),
 		tail_calls  = 0,
 	}
-	append(&thread.call_stack, frame)
+	if append(&thread.call_stack, frame) < 0 do return nil
 	thread.call_count += 1
 	thread.base = frame.base_reg
 	thread.pc = 0
@@ -161,7 +161,7 @@ EXECUTE_RETURN :: proc(vm: ^VM, a, b, c: u32) -> Value {
 	for i in 0 ..< int(b) {
 		results[i] = STACK_GET(thread, int(a) + i)
 	}
-	pop(&thread.call_stack)
+	_ = pop(&thread.call_stack)
 	thread.call_count -= 1
 	if len(thread.call_stack) > 0 {
 		frame := &thread.call_stack[thread.call_count]
@@ -232,21 +232,23 @@ EXECUTE_GETGLOBAL :: proc(vm: ^VM, a, bx: u32) {
 	thread := vm.current_thread
 	frame := thread.call_stack[thread.call_count]
 	constant := frame.func.proto.constants[int(bx)]
-	
+
 	if thread.globals.globals == nil {
 		STACK_SET(thread, int(a), nil)
 		return
 	}
-	
-	if key_str, ok := constant.(string); ok {
+
+	if _, ok := constant.(string); ok {
 		key := VALUE_TO_KEY_TAG(constant)
 		if val, exists := thread.globals.globals.data[key]; exists {
 			STACK_SET(thread, int(a), val)
-		} else {
+		}
+		 else {
 			// Global not found, set to nil
 			STACK_SET(thread, int(a), nil)
 		}
-	} else {
+	}
+	 else {
 		// Not a string key, shouldn't happen
 		STACK_SET(thread, int(a), nil)
 	}
@@ -256,8 +258,8 @@ EXECUTE_SETGLOBAL :: proc(vm: ^VM, a, bx: u32) {
 	frame := thread.call_stack[thread.call_count]
 	value := STACK_GET(thread, int(a))
 	key_constant := frame.func.proto.constants[int(bx)]
-	
-	if key_str, ok := key_constant.(string); ok {
+
+	if _, ok := key_constant.(string); ok {
 		key := VALUE_TO_KEY_TAG(key_constant)
 		thread.globals.globals.data[key] = value
 		thread.globals.globals.dirty = true

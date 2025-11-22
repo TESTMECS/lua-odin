@@ -1,6 +1,5 @@
 package compiler_test
 import compiler "../"
-import "core:log"
 import "core:mem/virtual"
 import "core:testing"
 
@@ -21,7 +20,7 @@ test_local :: proc(t: ^testing.T) {
 
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
-	c := NEW_COMPILER(&p, varena)
+	c := NEW_COMPILER(&p.nodes, varena)
 	COMPILE_NODE(c, nodeid)
 	insts := c.instructions[:]
 	if len(insts) == 0 {
@@ -53,7 +52,7 @@ test_block :: proc(t: ^testing.T) {
 
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
-	c := NEW_COMPILER(&p, varena)
+	c := NEW_COMPILER(&p.nodes, varena)
 	COMPILE_NODE(c, nodeid)
 	insts := c.instructions[:]
 	if len(insts) == 0 {
@@ -90,7 +89,7 @@ test_function :: proc(t: ^testing.T) {
 
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
-	c := NEW_COMPILER(&p, varena)
+	c := NEW_COMPILER(&p.nodes, varena)
 	COMPILE_NODE(c, nodeid)
 	insts := c.instructions[:]
 	if len(insts) == 0 {
@@ -121,7 +120,7 @@ test_table :: proc(t: ^testing.T) {
 
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
-	c := NEW_COMPILER(&p, varena)
+	c := NEW_COMPILER(&p.nodes, varena)
 	COMPILE_NODE(c, nodeid)
 	insts := c.instructions[:]
 	if len(insts) == 0 {
@@ -152,7 +151,7 @@ test_global :: proc(t: ^testing.T) {
 
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
-	c := NEW_COMPILER(&p, varena)
+	c := NEW_COMPILER(&p.nodes, varena)
 	COMPILE_NODE(c, nodeid)
 	insts := c.instructions[:]
 	if len(insts) == 0 {
@@ -187,7 +186,7 @@ test_while :: proc(t: ^testing.T) {
 
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
-	c := NEW_COMPILER(&p, varena)
+	c := NEW_COMPILER(&p.nodes, varena)
 	COMPILE_NODE(c, nodeid)
 	insts := c.instructions[:]
 	if len(insts) == 0 {
@@ -235,7 +234,7 @@ test_repeat :: proc(t: ^testing.T) {
 
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
-	c := NEW_COMPILER(&p, varena)
+	c := NEW_COMPILER(&p.nodes, varena)
 	COMPILE_NODE(c, nodeid)
 	insts := c.instructions[:]
 	if len(insts) == 0 {
@@ -280,7 +279,7 @@ test_for :: proc(t: ^testing.T) {
 
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
-	c := NEW_COMPILER(&p, varena)
+	c := NEW_COMPILER(&p.nodes, varena)
 	COMPILE_NODE(c, nodeid)
 	insts := c.instructions[:]
 	if len(insts) == 0 {
@@ -326,7 +325,7 @@ test_if :: proc(t: ^testing.T) {
 
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
-	c := NEW_COMPILER(&p, varena)
+	c := NEW_COMPILER(&p.nodes, varena)
 	COMPILE_NODE(c, nodeid)
 	insts := c.instructions[:]
 	if len(insts) == 0 {
@@ -364,7 +363,7 @@ test_call :: proc(t: ^testing.T) {
 
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
-	c := NEW_COMPILER(&p, varena)
+	c := NEW_COMPILER(&p.nodes, varena)
 	COMPILE_NODE(c, nodeid)
 	insts := c.instructions[:]
 	if len(insts) == 0 {

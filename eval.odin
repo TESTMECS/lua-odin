@@ -1,6 +1,7 @@
 package ouau
 import "core:math"
 import "core:strings"
+
 EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	kind := i.nodes.kind[node]
 	#partial switch kind {
@@ -414,6 +415,7 @@ GET_RIGHT_CHILD :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
 	left := i.nodes.first_child[node]
 	return i.nodes.next_sibling[left]
 }
+
 EXTRACT_PARAMS :: proc(i: ^Interpreter, node: NODEID, allocator := context.allocator) -> []string {
 	params := make([dynamic]string, allocator)
 
@@ -427,6 +429,7 @@ EXTRACT_PARAMS :: proc(i: ^Interpreter, node: NODEID, allocator := context.alloc
 
 	return params[:]
 }
+
 get_function_body :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
 	child := i.nodes.first_child[node]
 	// Skip parameters
@@ -436,6 +439,7 @@ get_function_body :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
 	// The next child should be the block
 	return child
 }
+
 IS_TRUTHY :: proc(PValue: Value) -> bool {
 	switch v in PValue {
 	case bool:
@@ -455,6 +459,7 @@ IS_TRUTHY :: proc(PValue: Value) -> bool {
 	}
 	return false
 }
+
 CALL_USER_FUNCTION :: proc(i: ^Interpreter, fn: ^Closure, args: []Value) -> Value {
 	env := NEW_ENVIRONMENT(fn.closure)
 	for param, i in fn.params {
@@ -472,6 +477,7 @@ CALL_USER_FUNCTION :: proc(i: ^Interpreter, fn: ^Closure, args: []Value) -> Valu
 	}
 	return nil // No explicit return
 }
+
 EVAL_EXPRESSION_LIST :: proc(i: ^Interpreter, node: NODEID) -> []Value {
 	values: [dynamic]Value
 
@@ -494,6 +500,7 @@ EVAL_EXPRESSION_LIST :: proc(i: ^Interpreter, node: NODEID) -> []Value {
 
 	return values[:]
 }
+
 EVAL_COMPARE :: proc(left, right: Value, op: Token) -> bool {
 	#partial switch op {
 	case .EQ:
@@ -535,6 +542,7 @@ EVAL_COMPARE :: proc(left, right: Value, op: Token) -> bool {
 	}
 	panic("unreachable")
 }
+
 EVAL_PLUS :: proc(left, right: Value) -> Value {
 	if left_str, left_ok := left.(string); left_ok {
 		if right_str, right_ok := right.(string); right_ok {
@@ -555,6 +563,7 @@ EVAL_PLUS :: proc(left, right: Value) -> Value {
 	}
 	return lvalue + rvalue
 }
+
 EVAL_MINUS :: proc(left, right: Value) -> Value {
 	#partial switch ty in left {
 	case f64:
@@ -563,6 +572,7 @@ EVAL_MINUS :: proc(left, right: Value) -> Value {
 		return nil
 	}
 }
+
 EVAL_MUL :: proc(left, right: Value) -> Value {
 	#partial switch ty in left {
 	case f64:
@@ -571,6 +581,7 @@ EVAL_MUL :: proc(left, right: Value) -> Value {
 		return nil
 	}
 }
+
 EVAL_DIV :: proc(left, right: Value) -> Value {
 	#partial switch ty in left {
 	case f64:
@@ -579,6 +590,7 @@ EVAL_DIV :: proc(left, right: Value) -> Value {
 		return nil
 	}
 }
+
 EVAL_MOD :: proc(left, right: Value) -> Value {
 	return math.mod_f64(left.(f64), right.(f64))
 }
@@ -601,6 +613,7 @@ EVAL_BITWISE :: proc(left, right: Value, op: Token) -> Value {
 	}
 	return 0.0
 }
+
 COMPARE_TABLE :: proc(left, right: ^Table) -> bool {
 	if left == right {
 		return true
@@ -624,9 +637,11 @@ COMPARE_TABLE :: proc(left, right: ^Table) -> bool {
 
 	return true
 }
+
 COMPARE_CLOSURE :: proc(left, right: ^Closure) -> bool {
 	return left == right
 }
+
 VALUE_TO_STRING :: proc(v: Value, allocator := context.allocator) -> string {
 	sb := strings.builder_make(allocator)
 	defer strings.builder_destroy(&sb)
@@ -651,6 +666,7 @@ VALUE_TO_STRING :: proc(v: Value, allocator := context.allocator) -> string {
 		return "nil"
 	}
 }
+
 EVAL_ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	lvalue := GET_LEFT_CHILD(i, node)
 	rvalue := GET_RIGHT_CHILD(i, node)
@@ -711,6 +727,7 @@ EVAL_ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	}
 	return nil
 }
+
 EVAL_GLOBAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	child := i.nodes.first_child[node]
 	vars: [dynamic]string

@@ -1,7 +1,5 @@
 package ouau
 import "core:math"
-// A single instruction
-Instruction :: u32
 // Bitsizes
 SIZE_OP :: 6
 SIZE_A :: 8
@@ -114,46 +112,48 @@ LOOKUP :: proc(op: Opcodes) -> (Definition, bool) {
 	if def.name == "" do return Definition{}, false
 	return def, true
 }
-MAKE_ABC :: proc(op, a, b, c: u32) -> Instruction {
-	if op > MASK_OP || a > MASK_A || b > MASK_B || c > MASK_C do panic("field out of range @MAKE_ABC")
+
+MAKE_ABC :: proc(operation, register_a, register_b, register_c: u32) -> u32 {
+	if operation > MASK_OP || register_a > MASK_A || register_b > MASK_B || register_c > MASK_C do panic("field out of range @MAKE_ABC")
 	return(
-		Instruction((op & MASK_OP) << POS_OP) |
-		Instruction((a & MASK_A) << POS_A) |
-		Instruction((c & MASK_C) << POS_C) |
-		Instruction((b & MASK_B) << POS_B) \
+		u32((operation & MASK_OP) << POS_OP) |
+		u32((register_a & MASK_A) << POS_A) |
+		u32((register_c & MASK_C) << POS_C) |
+		u32((register_b & MASK_B) << POS_B) \
 	)
 }
-MAKE_ABX :: proc(op, a, bx: u32) -> Instruction {
-	if op > MASK_OP || a > MASK_A || bx > MASK_Bx do panic("field out of range @MAKE_ABX")
+
+MAKE_ABX :: proc(operation, register_a, register_bx: u32) -> u32 {
+	if operation > MASK_OP || register_a > MASK_A || register_bx > MASK_Bx do panic("field out of range @MAKE_ABX")
 	return(
-		Instruction((op & MASK_OP) << POS_OP) |
-		Instruction((a & MASK_A) << POS_A) |
-		Instruction((bx & MASK_Bx) << POS_C) \
+		u32((operation & MASK_OP) << POS_OP) |
+		u32((register_a & MASK_A) << POS_A) |
+		u32((register_bx & MASK_Bx) << POS_C) \
 	)
 }
-MAKE_ASBX :: proc(op, a: u32, sbx: i32) -> Instruction {
-	biased := u32(sbx + i32(BxBIAS))
-	return MAKE_ABX(op, a, biased)
+MAKE_ASBX :: proc(operation, register_a: u32, register_sbx: i32) -> u32 {
+	biased := u32(register_sbx + i32(BxBIAS))
+	return MAKE_ABX(operation, register_a, biased)
 }
-DECODE_ABC :: proc(i: Instruction) -> (op, a, b, c: u32) {
-	op = u32((i >> POS_OP) & Instruction(MASK_OP))
-	a = u32((i >> POS_A) & Instruction(MASK_A))
-	c = u32((i >> POS_C) & Instruction(MASK_C))
-	b = u32((i >> POS_B) & Instruction(MASK_B))
+DECODE_ABC :: proc(instruction: u32) -> (operation, register_a, register_b, register_c: u32) {
+	operation = u32((instruction >> POS_OP) & u32(MASK_OP))
+	register_a = u32((instruction >> POS_A) & u32(MASK_A))
+	register_c = u32((instruction >> POS_C) & u32(MASK_C))
+	register_b = u32((instruction >> POS_B) & u32(MASK_B))
 	return
 }
-DECODE_ABX :: proc(i: Instruction) -> (op, a, bx: u32) {
-	op = u32((i >> POS_OP) & Instruction(MASK_OP))
-	a = u32((i >> POS_A) & Instruction(MASK_A))
-	bx = u32((i >> POS_C) & Instruction(MASK_Bx))
+DECODE_ABX :: proc(instruction: u32) -> (operation, register_a, register_bx: u32) {
+	operation = u32((instruction >> POS_OP) & u32(MASK_OP))
+	register_a = u32((instruction >> POS_A) & u32(MASK_A))
+	register_bx = u32((instruction >> POS_C) & u32(MASK_Bx))
 	return
 }
-DECODE_ASBX :: proc(i: Instruction) -> (u32, u32, i32) {
-	op, a, bx := DECODE_ABX(i)
-	sbx := i32(bx) - i32(BxBIAS)
-	return op, a, sbx
+DECODE_ASBX :: proc(instruction: u32) -> (u32, u32, i32) {
+	operation, register_a, register_bx := DECODE_ABX(instruction)
+	register_sbx := i32(register_bx) - i32(BxBIAS)
+	return operation, register_a, register_sbx
 }
-MAKE_INSTRUCTION :: proc(op: Opcodes, operands: ..int) -> Instruction {
+MAKE_INSTRUCTION :: proc(op: Opcodes, operands: ..int) -> u32 {
 	def, ok := LOOKUP(op)
 	if !ok do return 0
 	switch def.format {
