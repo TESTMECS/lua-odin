@@ -26,7 +26,7 @@ test-file:
 
 test_compiler_name := "test_local"
 test_compiler:
-	odin test ./test_compiler -define:ODIN_TEST_NAMES={{test_compiler_name}}
+	odin test ./test_compiler -define:ODIN_TEST_NAMES={{test_compiler_name}} -sanitize:address
 
 test_function:
 	odin test ./test_compiler -define:ODIN_TEST_NAMES=test_function

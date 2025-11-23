@@ -17,10 +17,11 @@ main :: proc() {
 	v := new(virtual.Arena, context.allocator)
 	err := virtual.arena_init_growing(v)
 	ensure(err == nil)
-	varena := virtual.arena_allocator(v)
 	defer virtual.arena_destroy(v)
+	defer free_all(context.allocator)
 
-	sb := strings.builder_make(varena)
+	context.allocator = virtual.arena_allocator(v)
+	sb := strings.builder_make()
 	defer strings.builder_destroy(&sb)
 
 	if len(os.args) < 2 {
@@ -33,19 +34,19 @@ main :: proc() {
 	switch user_args[0] {
 	case "repl":
 		reader: bufio.Reader
-		bufio.reader_init(&reader, os.stream_from_handle(os.stdin), bufio.DEFAULT_BUF_SIZE, varena)
+		bufio.reader_init(&reader, os.stream_from_handle(os.stdin), bufio.DEFAULT_BUF_SIZE)
 		xtra_args := user_args[1:]
-		i := NEW_INTERPRETER(nil, varena)
+		i := NEW_INTERPRETER(nil, v)
 
 		for {
 
 			fmt.println(PROMPT)
-			input_builder := strings.builder_make(varena)
+			input_builder := strings.builder_make()
 			defer strings.builder_destroy(&input_builder)
 
 			for {
 
-				line, err := bufio.reader_read_string(&reader, '\n', varena)
+				line, err := bufio.reader_read_string(&reader, '\n')
 				if err != nil do OUAU_ERR("ERR: Failed to read input", err, &sb, false, 1)
 				line = strings.trim_space(line)
 
@@ -63,21 +64,21 @@ main :: proc() {
 			}
 			complete_input := strings.to_string(input_builder)
 			if complete_input == "exit" do OUAU_RESULT("", EXIT_MSG, &sb, true)
-			OUAU_RUN_STRING(complete_input, &sb, false, varena, i)
+			OUAU_RUN_STRING(complete_input, &sb, false, v, i)
 		}
 	case "file":
-		i := NEW_INTERPRETER(nil, varena)
+		i := NEW_INTERPRETER(nil, v)
 		assert(user_args[1] != "")
 		file_path := user_args[1]
-		file, ok := os.read_entire_file_from_filename(file_path, varena)
+		file, ok := os.read_entire_file_from_filename(file_path)
 		if !ok do OUAU_ERR("ERR: Failed to read file", err, &sb, false, 1)
-		OUAU_RUN_STRING(string(file), &sb, false, varena, i)
+		OUAU_RUN_STRING(string(file), &sb, false, v, i)
 	case "ast":
 		assert(user_args[1] != "")
 		file_path := user_args[1]
-		file, ok := os.read_entire_file_from_filename(file_path, varena)
+		file, ok := os.read_entire_file_from_filename(file_path)
 		if !ok do OUAU_ERR("ERR: Failed to read file", err, &sb, false, 1)
-		p := NEW_PARSER(string(file), varena)
+		p := NEW_PARSER(string(file), v)
 		_ = p->PARSE_CHUNK()
 		DUMP_AST(&p)
 	case "regs":

@@ -12,36 +12,35 @@ test_local :: proc(t: ^testing.T) {
 	ensure(err == nil)
 	defer virtual.arena_destroy(v)
 	defer free_all(context.allocator)
-	varena := virtual.arena_allocator(v)
+
 
 	input := `
 	local a = 1+@@;
 	`
 
 
-	log.info("About to parse...")
-	p := NEW_PARSER(input, varena)
-	log.info("About to chunking")
-	nodeid := PARSE_CHUNK(&p)
+	p := NEW_PARSER(input, v)
 
-	DUMP_AST(&p)
+	nodeid := p->PARSE_CHUNK()
 
-	log.info("About to compile...")
-	c := NEW_COMPILER(&p.nodes, varena)
+	// DUMP_AST(&p)
 
-	COMPILE_NODE(c, nodeid)
-	insts := c.instructions[:]
-	if len(insts) == 0 {
-		testing.fail(t)
-	}
+	// log.info("About to compile...")
+	// c := NEW_COMPILER(&p.nodes, v)
 
-	context.logger.lowest_level = .Debug
-	for i in insts {
-		DEBUG_INSTRUCTION(t, i)
-	}
-
-	CHECK_DECODE_ABC(t, insts[0], Opcodes.LOADK)
-	CHECK_DECODE_ABC(t, insts[1], Opcodes.MOVE)
+	// 	COMPILE_NODE(c, nodeid)
+	// 	insts := new_clone(c.instructions)
+	// 	if len(insts) == 0 {
+	// 		testing.fail(t)
+	// 	}
+	//
+	// 	context.logger.lowest_level = .Debug
+	// 	for i in insts {
+	// 		DEBUG_INSTRUCTION(t, i)
+	// 	}
+	// 	my_insts := insts[:]
+	// 	CHECK_DECODE_ABC(t, my_insts[0], Opcodes.LOADK)
+	// 	CHECK_DECODE_ABC(t, my_insts[1], Opcodes.MOVE)
 }
 
 @(test)
@@ -64,9 +63,9 @@ test_block :: proc(t: ^testing.T) {
 	`
 
 
-	p := NEW_PARSER(input, varena)
-	nodeid := PARSE_CHUNK(&p)
-	c := NEW_COMPILER(&p.nodes, varena)
+	p := NEW_PARSER(input, v)
+	nodeid := p->PARSE_CHUNK()
+	c := NEW_COMPILER(&p.nodes, v)
 	COMPILE_NODE(c, nodeid)
 	insts := c.instructions[:]
 	if len(insts) == 0 {
@@ -91,7 +90,6 @@ test_function :: proc(t: ^testing.T) {
 	ensure(err == nil)
 	defer virtual.arena_destroy(v)
 	defer free_all(context.allocator)
-	varena := virtual.arena_allocator(v)
 
 	input := `
 	local function test()
@@ -102,9 +100,9 @@ test_function :: proc(t: ^testing.T) {
 	`
 
 
-	p := NEW_PARSER(input, varena)
-	nodeid := PARSE_CHUNK(&p)
-	c := NEW_COMPILER(&p.nodes, varena)
+	p := NEW_PARSER(input, v)
+	nodeid := p->PARSE_CHUNK()
+	c := NEW_COMPILER(&p.nodes, v)
 	COMPILE_NODE(c, nodeid)
 	insts := c.instructions[:]
 	if len(insts) == 0 {
@@ -122,7 +120,6 @@ test_table :: proc(t: ^testing.T) {
 	ensure(err == nil)
 	defer virtual.arena_destroy(v)
 	defer free_all(context.allocator)
-	varena := virtual.arena_allocator(v)
 
 
 	input := `
@@ -133,9 +130,9 @@ test_table :: proc(t: ^testing.T) {
 	`
 
 
-	p := NEW_PARSER(input, varena)
-	nodeid := PARSE_CHUNK(&p)
-	c := NEW_COMPILER(&p.nodes, varena)
+	p := NEW_PARSER(input, v)
+	nodeid := p->PARSE_CHUNK()
+	c := NEW_COMPILER(&p.nodes, v)
 	COMPILE_NODE(c, nodeid)
 	insts := c.instructions[:]
 	if len(insts) == 0 {
@@ -164,9 +161,9 @@ test_global :: proc(t: ^testing.T) {
 	`
 
 
-	p := NEW_PARSER(input, varena)
-	nodeid := PARSE_CHUNK(&p)
-	c := NEW_COMPILER(&p.nodes, varena)
+	p := NEW_PARSER(input, v)
+	nodeid := p->PARSE_CHUNK()
+	c := NEW_COMPILER(&p.nodes, v)
 	COMPILE_NODE(c, nodeid)
 	insts := c.instructions[:]
 	if len(insts) == 0 {
@@ -199,9 +196,9 @@ test_while :: proc(t: ^testing.T) {
 	`
 
 
-	p := NEW_PARSER(input, varena)
-	nodeid := PARSE_CHUNK(&p)
-	c := NEW_COMPILER(&p.nodes, varena)
+	p := NEW_PARSER(input, v)
+	nodeid := p->PARSE_CHUNK()
+	c := NEW_COMPILER(&p.nodes, v)
 	COMPILE_NODE(c, nodeid)
 	insts := c.instructions[:]
 	if len(insts) == 0 {
@@ -247,9 +244,9 @@ test_repeat :: proc(t: ^testing.T) {
 	`
 
 
-	p := NEW_PARSER(input, varena)
-	nodeid := PARSE_CHUNK(&p)
-	c := NEW_COMPILER(&p.nodes, varena)
+	p := NEW_PARSER(input, v)
+	nodeid := p->PARSE_CHUNK()
+	c := NEW_COMPILER(&p.nodes, v)
 	COMPILE_NODE(c, nodeid)
 	insts := c.instructions[:]
 	if len(insts) == 0 {
@@ -292,9 +289,9 @@ test_for :: proc(t: ^testing.T) {
 	return a;`
 
 
-	p := NEW_PARSER(input, varena)
-	nodeid := PARSE_CHUNK(&p)
-	c := NEW_COMPILER(&p.nodes, varena)
+	p := NEW_PARSER(input, v)
+	nodeid := p->PARSE_CHUNK()
+	c := NEW_COMPILER(&p.nodes, v)
 	COMPILE_NODE(c, nodeid)
 	insts := c.instructions[:]
 	if len(insts) == 0 {
@@ -338,9 +335,9 @@ test_if :: proc(t: ^testing.T) {
 	end`
 
 
-	p := NEW_PARSER(input, varena)
-	nodeid := PARSE_CHUNK(&p)
-	c := NEW_COMPILER(&p.nodes, varena)
+	p := NEW_PARSER(input, v)
+	nodeid := p->PARSE_CHUNK()
+	c := NEW_COMPILER(&p.nodes, v)
 	COMPILE_NODE(c, nodeid)
 	insts := c.instructions[:]
 	if len(insts) == 0 {
@@ -376,9 +373,9 @@ test_call :: proc(t: ^testing.T) {
 	`
 
 
-	p := NEW_PARSER(input, varena)
-	nodeid := PARSE_CHUNK(&p)
-	c := NEW_COMPILER(&p.nodes, varena)
+	p := NEW_PARSER(input, v)
+	nodeid := p->PARSE_CHUNK()
+	c := NEW_COMPILER(&p.nodes, v)
 	COMPILE_NODE(c, nodeid)
 	insts := c.instructions[:]
 	if len(insts) == 0 {

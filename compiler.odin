@@ -1,16 +1,58 @@
 package ouau
 import "core:log"
+import "core:mem/virtual"
 /*
 *	 ./compiler.odin
 *	 Copyright(C) 2025 TESTMEE
 *	 Defines the compiler functions for Ouau.
 */
+Compiler :: struct {
+	instructions: [dynamic]u32,
+	constants:    [dynamic]Value, // pool for LoadK
+	const_index:  map[Value]int, // equality hashing
+	locals:       map[string]int, // name -> register
+	upvalues:     map[string]int, // name -> upval index
+	nodes:        ^NODES,
+	max_stack:    int,
+	nparams:      int,
+	local_count:  int, // next free register
+	free_regs:    [dynamic]int, // stack of freed reg indices
+	prototypes:   [dynamic]^Prototype, // nested function prototypes
+	parent:       ^Prototype, // upvalue resolution
+	arena:        ^virtual.Arena,
+}
+
+@(require_results)
+NEW_COMPILER :: proc(my_nodes: ^NODES, arena: ^virtual.Arena) -> ^Compiler {
+	context.allocator = virtual.arena_allocator(arena)
+
+	c := new(Compiler)
+	c.nodes = my_nodes
+	c.constants = make([dynamic]Value)
+	c.const_index = make(map[Value]int)
+	c.locals = make(map[string]int)
+	c.upvalues = make(map[string]int)
+	c.free_regs = make([dynamic]int)
+	c.prototypes = make([dynamic]^Prototype)
+	c.parent = nil
+	return c
+}
+
+Prototype :: struct {
+	instructions: []u32,
+	constants:    []Value,
+	proto:        []^Prototype,
+	upvalues:     [dynamic]^UpValueDesc,
+	max_stack:    int,
+	num_params:   int,
+}
+
 COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	kind := c.nodes.kind[nodeid]
 	log.infof("Compiling node %v", kind)
 	switch kind {
 	case .DO:
-		unreachable()
+		unimplemented("TODO")
 	case .BREAK:
 		unimplemented("TODO")
 	case .VARARGS:
@@ -121,9 +163,9 @@ COMPILE_LOCAL :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 
 	reg := ALLOC_REG(c)
 	c.locals[var_name] = reg
+
 	// Check if there's an assignment (next sibling after variables)
 	assign_node := var_node
-	log.infof("assign_node::%v", c.nodes.name[assign_node])
 	for c.nodes.next_sibling[assign_node] != 0 {
 		assign_node = c.nodes.next_sibling[assign_node]
 	}
@@ -310,6 +352,8 @@ COMPILE_RETURN :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 }
 @(private = "file")
 COMPILE_FUNCTION :: proc(c: ^Compiler, nodeid: NODEID) -> int {
+	context.allocator = virtual.arena_allocator(c.arena)
+
 	func_name := c.nodes.name[nodeid]
 
 	// Get function body (first child)
@@ -318,12 +362,12 @@ COMPILE_FUNCTION :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 		return COMPILE_ERR(c, "FUNCTION node missing body")
 	}
 
-	prototype := new(Prototype, context.allocator)
-	function_compiler := NEW_COMPILER(c.nodes, context.allocator)
+	prototype := new(Prototype)
+	function_compiler := NEW_COMPILER(c.nodes, c.arena) // I think this is fine if it all goes into the same arena.
 	saved_locals := c.locals
 	saved_local_count := c.local_count
 
-	function_compiler.locals = make(map[string]int, context.allocator)
+	function_compiler.locals = make(map[string]int) // locals get allocated with the previous arena(c.arena) which should be the same space. If I'm correct. Don't know if this matters.
 	function_compiler.local_count = 0
 
 	body_result := COMPILE_NODE(function_compiler, body)

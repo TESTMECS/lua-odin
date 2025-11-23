@@ -33,45 +33,6 @@ NEW_GLOBAL_STATE :: proc(allocator := context.allocator) -> ^GlobalState {
 	return gs
 }
 
-Compiler :: struct {
-	instructions: [dynamic]u32,
-	constants:    [dynamic]Value, // pool for LoadK
-	const_index:  map[Value]int, // equality hashing
-	locals:       map[string]int, // name -> register
-	upvalues:     map[string]int, // name -> upval index
-	nodes:        ^NODES,
-	max_stack:    int,
-	nparams:      int,
-	local_count:  int, // next free register
-	free_regs:    [dynamic]int, // stack of freed reg indices
-	prototypes:   [dynamic]^Prototype, // nested function prototypes
-	parent:       ^Prototype, // upvalue resolution
-}
-
-@(require_results)
-NEW_COMPILER :: proc(my_nodes: ^NODES, allocator := context.allocator) -> ^Compiler {
-	c := new(Compiler, allocator)
-	c.nodes = my_nodes
-	c.constants = make([dynamic]Value, allocator)
-	c.const_index = make(map[Value]int, allocator)
-	c.locals = make(map[string]int, allocator)
-	c.upvalues = make(map[string]int, allocator)
-	c.free_regs = make([dynamic]int, allocator)
-	c.prototypes = make([dynamic]^Prototype, allocator)
-	c.parent = nil
-	return c
-}
-
-Prototype :: struct {
-	instructions: []u32,
-	constants:    []Value,
-	proto:        []^Prototype,
-	upvalues:     [dynamic]^UpValueDesc,
-	max_stack:    int,
-	num_params:   int,
-}
-
-
 VMFrame :: struct {
 	func:        ^Closure,
 	return_addr: int,

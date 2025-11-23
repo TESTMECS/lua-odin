@@ -1,6 +1,7 @@
 package ouau
 import "core:fmt"
 import "core:math"
+import "core:mem/virtual"
 import "core:slice"
 import "core:strings"
 /*
@@ -21,12 +22,13 @@ Interpreter :: struct {
 	call_stack: [dynamic]^Frame,
 }
 @(require_results)
-NEW_INTERPRETER :: proc(nodes: ^NODES, allocator := context.allocator) -> ^Interpreter {
-	i := new(Interpreter, allocator)
+NEW_INTERPRETER :: proc(nodes: ^NODES, areana: ^virtual.Arena) -> ^Interpreter {
+	context.allocator = virtual.arena_allocator(areana)
+	i := new(Interpreter)
 	i.nodes = nodes
-	i.globals = make(map[string]Value, allocator)
-	i.current = NEW_ENVIRONMENT(nil, allocator)
-	i.call_stack = make([dynamic]^Frame, allocator)
+	i.globals = make(map[string]Value)
+	i.current = NEW_ENVIRONMENT(nil)
+	i.call_stack = make([dynamic]^Frame)
 	INIT_BUILTINS(i)
 	return i
 }

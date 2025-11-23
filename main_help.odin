@@ -1,6 +1,6 @@
 package ouau
 import "core:fmt"
-import "core:mem"
+import "core:mem/virtual"
 import "core:os"
 import "core:strings"
 /*
@@ -12,10 +12,10 @@ OUAU_RUN_STRING :: proc(
 	input: string,
 	sb: ^strings.Builder,
 	is_exit := false,
-	varena: mem.Allocator,
+	v: ^virtual.Arena,
 	i: ^Interpreter,
 ) {
-	p := NEW_PARSER(input, varena)
+	p := NEW_PARSER(input, v)
 	root := PARSE_CHUNK(&p)
 	i.nodes = &p.nodes
 	val := INTERPRET(i, root)

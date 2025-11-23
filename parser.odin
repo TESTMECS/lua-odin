@@ -1,5 +1,5 @@
 package ouau
-import "core:log"
+import "core:mem/virtual"
 import "core:strconv"
 /*
 	 ./parser.odin
@@ -59,7 +59,8 @@ Parser :: struct {
 	lexer:       Lexer,
 	current:     TokenDefinition,
 	peek:        TokenDefinition,
-	PARSE_CHUNK: proc(p: ^Parser) -> NODEID,
+	arena:       ^virtual.Arena,
+	PARSE_CHUNK: proc(p: ^Parser) -> (NODEID, OuauError),
 }
 @(rodata)
 PRECEDENCES := #partial [Token]Precedence {
@@ -84,31 +85,47 @@ PRECEDENCES := #partial [Token]Precedence {
 	.BCLOSE = .LOWEST,
 }
 @(require_results)
-NEW_PARSER :: proc(input: string, allocator := context.allocator) -> (p: Parser) {
+NEW_PARSER :: proc(input: string, arena: ^virtual.Arena) -> (p: Parser) {
 	p = Parser {
 		pos         = 0,
+		arena       = arena,
 		nodes       = NODES{},
 		lexer       = NEW_LEXER(input),
 		PARSE_CHUNK = PARSE_CHUNK,
 	}
-	NODES_INIT(&p.nodes, allocator)
+	NODES_INIT(&p)
 	return
 }
 @(require_results)
-PARSE_CHUNK :: proc(p: ^Parser) -> NODEID {
-	ADVANCE(p)
-	ADVANCE(p)
-	return PARSE_BLOCK(p)
+ADVANCE :: proc(p: ^Parser) -> OuauError {
+	p.current = p.peek
+
+	next_token, err := p.lexer->NEXT()
+	if err != nil do return err
+
+	p.peek = next_token
+	return nil
+}
+@(require_results)
+PARSE_CHUNK :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
+	ADVANCE(p) or_return
+	ADVANCE(p) or_return
+	block := PARSE_BLOCK(p) or_return
+	return block, nil
 }
 @(private = "file")
-NODES_INIT :: proc(p: ^NODES, allocator := context.allocator) {
-	p.kind = make([dynamic]NODE_KIND, 0)
-	p.first_child = make([dynamic]NODEID, 0)
-	p.next_sibling = make([dynamic]NODEID, 0)
-	p.token = make([dynamic]Token, 0)
-	p.int_value = make([dynamic]i64, 0)
-	p.string_value = make([dynamic]string, 0)
-	p.name = make([dynamic]string, 0)
+NODES_INIT :: proc(p: ^Parser) {
+	old_allocator := context.allocator
+	context.allocator = virtual.arena_allocator(p.arena)
+	defer context.allocator = old_allocator
+
+	p.nodes.kind = make([dynamic]NODE_KIND)
+	p.nodes.first_child = make([dynamic]NODEID)
+	p.nodes.next_sibling = make([dynamic]NODEID)
+	p.nodes.token = make([dynamic]Token)
+	p.nodes.int_value = make([dynamic]i64)
+	p.nodes.string_value = make([dynamic]string)
+	p.nodes.name = make([dynamic]string)
 }
 @(private = "file")
 NEW_NODE :: proc(p: ^Parser, k: NODE_KIND) -> NODEID {
@@ -124,15 +141,7 @@ NEW_NODE :: proc(p: ^Parser, k: NODE_KIND) -> NODEID {
 
 	return id
 }
-@(private = "file")
-ADVANCE :: proc(p: ^Parser) {
-	p.current = p.peek
 
-	next_token, err := p.lexer->NEXT()
-	ensure(err == nil, "Failed to get next token")
-
-	p.peek = next_token
-}
 @(private = "file")
 ADD_CHILD :: proc(p: ^Parser, parent, child: NODEID) {
 	if p.nodes.first_child[parent] == 0 {
@@ -149,21 +158,23 @@ ADD_CHILD :: proc(p: ^Parser, parent, child: NODEID) {
 	}
 }
 @(private = "file")
-EXPECT :: proc(p: ^Parser, kind: Token) -> bool {
+EXPECT :: proc(p: ^Parser, kind: Token) -> (bool, OuauError) {
 	if p.current.kind == kind {
-		ADVANCE(p)
-		return true
+		err := ADVANCE(p)
+		if err != nil do return false, err
+		return true, nil
 	}
-	return false
+	return false, nil
 }
 
 @(private = "file")
-PARSE_BLOCK :: proc(p: ^Parser) -> NODEID {
+PARSE_BLOCK :: proc(p: ^Parser) -> (NODEID, OuauError) {
 	block := NEW_NODE(p, .BLOCK)
 
 	for {
 		if p.current.kind == .SEMI {
-			ADVANCE(p)
+			err := ADVANCE(p)
+			if err != nil do return block, err
 			continue
 		}
 
@@ -175,24 +186,35 @@ PARSE_BLOCK :: proc(p: ^Parser) -> NODEID {
 		ADD_CHILD(p, block, PARSE_STMT(p))
 	}
 
-	return block
+	return block, nil
 }
 @(private = "file")
-PARSE_STMT :: proc(p: ^Parser) -> NODEID {
+PARSE_STMT :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 	tk := p.current.kind
-
-	if tk == .WHILE do return PARSE_WHILE(p)
-	if tk == .REPEAT do return PARSE_REPEAT(p)
-	if tk == .DO do return PARSE_DO(p)
-	if tk == .IF do return PARSE_IF(p)
-	if tk == .FUNCTION do return PARSE_FUNCTION(p)
-	if tk == .FOR do return PARSE_FOR(p)
-	if tk == .LOCAL do return PARSE_LOCAL(p)
-	if tk == .GLOBAL do return PARSE_GLOBAL(p)
-	if tk == .BREAK do return PARSE_BREAK(p)
-	if tk == .RETURN do return PARSE_RETURN(p)
-	if tk == .OPEN do return PARSE_CALL(p)
-
+	#partial switch tk {
+	case .WHILE:
+		node = PARSE_WHILE(p) or_return
+	case .REPEAT:
+		node = PARSE_REPEAT(p) or_return
+	case .DO:
+		return PARSE_DO(p)
+	case .IF:
+		return PARSE_IF(p)
+	case .FUNCTION:
+		return PARSE_FUNCTION(p)
+	case .FOR:
+		return PARSE_FOR(p)
+	case .LOCAL:
+		return PARSE_LOCAL(p)
+	case .GLOBAL:
+		return PARSE_GLOBAL(p)
+	case .BREAK:
+		return PARSE_BREAK(p)
+	case .RETURN:
+		return PARSE_RETURN(p)
+	case .OPEN:
+		return PARSE_CALL(p)
+	}
 	return PARSE_EXPRESSION_STATEMENT(p)
 }
 @(private = "file")
@@ -208,50 +230,59 @@ PARSE_CALL :: proc(p: ^Parser) -> NODEID {
 	return call
 }
 @(private = "file")
-PARSE_WHILE :: proc(p: ^Parser) -> NODEID {
+PARSE_WHILE :: proc(p: ^Parser) -> (NODEID, OuauError) {
 	EXPECT(p, .WHILE)
 	node := NEW_NODE(p, .WHILE)
 	cond := PARSE_EXP(p)
 
 	EXPECT(p, .DO)
-	body := PARSE_BLOCK(p)
+	body, err := PARSE_BLOCK(p)
+	if err != nil do return node, err
 
 	EXPECT(p, .END)
 	ADD_CHILD(p, node, cond)
 	ADD_CHILD(p, node, body)
 
-	return node
+	return node, nil
 }
 @(private = "file")
-PARSE_IF :: proc(p: ^Parser) -> NODEID {
+PARSE_IF :: proc(p: ^Parser) -> (NODEID, OuauError) {
 	EXPECT(p, .IF)
 	root := NEW_NODE(p, .IF)
 	cond := PARSE_EXP(p)
 
 	EXPECT(p, .THEN)
-	blk := PARSE_BLOCK(p)
+	blk, err := PARSE_BLOCK(p)
 
 	ADD_CHILD(p, root, cond)
 	ADD_CHILD(p, root, blk)
 
 	for p.current.kind == .ELSEIF {
-		ADVANCE(p)
+		err := ADVANCE(p)
+		if err != nil do return root, err
+
 		econd := PARSE_EXP(p)
 		EXPECT(p, .THEN)
 
-		eblk := PARSE_BLOCK(p)
+		eblk, errr := PARSE_BLOCK(p)
+		if errr != nil do return root, errr
+
 		ADD_CHILD(p, root, econd)
 		ADD_CHILD(p, root, eblk)
 	}
 
 	if p.current.kind == .ELSE {
-		ADVANCE(p)
-		eblk := PARSE_BLOCK(p)
+		err := ADVANCE(p)
+		if err != nil do return root, err
+
+		eblk, errr := PARSE_BLOCK(p)
+		if errr != nil do return root, errr
+
 		ADD_CHILD(p, root, eblk)
 	}
 	EXPECT(p, .END)
 
-	return root
+	return root, nil
 }
 @(private = "file")
 PARSE_EXP :: proc(p: ^Parser) -> NODEID {
@@ -311,18 +342,19 @@ GET_PRECEDENCE :: proc(tok: Token) -> Precedence {
 	}
 }
 @(private = "file")
-PARSE_INFIX :: proc(p: ^Parser, left: NODEID) -> NODEID {
+PARSE_INFIX :: proc(p: ^Parser, left: NODEID) -> (NODEID, OuauError) {
 	tok := p.current.kind
 
 	if tok == .OPEN {
-		ADVANCE(p)
+		if err := ADVANCE(p); err != nil do return left, err
+
 		args := make([dynamic]NODEID)
 
 		if p.current.kind != .CLOSE {
 			append(&args, PARSE_EXP(p))
 
 			for p.current.kind == .COMMA {
-				ADVANCE(p)
+				if err := ADVANCE(p); err != nil do return left, err
 				append(&args, PARSE_EXP(p))
 			}
 		}
@@ -333,15 +365,16 @@ PARSE_INFIX :: proc(p: ^Parser, left: NODEID) -> NODEID {
 
 		for arg in args do ADD_CHILD(p, node, arg)
 
-		return node
+		return node, nil
 	}
 	if tok == .DOT {
-		ADVANCE(p)
+		if err := ADVANCE(p); err != nil do return left, err
 
 		if p.current.kind == .IDENTIFIER {
 			right := NEW_NODE(p, .IDENTIFIER)
 			p.nodes.name[right] = string(p.current.text)
-			ADVANCE(p)
+
+			if err := ADVANCE(p); err != nil do return left, err
 
 			node := NEW_NODE(p, .BINARY)
 			p.nodes.token[node] = tok
@@ -476,14 +509,14 @@ PARSE_EXPLIST :: proc(p: ^Parser) -> []NODEID {
 	return exps[:]
 }
 @(private = "file")
-PARSE_REPEAT :: proc(p: ^Parser) -> NODEID {
-	EXPECT(p, .REPEAT)
-	node := NEW_NODE(p, .REPEAT)
+PARSE_REPEAT :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
+	_ = EXPECT(p, .REPEAT) or_return
+	node = NEW_NODE(p, .REPEAT)
 
 	ublock := PARSE_UBLOCK(p)
 	ADD_CHILD(p, node, ublock)
 
-	return node
+	return node, nil
 }
 @(private = "file")
 PARSE_UBLOCK :: proc(p: ^Parser) -> NODEID {
@@ -611,6 +644,11 @@ PARSE_FOR :: proc(p: ^Parser) -> NODEID {
 }
 @(private = "file")
 PARSE_LOCAL :: proc(p: ^Parser) -> NODEID {
+
+	old_allocator := context.allocator
+	context.allocator = virtual.arena_allocator(p.arena)
+	defer context.allocator = old_allocator
+
 	EXPECT(p, .LOCAL)
 	node := NEW_NODE(p, .LOCAL)
 
