@@ -12,6 +12,7 @@ import "core:strings"
 HELP_MSG :: "Usage: lua-odin <file|repl|ast|regs> <file>"
 PROMPT :: "(Ouau)$ "
 EXIT_MSG :: "Bye!"
+
 main :: proc() {
 	v := new(virtual.Arena, context.allocator)
 	err := virtual.arena_init_growing(v)

@@ -1,5 +1,6 @@
 package compiler_test
 import compiler "../"
+import "core:log"
 import "core:mem/virtual"
 import "core:testing"
 
@@ -14,15 +15,18 @@ test_local :: proc(t: ^testing.T) {
 	varena := virtual.arena_allocator(v)
 
 	input := `
-	local a = 1;
+	local a = 1+@@;
 	`
 
 
+	log.info("About to parse...")
 	p := NEW_PARSER(input, varena)
+	log.info("About to chunking")
 	nodeid := PARSE_CHUNK(&p)
 
 	DUMP_AST(&p)
 
+	log.info("About to compile...")
 	c := NEW_COMPILER(&p.nodes, varena)
 
 	COMPILE_NODE(c, nodeid)

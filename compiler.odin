@@ -10,7 +10,7 @@ COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	log.infof("Compiling node %v", kind)
 	switch kind {
 	case .DO:
-		unimplemented("TODO")
+		unreachable()
 	case .BREAK:
 		unimplemented("TODO")
 	case .VARARGS:
@@ -118,10 +118,12 @@ COMPILE_LOCAL :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 
 	var_name := c.nodes.name[var_node]
 	log.infof("Compiling LOCAL node with name::%v", var_name)
+
 	reg := ALLOC_REG(c)
 	c.locals[var_name] = reg
 	// Check if there's an assignment (next sibling after variables)
 	assign_node := var_node
+	log.infof("assign_node::%v", c.nodes.name[assign_node])
 	for c.nodes.next_sibling[assign_node] != 0 {
 		assign_node = c.nodes.next_sibling[assign_node]
 	}

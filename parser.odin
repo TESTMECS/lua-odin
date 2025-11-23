@@ -100,7 +100,6 @@ NEW_PARSER :: proc(input: string, allocator := context.allocator) -> (p: Parser)
 PARSE_CHUNK :: proc(p: ^Parser) -> NODEID {
 	ADVANCE(p)
 	ADVANCE(p)
-
 	return PARSE_BLOCK(p)
 }
 @(private = "file")
@@ -129,8 +128,12 @@ NEW_NODE :: proc(p: ^Parser, k: NODE_KIND) -> NODEID {
 }
 @(private = "file")
 ADVANCE :: proc(p: ^Parser) {
+	log.info("=== ADVANCE ===")
+	log.infof("Peek Token::%v", p.peek)
 	p.current = p.peek
+	log.infof("p.current becomes::%v", p.current)
 	p.peek = NEXT(&p.lexer)
+	log.infof("p.peek becomes::%v", p.peek)
 }
 @(private = "file")
 ADD_CHILD :: proc(p: ^Parser, parent, child: NODEID) {
