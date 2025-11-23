@@ -3,9 +3,13 @@
 |---| --- |
 |bnot: '~21->22' | bnot: '!21->22' |
 
-# Status
-- [] Test Compilation with new data structures.
-- [] Test VM with new data structures.
-- [] Setup Persistent Debug logging for GC, Variables, Types. 
-- [] Setup Debug logging for Registers.
-- [] Make sure that we are mapping types. 
+- [ ] Test Parser Lot more.
+- [ ] Ensure correct Error messages.  
+- [ ] Refactor all state. 
+
+- [ ] Research Function Call Specification
+- [ ] Plan for Implmenting Function Call Specification
+
+- [ ] Plan for Implenting Closure Specification.
+
+

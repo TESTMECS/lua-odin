@@ -6,7 +6,15 @@ package ouau
 */
 COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	kind := c.nodes.kind[nodeid]
-	#partial switch kind {
+	switch kind {
+	case .DO:
+		unimplemented("TODO")
+	case .BREAK:
+		unimplemented("TODO")
+	case .VARARGS:
+		unimplemented("TODO")
+	case .UPVALUE:
+		unimplemented("TODO")
 	case .BLOCK:
 		return COMPILE_BLOCK(c, nodeid)
 	case .LITERAL:

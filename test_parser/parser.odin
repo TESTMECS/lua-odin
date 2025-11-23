@@ -28,7 +28,7 @@ test_do :: proc(t: ^testing.T) {
 
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
-	// DUMP_AST(&p)
+	DUMP_AST(&p)
 	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t) // id:0
 	EXPECT_CHILD(&p, 0, 1, t)
 	EXPECT_NODE(p.nodes.kind[1], .BLOCK, t) // id:1

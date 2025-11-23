@@ -7,6 +7,7 @@ import "core:strconv"
 	 @NODEID, @NODE_KIND, @NODES, @Precedence, @Parser
 */
 NODEID :: u32
+
 NODE_KIND :: enum {
 	INVALID,
 	BLOCK,
@@ -29,7 +30,10 @@ NODE_KIND :: enum {
 	LOCAL,
 	RETURN,
 	BREAK,
+	VARARGS,
+	UPVALUE,
 }
+
 NODES :: struct {
 	kind:         [dynamic]NODE_KIND,
 	first_child:  [dynamic]NODEID,
@@ -39,6 +43,7 @@ NODES :: struct {
 	string_value: [dynamic]string,
 	name:         [dynamic]string,
 }
+
 Precedence :: enum u8 {
 	LOWEST,
 	ASSIGN,
@@ -54,9 +59,10 @@ Parser :: struct {
 	pos:     int,
 	nodes:   NODES,
 	lexer:   Lexer,
-	current: Token_def,
-	peek:    Token_def,
+	current: TokenDefinition,
+	peek:    TokenDefinition,
 }
+
 @(rodata)
 PRECEDENCES := #partial [Token]Precedence {
 	.ASSIGN = .ASSIGN,

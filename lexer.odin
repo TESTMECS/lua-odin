@@ -5,13 +5,91 @@ package ouau
 *	 Defines the lexer functions for Ouau.
 *	 @Lexer
 */
+Token :: enum u8 {
+	EOF,
+	ILLEGAL,
+	// keywords
+	DO,
+	END,
+	IN,
+	WHILE,
+	REPEAT,
+	UNTIL,
+	FOR,
+	RETURN,
+	IF,
+	THEN,
+	ELSE,
+	ELSEIF,
+	FUNCTION,
+	LOCAL,
+	GLOBAL,
+	TRUE,
+	FALSE,
+	NIL,
+	BREAK,
+	OR,
+	AND,
+	NOT,
+	// operators
+	ASSIGN,
+	PLUS,
+	MINUS,
+	MUL,
+	DIV,
+	MOD,
+	POW,
+	DOT,
+	DOTDOT,
+	COMMA,
+	COLON,
+	SEMI,
+	LT,
+	LE,
+	GT,
+	GE,
+	EQ,
+	NE,
+	NEQ,
+	LEQ,
+	GEQ,
+	OROR,
+	ANDAND,
+	SHL,
+	SHR,
+	TILDE,
+	BXOR,
+	POUND,
+	DOTS,
+	BAND,
+	BOR,
+	BANG,
+	// punctuation
+	OPEN,
+	CLOSE,
+	// other
+	IDENTIFIER,
+	NUMBER,
+	STRING,
+	TOPEN,
+	TCLOSE,
+	BOPEN,
+	BCLOSE,
+}
+
+TokenDefinition :: struct {
+	kind: Token,
+	text: []u8,
+}
+
 Lexer :: struct {
 	input:    []u8,
+	ch:       u8, //current character
 	pos:      int,
 	read_pos: int,
-	ch:       u8,
-	NEXT:     proc(l: ^Lexer) -> Token_def,
+	NEXT:     proc(l: ^Lexer) -> TokenDefinition,
 }
+
 @(require_results)
 NEW_LEXER :: proc(input: string) -> Lexer {
 	l := Lexer {
@@ -24,9 +102,10 @@ NEW_LEXER :: proc(input: string) -> Lexer {
 	EAT(&l)
 	return l
 }
+
 @(require_results)
-NEXT :: proc(l: ^Lexer) -> Token_def {
-	tok: Token_def
+NEXT :: proc(l: ^Lexer) -> TokenDefinition {
+	tok: TokenDefinition
 	SKIP_WHITESPACE(l)
 	switch l.ch {
 	case '=':
@@ -139,12 +218,14 @@ NEXT :: proc(l: ^Lexer) -> Token_def {
 	EAT(l)
 	return tok
 }
+
 @(private = "file")
-GET_TOKEN :: proc(type: Token, input: []u8, start: int, length: int) -> Token_def {
-	return Token_def{kind = type, text = input[start:start + length]}
+GET_TOKEN :: proc(type: Token, input: []u8, start: int, length: int) -> TokenDefinition {
+	return TokenDefinition{kind = type, text = input[start:start + length]}
 }
+
 @(private = "file")
-UPDATE_KW :: proc(tok: ^Token_def) {
+UPDATE_KW :: proc(tok: ^TokenDefinition) {
 	switch string(tok.text) {
 	case "do":
 		tok.kind = .DO
@@ -184,22 +265,27 @@ UPDATE_KW :: proc(tok: ^Token_def) {
 		tok.kind = .ELSEIF
 	}
 }
+
 @(private = "file")
 IS_LETTER :: proc(ch: u8) -> bool {
 	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_'
 }
+
 @(private = "file")
 IS_DIGIT :: proc(ch: u8) -> bool {
 	return '0' <= ch && ch <= '9'
 }
+
 @(private = "file")
-TOKEN_FROM_CHAR :: proc(l: ^Lexer, ty: Token) -> Token_def {
+TOKEN_FROM_CHAR :: proc(l: ^Lexer, ty: Token) -> TokenDefinition {
 	return GET_TOKEN(ty, l.input, l.pos, 1)
 }
+
 @(private = "file")
 SKIP_WHITESPACE :: proc(l: ^Lexer) {
 	for l.ch == ' ' || l.ch == '\t' || l.ch == '\n' || l.ch == '\r' do EAT(l)
 }
+
 @(private = "file")
 EAT :: proc(l: ^Lexer) {
 	if l.pos >= len(l.input) - 1 {
@@ -211,13 +297,14 @@ EAT :: proc(l: ^Lexer) {
 	l.pos = l.read_pos
 	l.read_pos += 1
 }
+
 @(private = "file")
 PEEK :: proc(l: ^Lexer) -> u8 {
 	return l.read_pos >= len(l.input) ? 0 : l.input[l.read_pos]
 }
 
 @(private = "file")
-CREATE_IDENTIFIER :: proc(l: ^Lexer) -> Token_def {
+CREATE_IDENTIFIER :: proc(l: ^Lexer) -> TokenDefinition {
 	start := l.pos
 	EAT(l)
 	for IS_LETTER(l.ch) || IS_DIGIT(l.ch) do EAT(l)
@@ -250,7 +337,7 @@ CREATE_IDENTIFIER :: proc(l: ^Lexer) -> Token_def {
 	return GET_TOKEN(.IDENTIFIER, l.input, start, l.pos - start)
 }
 @(private = "file")
-CREATE_NUMBER :: proc(l: ^Lexer) -> Token_def {
+CREATE_NUMBER :: proc(l: ^Lexer) -> TokenDefinition {
 	start := l.pos
 	for IS_DIGIT(l.ch) do EAT(l)
 	if l.ch == '.' {
@@ -262,7 +349,7 @@ CREATE_NUMBER :: proc(l: ^Lexer) -> Token_def {
 }
 
 @(private = "file")
-CREATE_STRING :: proc(l: ^Lexer) -> Token_def {
+CREATE_STRING :: proc(l: ^Lexer) -> TokenDefinition {
 	start := l.pos + 1
 	for {
 		EAT(l)

@@ -51,29 +51,34 @@ OUAU_RESULT :: proc(res: string, msg: string, sb: ^strings.Builder, is_exit := t
 		fmt.println("IS", result)
 	}
 }
+dump_node :: proc(p: ^Parser, id: u32, indent: int) {
+	for _ in 0 ..< indent {
+		fmt.print("  ")
+	}
+
+	fmt.printf("%s", p.nodes.kind[id])
+
+	if p.nodes.name[id] != "" {
+		fmt.printf(" name='%s'", p.nodes.name[id])
+	}
+	if p.nodes.int_value[id] != 0 {
+		fmt.printf(" int=%d", p.nodes.int_value[id])
+	}
+	if p.nodes.string_value[id] != "" {
+		fmt.printf(" str='%s'", p.nodes.string_value[id])
+	}
+
+	fmt.println()
+
+	child := p.nodes.first_child[id]
+	for child != 0 {
+		dump_node(p, child, indent + 1)
+		child = p.nodes.next_sibling[child]
+	}
+}
+
 DUMP_AST :: proc(p: ^Parser) {
 	fmt.println("=== AST DUMP ===")
-	for i in 0 ..< len(p.nodes.kind) {
-		fmt.printf("Node %d: %s", i, p.nodes.kind[i])
-
-		if p.nodes.name[i] != "" {
-			fmt.printf(" name='%s'", p.nodes.name[i])
-		}
-		if p.nodes.int_value[i] != 0 {
-			fmt.printf(" int=%d", p.nodes.int_value[i])
-		}
-		if p.nodes.string_value[i] != "" {
-			fmt.printf(" str='%s'", p.nodes.string_value[i])
-		}
-
-		child_count := 0
-		child := p.nodes.first_child[i]
-		for child != 0 {
-			child_count += 1
-			child = p.nodes.next_sibling[child]
-		}
-		fmt.printf(" children=%d", child_count)
-		fmt.println()
-	}
+	dump_node(p, 0, 0)
 }
 
