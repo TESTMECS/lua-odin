@@ -20,7 +20,9 @@ test_do :: proc(t: ^testing.T) {
 	input := `
 	do
 		local a = 1;
+
 		function add(a,b) return a+b end;
+
 		add(1,2);
 	end
 	`
@@ -85,7 +87,7 @@ test_conditionals :: proc(t: ^testing.T) {
 
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
-	// DUMP_AST(&p)
+	DUMP_AST(&p)
 	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t)
 	EXPECT_NODE(p.nodes.kind[1], .LOCAL, t)
 	EXPECT_NODE(p.nodes.kind[2], .IDENTIFIER, t)
@@ -145,7 +147,7 @@ test_functions :: proc(t: ^testing.T) {
 
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
-	// DUMP_AST(&p)
+	DUMP_AST(&p)
 	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t)
 	EXPECT_NODE(p.nodes.kind[1], .LOCAL, t)
 	EXPECT_NODE(p.nodes.kind[2], .FUNCTION, t)

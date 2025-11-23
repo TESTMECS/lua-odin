@@ -2,10 +2,8 @@
 |lua| ouau|
 |---| --- |
 |bnot: '~21->22' | bnot: '!21->22' |
-
-- [ ] Test Parser Lot more.
-- [ ] Ensure correct Error messages.  
-- [ ] Refactor all state. 
+# Bugs
+- Function Parsing not working. 
 
 - [ ] Research Function Call Specification
 - [ ] Plan for Implmenting Function Call Specification

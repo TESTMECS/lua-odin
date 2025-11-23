@@ -1,4 +1,5 @@
 package ouau
+import "core:log"
 import "core:strconv"
 /*
 	 ./parser.odin
@@ -613,7 +614,9 @@ PARSE_LOCAL :: proc(p: ^Parser) -> NODEID {
 	node := NEW_NODE(p, .LOCAL)
 
 	if p.current.kind == .FUNCTION {
-		PARSE_FUNCTION(p)
+		function_node := PARSE_FUNCTION(p)
+		ADD_CHILD(p, node, function_node)
+		return node
 	}
 	 else {
 		vars := make([dynamic]NODEID)
