@@ -1,4 +1,5 @@
 package ouau
+import "core:log"
 import "core:mem/virtual"
 import "core:strconv"
 /*
@@ -54,13 +55,15 @@ Precedence :: enum u8 {
 	INDEX,
 }
 Parser :: struct {
-	pos:         int,
-	nodes:       NODES,
-	lexer:       Lexer,
-	current:     TokenDefinition,
-	peek:        TokenDefinition,
-	arena:       ^virtual.Arena,
-	PARSE_CHUNK: proc(p: ^Parser) -> (NODEID, OuauError),
+	pos:              int,
+	nodes:            NODES,
+	lexer:            Lexer,
+	current:          TokenDefinition,
+	peek:             TokenDefinition,
+	arena:            ^virtual.Arena,
+	PARSE_CHUNK:      proc(p: ^Parser) -> (NODEID, OuauError),
+	GET_CURRENT_TEXT: proc(p: ^Parser) -> (text: string),
+	CURRENT_IS_KIND:  proc(p: ^Parser, kind: Token) -> bool,
 }
 @(rodata)
 PRECEDENCES := #partial [Token]Precedence {
@@ -87,29 +90,30 @@ PRECEDENCES := #partial [Token]Precedence {
 @(require_results)
 NEW_PARSER :: proc(input: string, arena: ^virtual.Arena) -> (p: Parser) {
 	p = Parser {
-		pos         = 0,
-		arena       = arena,
-		nodes       = NODES{},
-		lexer       = NEW_LEXER(input),
-		PARSE_CHUNK = PARSE_CHUNK,
+		pos              = 0,
+		arena            = arena,
+		nodes            = NODES{},
+		current          = TokenDefinition{},
+		peek             = TokenDefinition{},
+		lexer            = NEW_LEXER(input),
+		PARSE_CHUNK      = PARSE_CHUNK,
+		CURRENT_IS_KIND  = CURRENT_IS_KIND,
+		GET_CURRENT_TEXT = GET_CURRENT_TEXT,
 	}
 	NODES_INIT(&p)
 	return
 }
 @(require_results)
-ADVANCE :: proc(p: ^Parser) -> OuauError {
+ADVANCE :: proc(p: ^Parser, description := "") -> (err: OuauError) {
 	p.current = p.peek
-
-	next_token, err := p.lexer->NEXT()
-	if err != nil do return err
-
+	next_token := p.lexer->NEXT() or_return
 	p.peek = next_token
 	return nil
 }
 @(require_results)
 PARSE_CHUNK :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
-	ADVANCE(p) or_return
-	ADVANCE(p) or_return
+	ADVANCE(p, "p.current::tok[-1] and p.peek::tok[0]") or_return
+	ADVANCE(p, "p.current::tok[0]") or_return
 	block := PARSE_BLOCK(p) or_return
 	return block, nil
 }
@@ -188,6 +192,7 @@ PARSE_BLOCK :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 @(private = "file", require_results)
 PARSE_STMT :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 	tk := p.current.kind
+	log.infof("PARSE_STMT:: %v", tk)
 	#partial switch tk {
 	case .WHILE:
 		node = PARSE_WHILE(p) or_return
@@ -348,7 +353,7 @@ PARSE_INFIX :: proc(p: ^Parser, left_expression: NODEID) -> (infix_node: NODEID,
 		if p.current.kind == .IDENTIFIER { 	// TODO: bad grammar
 			right_expression := NEW_NODE(p, .IDENTIFIER)
 
-			p.nodes.name[right_expression] = string(p.current.text) // TODO: bad grammar
+			p.nodes.name[right_expression] = p->GET_CURRENT_TEXT()
 			ADVANCE(p) or_return
 			infix_node := NEW_NODE(p, .BINARY)
 			p.nodes.token[infix_node] = token // TODO: bad grammar
@@ -383,7 +388,7 @@ PARSE_PRIMARY :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 
 	if tk == .NUMBER {
 		id := NEW_NODE(p, .LITERAL)
-		val, _ := strconv.parse_i64(string(p.current.text))
+		val, _ := strconv.parse_i64(p->GET_CURRENT_TEXT())
 		p.nodes.int_value[id] = val
 		ADVANCE(p) or_return
 
@@ -392,7 +397,7 @@ PARSE_PRIMARY :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 
 	if tk == .STRING {
 		id := NEW_NODE(p, .STRING)
-		p.nodes.string_value[id] = string(p.current.text)
+		p.nodes.string_value[id] = p->GET_CURRENT_TEXT()
 		ADVANCE(p) or_return
 
 		return id, nil
@@ -400,7 +405,7 @@ PARSE_PRIMARY :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 
 	if tk == .IDENTIFIER {
 		id := NEW_NODE(p, .IDENTIFIER)
-		p.nodes.name[id] = string(p.current.text)
+		p.nodes.name[id] = p->GET_CURRENT_TEXT()
 		ADVANCE(p) or_return
 
 		return id, nil
@@ -408,7 +413,7 @@ PARSE_PRIMARY :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 
 	if tk == .NIL || tk == .TRUE || tk == .FALSE {
 		id := NEW_NODE(p, .LITERAL)
-		p.nodes.string_value[id] = string(p.current.text)
+		p.nodes.string_value[id] = p->GET_CURRENT_TEXT()
 		ADVANCE(p) or_return
 
 		return id, nil
@@ -517,56 +522,74 @@ PARSE_DO :: proc(p: ^Parser) -> (body: NODEID, err: OuauError) {
 	EXPECT(p, .END) or_return
 	return body, nil
 }
+@(private = "file")
+SET_NODE_NAME :: proc(p: ^Parser, node: NODEID, name: string) -> (err: OuauError) {
+	if p.nodes.name[node] == "" {
+		p.nodes.name[node] = name
+		return nil
+	}
+	return GET_PARSE_ERROR(p, "Name Already set for node.")
+}
 @(private = "file", require_results)
-PARSE_FUNCTION :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
+GET_CURRENT_TEXT :: proc(p: ^Parser) -> (text: string) {
+	text = string(p.current.text)
+	return
+}
+@(private = "file", require_results)
+PARSE_FUNCTION :: proc(p: ^Parser) -> (function_node: NODEID, err: OuauError) {
 	EXPECT(p, .FUNCTION) or_return
-	name := p.current.text
-	node = NEW_NODE(p, .FUNCTION)
 
-	p.nodes.name[node] = string(name)
+	function_name := p->GET_CURRENT_TEXT()
+	function_node = NEW_NODE(p, .FUNCTION)
+	SET_NODE_NAME(p, function_node, function_name)
 
-	ADVANCE(p) or_return
-	if p.current.kind == .OPEN {
-		ADVANCE(p) or_return
-		if p.current.kind != .CLOSE {
+	ADVANCE(p, "past 'function name'") or_return
+	if p->CURRENT_IS_KIND(.OPEN) {
+		ADVANCE(p, "past '(' ") or_return
+		if p->CURRENT_IS_KIND(.CLOSE) {
 			for {
-				if p.current.kind == .IDENTIFIER {
-					param := NEW_NODE(p, .IDENTIFIER)
-					p.nodes.name[param] = string(p.current.text)
-					ADD_CHILD(p, node, param)
-					ADVANCE(p) or_return
+				#partial switch p.current.kind {
+				case .IDENTIFIER:
+					function_parameter := NEW_NODE(p, .IDENTIFIER)
+					p.nodes.name[function_parameter] = p->GET_CURRENT_TEXT()
+					ADD_CHILD(p, function_node, function_parameter)
+					ADVANCE(p, "past param") or_return
 					if p.current.kind == .COMMA {
-						ADVANCE(p) or_return
+						ADVANCE(p, "past comma to next param") or_return
 					} else {
 						break
 					}
-				} else if p.current.kind == .DOTS {
-					// varargs
-					ADVANCE(p) or_return
+				case .DOTS:
+					// varargs, TODO:
+					ADVANCE(p, "past varargs") or_return
 					break
-				} else {
+				case:
 					break
 				}
 			}
 		}
 		EXPECT(p, .CLOSE) or_return
 	}
-
 	body := PARSE_BLOCK(p) or_return
 	EXPECT(p, .END) or_return
-	ADD_CHILD(p, node, body)
-	return node, nil
+	ADD_CHILD(p, function_node, body)
+	return function_node, nil
+}
+
+@(private = "file")
+CURRENT_IS_KIND :: proc(p: ^Parser, kind: Token) -> bool {
+	return p.current.kind == kind
 }
 @(private = "file", require_results)
 PARSE_FOR :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 	EXPECT(p, .FOR) or_return
-	var_name := string(p.current.text)
+	var_name := p->GET_CURRENT_TEXT()
 	ADVANCE(p) or_return
 
 	node = NEW_NODE(p, .FOR)
 	p.nodes.name[node] = var_name
 
-	if p.current.kind == .ASSIGN {
+	if p->CURRENT_IS_KIND(.ASSIGN) {
 		ADVANCE(p) or_return
 		init := PARSE_EXP(p) or_return
 		EXPECT(p, .COMMA) or_return
@@ -582,16 +605,15 @@ PARSE_FOR :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 		body := PARSE_BLOCK(p) or_return
 		EXPECT(p, .END) or_return
 		ADD_CHILD(p, node, body)
-	} else if p.current.kind == .COMMA || p.current.kind == .IN {
-		if p.current.kind == .COMMA {
-			for p.current.kind == .COMMA {
-				ADVANCE(p) or_return
-				next_var := NEW_NODE(p, .IDENTIFIER)
-				p.nodes.name[next_var] = string(p.current.text)
-				ADVANCE(p) or_return
-				ADD_CHILD(p, node, next_var)
-			}
+	} else if p->CURRENT_IS_KIND(.COMMA) {
+		for p->CURRENT_IS_KIND(.COMMA) {
+			ADVANCE(p) or_return
+			next_var := NEW_NODE(p, .IDENTIFIER)
+			p.nodes.name[next_var] = string(p.current.text)
+			ADVANCE(p) or_return
+			ADD_CHILD(p, node, next_var)
 		}
+	} else if p->CURRENT_IS_KIND(.IN) {
 		EXPECT(p, .IN) or_return
 		iter := PARSE_EXPLIST(p) or_return
 		for exp in iter do ADD_CHILD(p, node, exp)
@@ -610,7 +632,7 @@ PARSE_LOCAL :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 
 	EXPECT(p, .LOCAL) or_return
 	node = NEW_NODE(p, .LOCAL)
-	if p.current.kind == .FUNCTION {
+	if p->CURRENT_IS_KIND(.FUNCTION) {
 		function_node := PARSE_FUNCTION(p) or_return
 		ADD_CHILD(p, node, function_node)
 		return
@@ -619,7 +641,7 @@ PARSE_LOCAL :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 		primary_expr := PARSE_PRIMARY(p) or_return
 		append(&vars, primary_expr)
 
-		for p.current.kind == .COMMA {
+		for p->CURRENT_IS_KIND(.COMMA) {
 			ADVANCE(p) or_return
 			primary_expr = PARSE_PRIMARY(p) or_return
 			append(&vars, primary_expr)

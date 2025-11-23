@@ -1,4 +1,3 @@
-#+private
 package ouau
 import "core:bufio"
 import "core:fmt"
@@ -22,7 +21,7 @@ main :: proc() {
 		os.exit(0)
 	}
 }
-@(require_results)
+@(private = "file", require_results)
 Ouau :: proc() -> (main_err: Maybe(OuauError)) {
 
 	v := new(virtual.Arena, context.allocator)

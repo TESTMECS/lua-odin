@@ -1,11 +1,17 @@
 package ouau
+import "core:fmt"
 import "core:io"
-import "core:log"
 /*
 *	 ./errors.odin
 *	 Copyright(C) 2025 TESTMEE
 *	 Defines the error values for Ouau.
 */
+OuauError :: union {
+	SyntaxError,
+	ParseError,
+	io.Error,
+}
+
 SyntaxError :: struct {
 	msg:  string,
 	pos:  int,
@@ -19,7 +25,7 @@ GET_SYNTAX_ERROR :: proc(l: ^Lexer, tok: TokenDefinition) -> OuauError {
 		kind = tok.kind,
 		text = tok.text,
 	}
-	log.errorf(
+	fmt.eprintfln(
 		"[Syntax Error]::at position::(%d) of kind::(%v) with text::('%s'/%d)",
 		s.pos,
 		s.kind,
@@ -28,8 +34,17 @@ GET_SYNTAX_ERROR :: proc(l: ^Lexer, tok: TokenDefinition) -> OuauError {
 	)
 	return s
 }
-OuauError :: union {
-	SyntaxError,
-	io.Error,
+ParseError :: struct {
+	msg: string,
+}
+GET_PARSE_ERROR :: proc(p: ^Parser, msg: string) -> (err: OuauError) {
+	err = ParseError{msg}
+	fmt.eprintf("[Parse Error]Msg::(%s)|", msg)
+	fmt.eprintf("Pos::(%d)|", p.pos)
+	fmt.eprintf("Current Token Text::(%s)|", p.current.text)
+	fmt.eprintf("Current Token Kind::(%v)|", p.current.kind)
+	fmt.eprintf("Peek Token Kind::(%s)|", p.peek.kind)
+	fmt.eprintf("Peek Token Text::(%s)|", p.peek.text)
+	return
 }
 

@@ -33,6 +33,6 @@ test_function:
 
 test_parser_name := "test_functions"
 test_parser:
-	odin test ./test_parser 
+	odin test ./test_parser -define:ODIN_TEST_NAMES={{test_parser_name}}
 
 
