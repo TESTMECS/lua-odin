@@ -33,7 +33,7 @@ test_block :: proc(t: ^testing.T) {
 
 
 	p := NEW_PARSER(input, varena)
-	nodeid := PARSE_CHUNK(&p)
+	nodeid := p->PARSE_CHUNK()
 
 	new_nodes := new_clone(p.nodes, varena)
 	c := NEW_COMPILER(new_nodes, varena)
@@ -86,8 +86,9 @@ test_function :: proc(t: ^testing.T) {
 
 
 	p := NEW_PARSER(input, varena)
-	nodeid := PARSE_CHUNK(&p)
+	nodeid := p->PARSE_CHUNK()
 	clone_nodes := new_clone(p.nodes, varena)
+
 	// DUMP_AST(&p)
 	c := NEW_COMPILER(clone_nodes, varena)
 	COMPILE_NODE(c, nodeid)

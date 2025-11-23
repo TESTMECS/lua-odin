@@ -8,7 +8,6 @@ import "core:strconv"
 	 @NODEID, @NODE_KIND, @NODES, @Precedence, @Parser
 */
 NODEID :: u32
-
 NODE_KIND :: enum {
 	INVALID,
 	BLOCK,
@@ -34,7 +33,6 @@ NODE_KIND :: enum {
 	VARARGS,
 	UPVALUE,
 }
-
 NODES :: struct {
 	kind:         [dynamic]NODE_KIND,
 	first_child:  [dynamic]NODEID,
@@ -44,7 +42,6 @@ NODES :: struct {
 	string_value: [dynamic]string,
 	name:         [dynamic]string,
 }
-
 Precedence :: enum u8 {
 	LOWEST,
 	ASSIGN,
@@ -57,13 +54,13 @@ Precedence :: enum u8 {
 	INDEX,
 }
 Parser :: struct {
-	pos:     int,
-	nodes:   NODES,
-	lexer:   Lexer,
-	current: TokenDefinition,
-	peek:    TokenDefinition,
+	pos:         int,
+	nodes:       NODES,
+	lexer:       Lexer,
+	current:     TokenDefinition,
+	peek:        TokenDefinition,
+	PARSE_CHUNK: proc(p: ^Parser) -> NODEID,
 }
-
 @(rodata)
 PRECEDENCES := #partial [Token]Precedence {
 	.ASSIGN = .ASSIGN,
@@ -89,9 +86,10 @@ PRECEDENCES := #partial [Token]Precedence {
 @(require_results)
 NEW_PARSER :: proc(input: string, allocator := context.allocator) -> (p: Parser) {
 	p = Parser {
-		pos   = 0,
-		nodes = NODES{},
-		lexer = NEW_LEXER(input),
+		pos         = 0,
+		nodes       = NODES{},
+		lexer       = NEW_LEXER(input),
+		PARSE_CHUNK = PARSE_CHUNK,
 	}
 	NODES_INIT(&p.nodes, allocator)
 	return
@@ -132,7 +130,7 @@ ADVANCE :: proc(p: ^Parser) {
 	log.infof("Peek Token::%v", p.peek)
 	p.current = p.peek
 	log.infof("p.current becomes::%v", p.current)
-	p.peek = NEXT(&p.lexer)
+	p.peek = p.lexer->NEXT()
 	log.infof("p.peek becomes::%v", p.peek)
 }
 @(private = "file")

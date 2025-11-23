@@ -60,14 +60,11 @@ main :: proc() {
 					strings.write_string(&input_builder, line)
 					break
 				}
-
 			}
-
 			complete_input := strings.to_string(input_builder)
 			if complete_input == "exit" do OUAU_RESULT("", EXIT_MSG, &sb, true)
 			OUAU_RUN_STRING(complete_input, &sb, false, varena, i)
 		}
-
 	case "file":
 		i := NEW_INTERPRETER(nil, varena)
 		assert(user_args[1] != "")
@@ -75,16 +72,14 @@ main :: proc() {
 		file, ok := os.read_entire_file_from_filename(file_path, varena)
 		if !ok do OUAU_ERR("ERR: Failed to read file", err, &sb, false, 1)
 		OUAU_RUN_STRING(string(file), &sb, false, varena, i)
-
 	case "ast":
 		assert(user_args[1] != "")
 		file_path := user_args[1]
 		file, ok := os.read_entire_file_from_filename(file_path, varena)
 		if !ok do OUAU_ERR("ERR: Failed to read file", err, &sb, false, 1)
 		p := NEW_PARSER(string(file), varena)
-		_ = PARSE_CHUNK(&p)
+		_ = p->PARSE_CHUNK()
 		DUMP_AST(&p)
-
 	case "regs":
 		unimplemented("TODO")
 	}

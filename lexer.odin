@@ -76,12 +76,10 @@ Token :: enum u8 {
 	BOPEN,
 	BCLOSE,
 }
-
 TokenDefinition :: struct {
 	kind: Token,
 	text: []u8,
 }
-
 Lexer :: struct {
 	input:    []u8,
 	ch:       u8, //current character
@@ -89,7 +87,6 @@ Lexer :: struct {
 	read_pos: int,
 	NEXT:     proc(l: ^Lexer) -> TokenDefinition,
 }
-
 @(require_results)
 NEW_LEXER :: proc(input: string) -> Lexer {
 	l := Lexer {
@@ -102,7 +99,6 @@ NEW_LEXER :: proc(input: string) -> Lexer {
 	EAT(&l)
 	return l
 }
-
 @(require_results)
 NEXT :: proc(l: ^Lexer) -> TokenDefinition {
 	tok: TokenDefinition
@@ -218,12 +214,10 @@ NEXT :: proc(l: ^Lexer) -> TokenDefinition {
 	EAT(l)
 	return tok
 }
-
 @(private = "file")
 GET_TOKEN :: proc(type: Token, input: []u8, start: int, length: int) -> TokenDefinition {
 	return TokenDefinition{kind = type, text = input[start:start + length]}
 }
-
 @(private = "file")
 UPDATE_KW :: proc(tok: ^TokenDefinition) {
 	switch string(tok.text) {
