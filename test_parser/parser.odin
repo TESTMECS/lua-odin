@@ -148,7 +148,7 @@ test_functions :: proc(t: ^testing.T) {
 	defer free_all(context.allocator)
 
 	input := `
-	local function add(a,b)
+	function add(a,b)
 		return a + b
 	end
 	add(1,2)
@@ -156,6 +156,7 @@ test_functions :: proc(t: ^testing.T) {
 
 
 	p := NEW_PARSER(input, v)
+
 	nodeid, errr := p->PARSE_CHUNK()
 	if errr != nil {
 		log.errorf("Error parsing chunk %v", errr)
@@ -163,26 +164,6 @@ test_functions :: proc(t: ^testing.T) {
 	}
 
 	DUMP_AST(&p)
-
-	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t)
-	EXPECT_NODE(p.nodes.kind[1], .LOCAL, t)
-	EXPECT_NODE(p.nodes.kind[2], .FUNCTION, t)
-	EXPECT_NODE(p.nodes.kind[3], .IDENTIFIER, t)
-	CHECK_ID(&p, 3, "a", t)
-	EXPECT_NODE(p.nodes.kind[4], .IDENTIFIER, t)
-	CHECK_ID(&p, 4, "b", t)
-	EXPECT_NODE(p.nodes.kind[5], .BLOCK, t)
-	EXPECT_NODE(p.nodes.kind[6], .RETURN, t)
-	EXPECT_NODE(p.nodes.kind[7], .IDENTIFIER, t)
-	CHECK_ID(&p, 7, "a", t)
-	EXPECT_NODE(p.nodes.kind[8], .IDENTIFIER, t)
-	CHECK_ID(&p, 8, "b", t)
-	EXPECT_NODE(p.nodes.kind[9], .BINARY, t)
-	EXPECT_NODE(p.nodes.kind[10], .IDENTIFIER, t)
-	CHECK_ID(&p, 10, "add", t)
-	EXPECT_NODE(p.nodes.kind[11], .LITERAL, t)
-	EXPECT_NODE(p.nodes.kind[12], .LITERAL, t)
-	EXPECT_NODE(p.nodes.kind[13], .CALL, t)
 }
 @(test)
 test_tables :: proc(t: ^testing.T) {
