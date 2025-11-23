@@ -6,8 +6,7 @@ import "core:math"
 *	 This file defines the helper functions for ./opcodes.odin
 */
 // (1 << n) - 1
-MASK :: proc(n: int) -> u32 {return (u32(1) << u32(n)) - u32(1)}
-
+MASK :: proc "contextless" (n: int) -> u32 { return (u32(1) << u32(n)) - u32(1) }
 MASK_OP := MASK(SIZE_OP)
 MASK_A := MASK(SIZE_A)
 MASK_B := MASK(SIZE_B)

@@ -1,65 +1,35 @@
 package ouau
 import "core:fmt"
 import "core:mem/virtual"
-import "core:os"
-import "core:strings"
 /*
 *	 ./main_help.odin
 *	 Copyright(C) 2025 TESTMEE
 *	 Help functions for Ouau.
 */
-OUAU_RUN_STRING :: proc(
+OUAU_EVAL_STRING :: proc(
 	input: string,
-	sb: ^strings.Builder,
-	is_exit := false,
 	v: ^virtual.Arena,
 	i: ^Interpreter,
-) {
-	p := NEW_PARSER(input, v)
-	root, err := PARSE_CHUNK(&p)
-	if err != nil {
-		OUAU_ERR("ERR: Failed to parse chunk", err, sb, is_exit, 1)
-	}
-	i.nodes = &p.nodes
-	val := INTERPRET(i, root)
-	fmt.println("RET:", val)
-}
-OUAU_ERR :: proc(
-	msg: string,
+) -> (
+	return_value: Value,
 	err: OuauError,
-	sb: ^strings.Builder,
-	is_exit := true,
-	exit_code := 1,
 ) {
-	strings.builder_reset(sb)
-	fmt.sbprintln(sb, msg, err)
-	err_msg := strings.to_string(sb^)
-	if is_exit {
-		fmt.eprintln(err_msg)
-		os.exit(exit_code)
-	} else {
-		fmt.println(err_msg)
-	}
-}
-OUAU_RESULT :: proc(res: string, msg: string, sb: ^strings.Builder, is_exit := true) {
-	strings.builder_reset(sb)
-	fmt.sbprintln(sb, msg, res)
-	result := strings.to_string(sb^)
-	if is_exit {
-		fmt.println("IS", result)
-		os.exit(0)
-	} else {
-		fmt.println("IS", result)
-	}
+	p := NEW_PARSER(input, v) or_return
+	root := PARSE_CHUNK(&p) or_return
+	i.nodes = &p.nodes
+	return_value = INTERPRET(i, root)
+	return return_value, nil
 }
 dump_node :: proc(p: ^Parser, id: u32, indent: int) {
+	// Print each AST node.
 	for _ in 0 ..< indent {
 		fmt.print("  ")
 	}
-
 	fmt.printf("%s", p.nodes.kind[id])
-	if p.nodes.kind[id] == .BINARY {
+	#partial switch p.nodes.kind[id] {
+	case .BINARY:
 		fmt.printf(" <.%s.>", p.nodes.token[id])
+	case:
 	}
 	if p.nodes.name[id] != "" {
 		fmt.printf(" name='%s'", p.nodes.name[id])
@@ -70,9 +40,7 @@ dump_node :: proc(p: ^Parser, id: u32, indent: int) {
 	if p.nodes.string_value[id] != "" {
 		fmt.printf(" str='%s'", p.nodes.string_value[id])
 	}
-
 	fmt.println()
-
 	child := p.nodes.first_child[id]
 	for child != 0 {
 		dump_node(p, child, indent + 1)

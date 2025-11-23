@@ -1,6 +1,7 @@
 package ouau
 import "core:fmt"
 import "core:io"
+import "core:mem/virtual"
 /*
 *	 ./errors.odin
 *	 Copyright(C) 2025 TESTMEE
@@ -9,6 +10,7 @@ import "core:io"
 OuauError :: union {
 	SyntaxError,
 	ParseError,
+	virtual.Allocator_Error,
 	io.Error,
 }
 
