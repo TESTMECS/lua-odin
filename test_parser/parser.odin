@@ -138,7 +138,7 @@ test_functions :: proc(t: ^testing.T) {
 	varena := virtual.arena_allocator(v)
 
 	input := `
-	local function add(a,b)
+	function add(a,b)
 		return a + b
 	end
 	add(1,2)
