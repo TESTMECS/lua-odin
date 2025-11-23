@@ -6,8 +6,7 @@ import "core:testing"
 import lexer "../"
 
 @(test)
-test_lexer_init :: proc(t: ^testing.T)
-{
+test_lexer_init :: proc(t: ^testing.T) {
 	using lexer
 	input := `
 	local a = 1;
@@ -21,18 +20,16 @@ test_lexer_init :: proc(t: ^testing.T)
 	if
 	then
 	else
-	elseif
+	elseif@@
 	`
 
 
 	l := NEW_LEXER(input)
 
-	tests := [?]struct
-	{
+	tests := [?]struct {
 		expected: Token,
 		lit:      string,
-	} \
-	{
+	} {
 		{.LOCAL, "local"},
 		{.IDENTIFIER, "a"},
 		{.ASSIGN, "="},
@@ -71,16 +68,14 @@ test_lexer_init :: proc(t: ^testing.T)
 		//
 		{.EOF, ""},
 	}
-	for tc, i in tests
-	{
-		tok := l->NEXT()
-		if tok.kind != tc.expected
-		{
+	for tc, i in tests {
+		tok, err := l->NEXT()
+		ensure(err == nil, "Failed to get next token")
+		if tok.kind != tc.expected {
 			log.errorf("expected %v, got %v, iter: %v", tc.expected, tok.kind, i)
 			continue
 		}
-		if string(tok.text) != tc.lit
-		{
+		if string(tok.text) != tc.lit {
 			log.errorf("expected %v, got %v, iter: %v", tc.lit, tok.text, i)
 		}
 	}

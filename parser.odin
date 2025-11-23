@@ -126,12 +126,12 @@ NEW_NODE :: proc(p: ^Parser, k: NODE_KIND) -> NODEID {
 }
 @(private = "file")
 ADVANCE :: proc(p: ^Parser) {
-	log.info("=== ADVANCE ===")
-	log.infof("Peek Token::%v", p.peek)
 	p.current = p.peek
-	log.infof("p.current becomes::%v", p.current)
-	p.peek = p.lexer->NEXT()
-	log.infof("p.peek becomes::%v", p.peek)
+
+	next_token, err := p.lexer->NEXT()
+	ensure(err == nil, "Failed to get next token")
+
+	p.peek = next_token
 }
 @(private = "file")
 ADD_CHILD :: proc(p: ^Parser, parent, child: NODEID) {

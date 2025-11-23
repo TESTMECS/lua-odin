@@ -1,4 +1,5 @@
 package ouau
+import "core:log"
 /*
 *	 ./lexer.odin
 *	 Copyright(C) 2025 TESTMEE
@@ -80,12 +81,21 @@ TokenDefinition :: struct {
 	kind: Token,
 	text: []u8,
 }
+SyntaxError :: struct {
+	msg:  string,
+	pos:  int,
+	kind: Token,
+	text: []u8,
+}
+LexerError :: union {
+	SyntaxError,
+}
 Lexer :: struct {
 	input:    []u8,
 	ch:       u8, //current character
 	pos:      int,
 	read_pos: int,
-	NEXT:     proc(l: ^Lexer) -> TokenDefinition,
+	NEXT:     proc(l: ^Lexer) -> (TokenDefinition, LexerError),
 }
 @(require_results)
 NEW_LEXER :: proc(input: string) -> Lexer {
@@ -100,8 +110,7 @@ NEW_LEXER :: proc(input: string) -> Lexer {
 	return l
 }
 @(require_results)
-NEXT :: proc(l: ^Lexer) -> TokenDefinition {
-	tok: TokenDefinition
+NEXT :: proc(l: ^Lexer) -> (tok: TokenDefinition, err: LexerError) {
 	SKIP_WHITESPACE(l)
 	switch l.ch {
 	case '=':
@@ -206,13 +215,31 @@ NEXT :: proc(l: ^Lexer) -> TokenDefinition {
 		if IS_LETTER(l.ch) {
 			tok = CREATE_IDENTIFIER(l)
 			UPDATE_KW(&tok)
-			return tok
+			return tok, nil
 		}
-		 else if IS_DIGIT(l.ch) do return CREATE_NUMBER(l)
+		 else if IS_DIGIT(l.ch) do return CREATE_NUMBER(l), nil
 		tok = GET_TOKEN(.ILLEGAL, l.input, l.pos, 1)
 	}
 	EAT(l)
-	return tok
+	if tok.kind == .ILLEGAL do return tok, GET_SYNTAX_ERROR(l, tok)
+	return tok, nil // EOF
+}
+@(private = "file")
+GET_SYNTAX_ERROR :: proc(l: ^Lexer, tok: TokenDefinition) -> LexerError {
+	s := SyntaxError {
+		msg  = string(tok.text),
+		pos  = l.pos,
+		kind = tok.kind,
+		text = tok.text,
+	}
+	log.errorf(
+		"[Syntax Error]::at position::(%d) of kind::(%v) with text::('%s'/%d)",
+		s.pos,
+		s.kind,
+		s.msg,
+		s.text,
+	)
+	return s
 }
 @(private = "file")
 GET_TOKEN :: proc(type: Token, input: []u8, start: int, length: int) -> TokenDefinition {
