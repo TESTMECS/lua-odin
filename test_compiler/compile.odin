@@ -21,6 +21,8 @@ test_local :: proc(t: ^testing.T) {
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
 
+	DUMP_AST(&p)
+
 	c := NEW_COMPILER(&p.nodes, varena)
 
 	COMPILE_NODE(c, nodeid)
@@ -78,6 +80,7 @@ test_block :: proc(t: ^testing.T) {
 }
 @(test)
 test_function :: proc(t: ^testing.T) {
+	// Failing
 	using compiler
 	v := new(virtual.Arena, context.allocator)
 	err := virtual.arena_init_growing(v)
@@ -87,7 +90,7 @@ test_function :: proc(t: ^testing.T) {
 	varena := virtual.arena_allocator(v)
 
 	input := `
-	function test()
+	local function test()
 		local a = 1;
 		local b = 2;
 		return a + b;

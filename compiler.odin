@@ -7,7 +7,7 @@ import "core:log"
 */
 COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	kind := c.nodes.kind[nodeid]
-	log.info("Compiling node %v", kind)
+	log.infof("Compiling node %v", kind)
 	switch kind {
 	case .DO:
 		unimplemented("TODO")
@@ -110,17 +110,14 @@ COMPILE_STRING :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 }
 @(private = "file")
 COMPILE_LOCAL :: proc(c: ^Compiler, nodeid: NODEID) -> int {
-	// Get the first child (variable name)
-	var_node := c.nodes.first_child[nodeid]
-	if var_node == 0 {
-		return COMPILE_ERR(c, "LOCAL node has no variable name")
-	}
-	// Get variable name
-	if c.nodes.kind[var_node] != .IDENTIFIER {
-		return COMPILE_ERR(c, "Expected identifier in LOCAL declaration")
-	}
+	var_node := c.nodes.first_child[nodeid] // Get the first child(namelist or function)
+	log.infof("Compiling LOCAL node %v", c.nodes.kind[var_node] == .FUNCTION)
+
+	if var_node == 0 do return COMPILE_ERR(c, "LOCAL node has no variable name or function definition.")
+	if c.nodes.kind[var_node] != .IDENTIFIER do return COMPILE_ERR(c, "Expected identifier in LOCAL declaration") // Should be function as well but fix later.
+
 	var_name := c.nodes.name[var_node]
-	// Allocate register for this variable
+	log.infof("Compiling LOCAL node with name::%v", var_name)
 	reg := ALLOC_REG(c)
 	c.locals[var_name] = reg
 	// Check if there's an assignment (next sibling after variables)
@@ -156,14 +153,19 @@ COMPILE_IDENTIFIER :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 }
 @(private = "file")
 COMPILE_BLOCK :: proc(c: ^Compiler, nodeid: NODEID) -> int {
-	child := c.nodes.first_child[nodeid]
-	last_result := -1
+	child := c.nodes.first_child[nodeid] // Get first child
+	assert(child != nodeid, "First child of BLOCK is itself")
+
+	last_result := -1 // Assume no result
+
 	for child != 0 {
-		result := COMPILE_NODE(c, child)
-		// RETURN and FUNCTION statements return -1, which is not an error in blocks
+		result := COMPILE_NODE(c, child) // Compile child
+
 		if result < 0 && c.nodes.kind[child] != .RETURN && c.nodes.kind[child] != .FUNCTION {
+			// RETURN and FUNCTION statements return -1, which is not an error in blocks
 			return result
 		}
+
 		// Free the result register unless it's the last expression
 		next_child := c.nodes.next_sibling[child]
 		if next_child != 0 && result >= 0 {
@@ -172,8 +174,10 @@ COMPILE_BLOCK :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 		 else {
 			last_result = result
 		}
+
 		child = next_child
 	}
+
 	return last_result
 }
 @(private = "file")
