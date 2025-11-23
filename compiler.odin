@@ -1,4 +1,5 @@
 package ouau
+import "core:log"
 /*
 *	 ./compiler.odin
 *	 Copyright(C) 2025 TESTMEE
@@ -6,6 +7,7 @@ package ouau
 */
 COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	kind := c.nodes.kind[nodeid]
+	log.info("Compiling node %v", kind)
 	switch kind {
 	case .DO:
 		unimplemented("TODO")

@@ -20,7 +20,9 @@ test_local :: proc(t: ^testing.T) {
 
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
+
 	c := NEW_COMPILER(&p.nodes, varena)
+
 	COMPILE_NODE(c, nodeid)
 	insts := c.instructions[:]
 	if len(insts) == 0 {

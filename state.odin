@@ -49,14 +49,15 @@ Compiler :: struct {
 }
 
 @(require_results)
-NEW_COMPILER :: proc(bytecode: ^NODES, allocator := context.allocator) -> ^Compiler {
+NEW_COMPILER :: proc(my_nodes: ^NODES, allocator := context.allocator) -> ^Compiler {
 	c := new(Compiler, allocator)
-	c.nodes = bytecode
+	c.nodes = my_nodes
 	c.constants = make([dynamic]Value, allocator)
 	c.const_index = make(map[Value]int, allocator)
 	c.locals = make(map[string]int, allocator)
 	c.upvalues = make(map[string]int, allocator)
 	c.free_regs = make([dynamic]int, allocator)
+	c.prototypes = make([dynamic]^Prototype, allocator)
 	c.parent = nil
 	return c
 }
