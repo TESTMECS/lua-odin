@@ -1,5 +1,4 @@
 package ouau
-import "core:log"
 import "core:mem/virtual"
 import "core:strconv"
 /*
@@ -90,10 +89,16 @@ PRECEDENCES := #partial [Token]Precedence {
 	.BCLOSE = .LOWEST,
 }
 @(require_results)
-NEW_PARSER :: proc(input: string, arena: ^virtual.Arena) -> (p: Parser) {
-	p = Parser {
+NEW_PARSER :: proc(
+	input: string,
+	param_arena: ^virtual.Arena,
+) -> (
+	new_parser: Parser,
+	err: OuauError,
+) {
+	new_parser = Parser {
 		pos              = 0,
-		arena            = arena,
+		arena            = param_arena,
 		nodes            = NODES{},
 		current          = TokenDefinition{},
 		peek             = TokenDefinition{},
@@ -104,19 +109,21 @@ NEW_PARSER :: proc(input: string, arena: ^virtual.Arena) -> (p: Parser) {
 		SET_NODEID_TOKEN = SET_NODEID_TOKEN,
 		ADD_NODEID_CHILD = ADD_NODEID_CHILD,
 	}
+	// Initalize current and peek
+	first_token := new_parser.lexer->NEXT() or_return
+	new_parser.peek = first_token
 	// Initalize Nodes
 	old_allocator := context.allocator
-	context.allocator = virtual.arena_allocator(arena)
+	context.allocator = virtual.arena_allocator(param_arena)
 	defer context.allocator = old_allocator
-
-	p.nodes.kind = make([dynamic]NODE_KIND)
-	p.nodes.first_child = make([dynamic]NODEID)
-	p.nodes.next_sibling = make([dynamic]NODEID)
-	p.nodes.token = make([dynamic]Token)
-	p.nodes.int_value = make([dynamic]i64)
-	p.nodes.string_value = make([dynamic]string)
-	p.nodes.name = make([dynamic]string)
-	return
+	new_parser.nodes.kind = make([dynamic]NODE_KIND)
+	new_parser.nodes.first_child = make([dynamic]NODEID)
+	new_parser.nodes.next_sibling = make([dynamic]NODEID)
+	new_parser.nodes.token = make([dynamic]Token)
+	new_parser.nodes.int_value = make([dynamic]i64)
+	new_parser.nodes.string_value = make([dynamic]string)
+	new_parser.nodes.name = make([dynamic]string)
+	return new_parser, nil
 }
 @(require_results)
 ADVANCE :: proc(p: ^Parser, description := "") -> (err: OuauError) {
@@ -127,7 +134,7 @@ ADVANCE :: proc(p: ^Parser, description := "") -> (err: OuauError) {
 }
 @(require_results)
 PARSE_CHUNK :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
-	ADVANCE(p, "p.current::tok[-1] and p.peek::tok[0]") or_return
+	// ADVANCE(p, "p.current::tok[-1] and p.peek::tok[0]") or_return
 	ADVANCE(p, "p.current::tok[0]") or_return
 	block := PARSE_BLOCK(p) or_return
 	return block, nil
@@ -163,37 +170,31 @@ ADD_NODEID_CHILD :: proc(p: ^Parser, parent, child: NODEID) {
 }
 @(private = "file", require_results)
 EXPECT :: proc(p: ^Parser, kind: Token) -> (err: OuauError) {
-	if p.current.kind == kind {
+	if p->CURRENT_IS_KIND(kind) {
 		return ADVANCE(p)
 	}
 	return nil
 }
-
 @(private = "file", require_results)
 PARSE_BLOCK :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 	block := NEW_NODE(p, .BLOCK)
-
 	for {
-		if p.current.kind == .SEMI {
+		#partial switch p.current.kind {
+		case .SEMI:
 			ADVANCE(p) or_return
 			continue
+		case .END, .ELSE, .ELSEIF, .EOF, .ILLEGAL:
+			break
+		case:
+			child := PARSE_STMT(p) or_return
+			p->ADD_NODEID_CHILD(block, child)
 		}
-
-		tk := p.current.kind
-
-		block_end := tk == .END || tk == .ELSE || tk == .ELSEIF || tk == .EOF
-		if block_end do break
-
-		child := PARSE_STMT(p) or_return
-		p->ADD_NODEID_CHILD(block, child)
 	}
-
 	return block, nil
 }
 @(private = "file", require_results)
 PARSE_STMT :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 	tk := p.current.kind
-	log.infof("PARSE_STMT:: %v", tk)
 	#partial switch tk {
 	case .WHILE:
 		node = PARSE_WHILE(p) or_return
@@ -217,8 +218,10 @@ PARSE_STMT :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 		node = PARSE_RETURN(p) or_return
 	case .OPEN:
 		node = PARSE_CALL(p) or_return
+	case:
+		node = PARSE_EXPRESSION_STATEMENT(p) or_return
 	}
-	return PARSE_EXPRESSION_STATEMENT(p)
+	return node, nil
 }
 @(private = "file", require_results)
 PARSE_CALL :: proc(p: ^Parser) -> (call_node: NODEID, err: OuauError) {

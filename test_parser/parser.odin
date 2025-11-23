@@ -9,31 +9,30 @@ import parser "../"
 @(test)
 test_do :: proc(t: ^testing.T) {
 	using parser
+	using testing
+	err: ParserTestingError
 
 	v := new(virtual.Arena, context.allocator)
-	err := virtual.arena_init_growing(v)
-	ensure(err == nil)
+	err = virtual.arena_init_growing(v)
+	expectf(t, err == nil, "Error initializing arena %v", err)
 	defer virtual.arena_destroy(v)
 	defer free_all(context.allocator)
 
 	input := `
 	do
 		local a = 1;
-
 		function add(a,b) return a+b end;
-
 		add(1,2);
 	end
 	`
 
 
-	p := NEW_PARSER(input, v)
+	p, err = NEW_PARSER(input, v)
+	expectf(t, err == nil, "Error parsing chunk %v", err)
 
+	testing.fail(t)
 	nodeid, errr := p->PARSE_CHUNK()
-	if errr != nil {
-		log.errorf("Error parsing chunk %v", errr)
-		testing.fail(t)
-	}
+
 
 	DUMP_AST(&p)
 

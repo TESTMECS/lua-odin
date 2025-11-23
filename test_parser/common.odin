@@ -1,11 +1,20 @@
 package parser_test
-import parser "../"
+import Ouau "../"
 import "core:fmt"
 import "core:log"
+import "core:mem/virtual"
 import "core:testing"
-
-DUMP_AST :: proc(p: ^parser.Parser) {
-	using parser
+/*
+* ./parser_test/common.odin
+* Copyright(C) 2025 TESTMEE
+* Defines the common functions and errors for parser tests.
+* */
+ParserTestingError :: union {
+	virtual.Allocator_Error,
+	Ouau.OuauError,
+}
+DUMP_AST :: proc(p: ^Ouau.Parser) {
+	using Ouau
 	fmt.println("=== AST DUMP ===")
 	for i in 0 ..< len(p.nodes.kind) {
 		fmt.printf("Node %d: %s", i, p.nodes.kind[i])
@@ -30,25 +39,21 @@ DUMP_AST :: proc(p: ^parser.Parser) {
 		fmt.println()
 	}
 }
-EXPECT_NODE :: proc(kind: parser.NODE_KIND, expect: parser.NODE_KIND, t: ^testing.T) {
+EXPECT_NODE :: proc(kind: Ouau.NODE_KIND, expect: Ouau.NODE_KIND, t: ^testing.T) -> bool {
 	if expect != kind {
-		log.info("expect", expect, "got", kind)
-		testing.fail(t)
+		log.debug("expect", expect, "got", kind)
+		return false
 	}
+	return true
 }
-EXPECT_CHILD :: proc(
-	p: ^parser.Parser,
-	parent: parser.NODEID,
-	child: parser.NODEID,
-	t: ^testing.T,
-) {
+EXPECT_CHILD :: proc(p: ^Ouau.Parser, parent: Ouau.NODEID, child: Ouau.NODEID, t: ^testing.T) {
 	if p.nodes.first_child[parent] != child {
 		log.info("expect", child, "got", p.nodes.first_child[parent])
 		testing.fail(t)
 	}
 }
-CHECK_ID :: proc(p: ^parser.Parser, nodeid: parser.NODEID, id: string, t: ^testing.T) {
-	using parser
+CHECK_ID :: proc(p: ^Ouau.Parser, nodeid: Ouau.NODEID, id: string, t: ^testing.T) {
+	using Ouau
 	if p.nodes.name[nodeid] != id {
 		log.info("expect", id, "got", p.nodes.name[nodeid])
 		testing.fail(t)
