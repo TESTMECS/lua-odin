@@ -140,9 +140,8 @@ PARSE_CHUNK :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 	return block, nil
 }
 @(private = "file")
-NEW_NODE :: proc(p: ^Parser, k: NODE_KIND) -> NODEID {
-	id := cast(NODEID)len(p.nodes.kind)
-
+NEW_NODE :: proc(p: ^Parser, k: NODE_KIND) -> (new_nodeid: NODEID) {
+	new_nodeid = NODEID(len(p.nodes.kind))
 	append(&p.nodes.kind, k)
 	append(&p.nodes.first_child, NODEID(0))
 	append(&p.nodes.next_sibling, NODEID(0))
@@ -150,10 +149,8 @@ NEW_NODE :: proc(p: ^Parser, k: NODE_KIND) -> NODEID {
 	append(&p.nodes.int_value, 0)
 	append(&p.nodes.string_value, "")
 	append(&p.nodes.name, "")
-
-	return id
+	return
 }
-
 @(private = "file")
 ADD_NODEID_CHILD :: proc(p: ^Parser, parent, child: NODEID) {
 	if p.nodes.first_child[parent] == 0 {
@@ -387,51 +384,40 @@ PARSE_INFIX :: proc(p: ^Parser, left_expression: NODEID) -> (infix_node: NODEID,
 	return infix_node, nil
 }
 @(private = "file", require_results)
-PARSE_PRIMARY :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
-	tk := p.current.kind
-
-	if tk == .NUMBER {
-		id := NEW_NODE(p, .LITERAL)
+PARSE_PRIMARY :: proc(p: ^Parser) -> (primary_node: NODEID, err: OuauError) {
+	token_kind := p.current.kind
+	#partial switch token_kind {
+	case .NUMBER:
+		primary_node = NEW_NODE(p, .LITERAL)
 		val, _ := strconv.parse_i64(p->GET_CURRENT_TEXT())
-		p.nodes.int_value[id] = val
+		p.nodes.int_value[primary_node] = val
 		ADVANCE(p) or_return
-
-		return id, nil
-	}
-
-	if tk == .STRING {
-		id := NEW_NODE(p, .STRING)
-		p.nodes.string_value[id] = p->GET_CURRENT_TEXT()
+		return primary_node, nil
+	case .STRING:
+		primary_node = NEW_NODE(p, .STRING)
+		p.nodes.string_value[primary_node] = p->GET_CURRENT_TEXT()
 		ADVANCE(p) or_return
-
-		return id, nil
-	}
-
-	if tk == .IDENTIFIER {
-		id := NEW_NODE(p, .IDENTIFIER)
-		p.nodes.name[id] = p->GET_CURRENT_TEXT()
+		return primary_node, nil
+	case .IDENTIFIER:
+		primary_node := NEW_NODE(p, .IDENTIFIER)
+		p.nodes.name[primary_node] = p->GET_CURRENT_TEXT()
 		ADVANCE(p) or_return
-
-		return id, nil
-	}
-
-	if tk == .NIL || tk == .TRUE || tk == .FALSE {
-		id := NEW_NODE(p, .LITERAL)
-		p.nodes.string_value[id] = p->GET_CURRENT_TEXT()
+		return primary_node, nil
+	case .NIL, .TRUE, .FALSE:
+		primary_node = NEW_NODE(p, .LITERAL)
+		p.nodes.string_value[primary_node] = p->GET_CURRENT_TEXT()
 		ADVANCE(p) or_return
-
-		return id, nil
-	}
-	if tk == .OPEN {
+		return primary_node, nil
+	case .OPEN:
 		ADVANCE(p) or_return
-		exp := PARSE_EXP(p) or_return
+		primary_expr := PARSE_EXP(p) or_return
 		EXPECT(p, .CLOSE) or_return
-		return exp, nil
+		primary_node = primary_expr
+		return primary_node, nil
+	case .TOPEN:
+		primary_node = PARSE_TABLE(p) or_return
+	case:
 	}
-	if tk == .TOPEN {
-		node = PARSE_TABLE(p) or_return
-	}
-	// TODO: check
 	return NEW_NODE(p, .INVALID), nil
 }
 @(private = "file", require_results)
