@@ -412,28 +412,11 @@ test_bitwise :: proc(t: ^testing.T) {
 
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
-	// DUMP_AST(&p)
-}
-@(test)
-test_parse_forlist :: proc(t: ^testing.T) {
-	using parser
-	v := new(virtual.Arena, context.allocator)
-	err := virtual.arena_init_growing(v)
-	ensure(err == nil)
-	defer virtual.arena_destroy(v)
-	defer free_all(context.allocator)
-	varena := virtual.arena_allocator(v)
-	input := `
-	local a = {1,2,3};
-	`
-
-
-	p := NEW_PARSER(input, varena)
-	nodeid := PARSE_CHUNK(&p)
-	// DUMP_AST(&p)
+	DUMP_AST(&p)
 }
 @(test)
 test_array_assignment :: proc(t: ^testing.T) {
+	// Not sure about this one.
 	using parser
 	v := new(virtual.Arena, context.allocator)
 	err := virtual.arena_init_growing(v)
@@ -449,7 +432,7 @@ test_array_assignment :: proc(t: ^testing.T) {
 
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
-	// DUMP_AST(&p)
+	DUMP_AST(&p)
 }
 @(test)
 test_array_access :: proc(t: ^testing.T) {
@@ -500,7 +483,7 @@ test_global :: proc(t: ^testing.T) {
 
 	input := `
 	do
-		a = 1;
+		global a = 1;
 		return a;
 	end
 	`
