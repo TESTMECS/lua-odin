@@ -12,8 +12,12 @@ test:
 
 alias b := build
 build:
-	odin build .
+	odin build . -out:lua-odin.build
 	
+alias c := clean
+clean:
+	rm *.build && rm *.bin
+
 alias re := repl
 repl:
 	odin run . -- repl 
