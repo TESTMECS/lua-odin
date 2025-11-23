@@ -138,7 +138,7 @@ test_functions :: proc(t: ^testing.T) {
 	varena := virtual.arena_allocator(v)
 
 	input := `
-	function add(a,b)
+	local function add(a,b)
 		return a + b
 	end
 	add(1,2)
@@ -190,7 +190,7 @@ test_tables :: proc(t: ^testing.T) {
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
 	DUMP_AST(&p)
-	log.info(p.nodes)
+
 	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t)
 	EXPECT_NODE(p.nodes.kind[1], .LOCAL, t)
 	EXPECT_NODE(p.nodes.kind[2], .IDENTIFIER, t)
@@ -208,7 +208,6 @@ test_tables :: proc(t: ^testing.T) {
 	CHECK_ID(&p, 10, "d", t)
 	EXPECT_NODE(p.nodes.kind[11], .LITERAL, t)
 	EXPECT_NODE(p.nodes.kind[12], .BINARY, t)
-	// EXPECT_NODE(p.nodes.kind[13], .INVALID, t)
 }
 @(test)
 test_for :: proc(t: ^testing.T) {
@@ -229,7 +228,8 @@ test_for :: proc(t: ^testing.T) {
 
 	p := parser.NEW_PARSER(input, varena)
 	program := parser.PARSE_CHUNK(&p)
-	// DUMP_AST(&p)
+	DUMP_AST(&p)
+
 	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t)
 	EXPECT_NODE(p.nodes.kind[1], .FOR, t)
 	EXPECT_NODE(p.nodes.kind[2], .LITERAL, t)
@@ -259,7 +259,9 @@ test_while :: proc(t: ^testing.T) {
 
 	p := parser.NEW_PARSER(input, varena)
 	program := parser.PARSE_CHUNK(&p)
-	// DUMP_AST(&p)
+
+	DUMP_AST(&p)
+
 	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t)
 	EXPECT_NODE(p.nodes.kind[1], .WHILE, t)
 	EXPECT_NODE(p.nodes.kind[2], .LITERAL, t)
@@ -288,7 +290,9 @@ test_repeat :: proc(t: ^testing.T) {
 
 	p := parser.NEW_PARSER(input, varena)
 	program := parser.PARSE_CHUNK(&p)
-	// DUMP_AST(&p)
+
+	DUMP_AST(&p)
+
 	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t)
 	EXPECT_NODE(p.nodes.kind[1], .REPEAT, t)
 	EXPECT_NODE(p.nodes.kind[2], .BLOCK, t)
@@ -306,6 +310,7 @@ test_repeat :: proc(t: ^testing.T) {
 	EXPECT_NODE(p.nodes.kind[11], .LITERAL, t)
 	EXPECT_NODE(p.nodes.kind[12], .UBLOCK, t)
 }
+
 @(test)
 test_list :: proc(t: ^testing.T) {
 	using parser
@@ -327,7 +332,9 @@ test_list :: proc(t: ^testing.T) {
 
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
-	// DUMP_AST(&p)
+
+	DUMP_AST(&p)
+
 	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t)
 	EXPECT_NODE(p.nodes.kind[1], .LOCAL, t)
 	EXPECT_NODE(p.nodes.kind[2], .IDENTIFIER, t)
@@ -352,6 +359,7 @@ test_list :: proc(t: ^testing.T) {
 	CHECK_ID(&p, 15, "a", t)
 	EXPECT_NODE(p.nodes.kind[16], .CALL, t)
 }
+
 @(test)
 test_logic :: proc(t: ^testing.T) {
 	using parser
@@ -380,7 +388,7 @@ test_logic :: proc(t: ^testing.T) {
 
 	p := NEW_PARSER(input, varena)
 	nodeid := PARSE_CHUNK(&p)
-	// DUMP_AST(&p)
+	DUMP_AST(&p)
 }
 @(test)
 test_bitwise :: proc(t: ^testing.T) {

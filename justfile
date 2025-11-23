@@ -30,7 +30,7 @@ test_compiler TEST_NAME:
 test_function:
 	odin test ./test_compiler -define:ODIN_TEST_NAMES=test_function
 
-test_parser_name := "test_functions"
+test_parser_name := "test_logic"
 test_parser:
 	odin test ./test_parser -define:ODIN_TEST_NAMES={{test_parser_name}}
 
