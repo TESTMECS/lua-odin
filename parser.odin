@@ -417,14 +417,11 @@ PARSE_PRIMARY :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 		ADVANCE(p) or_return
 		exp := PARSE_EXP(p) or_return
 		EXPECT(p, .CLOSE) or_return
-
 		return exp, nil
 	}
-
 	if tk == .TOPEN {
 		node = PARSE_TABLE(p) or_return
 	}
-
 	// TODO: check
 	return NEW_NODE(p, .INVALID), nil
 }

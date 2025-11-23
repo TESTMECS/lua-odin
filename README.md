@@ -2,6 +2,8 @@
 |lua| ouau|
 |---| --- |
 |bnot: '~21->22' | bnot: '!21->22' |
+# Status
+- Refactoring Parser.
 # Bugs
 - `local function` not compiling correctly. 
 

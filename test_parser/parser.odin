@@ -15,7 +15,6 @@ test_do :: proc(t: ^testing.T) {
 	ensure(err == nil)
 	defer virtual.arena_destroy(v)
 	defer free_all(context.allocator)
-	varena := virtual.arena_allocator(v)
 
 	input := `
 	do
@@ -28,8 +27,13 @@ test_do :: proc(t: ^testing.T) {
 	`
 
 
-	p := NEW_PARSER(input, varena)
-	nodeid := p->PARSE_CHUNK()
+	p := NEW_PARSER(input, v)
+
+	nodeid, errr := p->PARSE_CHUNK()
+	if errr != nil {
+		log.errorf("Error parsing chunk %v", errr)
+		testing.fail(t)
+	}
 
 	DUMP_AST(&p)
 
@@ -71,7 +75,6 @@ test_conditionals :: proc(t: ^testing.T) {
 	ensure(err == nil)
 	defer virtual.arena_destroy(v)
 	defer free_all(context.allocator)
-	varena := virtual.arena_allocator(v)
 
 	input := `
 	local a = 1;
@@ -87,8 +90,12 @@ test_conditionals :: proc(t: ^testing.T) {
 	`
 
 
-	p := NEW_PARSER(input, varena)
-	nodeid := p->PARSE_CHUNK()
+	p := NEW_PARSER(input, v)
+	nodeid, errr := p->PARSE_CHUNK()
+	if errr != nil {
+		log.errorf("Error parsing chunk %v", errr)
+		testing.fail(t)
+	}
 
 	DUMP_AST(&p)
 
@@ -139,7 +146,6 @@ test_functions :: proc(t: ^testing.T) {
 	ensure(err == nil)
 	defer virtual.arena_destroy(v)
 	defer free_all(context.allocator)
-	varena := virtual.arena_allocator(v)
 
 	input := `
 	local function add(a,b)
@@ -149,8 +155,12 @@ test_functions :: proc(t: ^testing.T) {
 	`
 
 
-	p := NEW_PARSER(input, varena)
-	nodeid := p->PARSE_CHUNK()
+	p := NEW_PARSER(input, v)
+	nodeid, errr := p->PARSE_CHUNK()
+	if errr != nil {
+		log.errorf("Error parsing chunk %v", errr)
+		testing.fail(t)
+	}
 
 	DUMP_AST(&p)
 
@@ -182,7 +192,6 @@ test_tables :: proc(t: ^testing.T) {
 	ensure(err == nil)
 	defer virtual.arena_destroy(v)
 	defer free_all(context.allocator)
-	varena := virtual.arena_allocator(v)
 
 	input := `
 	local a = {
@@ -193,8 +202,12 @@ test_tables :: proc(t: ^testing.T) {
 	`
 
 
-	p := NEW_PARSER(input, varena)
-	nodeid := p->PARSE_CHUNK()
+	p := NEW_PARSER(input, v)
+	nodeid, errr := p->PARSE_CHUNK()
+	if errr != nil {
+		log.errorf("Error parsing chunk %v", errr)
+		testing.fail(t)
+	}
 
 	DUMP_AST(&p)
 
@@ -224,7 +237,6 @@ test_for :: proc(t: ^testing.T) {
 	ensure(err == nil)
 	defer virtual.arena_destroy(v)
 	defer free_all(context.allocator)
-	varena := virtual.arena_allocator(v)
 
 	input := `
 	for i = 1, 10 do
@@ -233,8 +245,12 @@ test_for :: proc(t: ^testing.T) {
 	`
 
 
-	p := NEW_PARSER(input, varena)
-	program := p->PARSE_CHUNK()
+	p := NEW_PARSER(input, v)
+	program, errr := p->PARSE_CHUNK()
+	if errr != nil {
+		log.errorf("Error parsing chunk %v", errr)
+		testing.fail(t)
+	}
 
 	DUMP_AST(&p)
 
@@ -257,7 +273,7 @@ test_while :: proc(t: ^testing.T) {
 	ensure(err == nil)
 	defer virtual.arena_destroy(v)
 	defer free_all(context.allocator)
-	varena := virtual.arena_allocator(v)
+
 	input := `
 	while true do
 		print("Hello")
@@ -265,8 +281,12 @@ test_while :: proc(t: ^testing.T) {
 	`
 
 
-	p := NEW_PARSER(input, varena)
-	program := p->PARSE_CHUNK()
+	p := NEW_PARSER(input, v)
+	program, errr := p->PARSE_CHUNK()
+	if errr != nil {
+		log.errorf("Error parsing chunk %v", errr)
+		testing.fail(t)
+	}
 
 	DUMP_AST(&p)
 
@@ -287,7 +307,7 @@ test_repeat :: proc(t: ^testing.T) {
 	ensure(err == nil)
 	defer virtual.arena_destroy(v)
 	defer free_all(context.allocator)
-	varena := virtual.arena_allocator(v)
+
 	input := `
 	repeat
 		print("Hello");
@@ -296,8 +316,12 @@ test_repeat :: proc(t: ^testing.T) {
 	`
 
 
-	p := NEW_PARSER(input, varena)
-	program := p->PARSE_CHUNK()
+	p := NEW_PARSER(input, v)
+	program, errr := p->PARSE_CHUNK()
+	if errr != nil {
+		log.errorf("Error parsing chunk %v", errr)
+		testing.fail(t)
+	}
 
 	DUMP_AST(&p)
 
@@ -327,7 +351,7 @@ test_list :: proc(t: ^testing.T) {
 	ensure(err == nil)
 	defer virtual.arena_destroy(v)
 	defer free_all(context.allocator)
-	varena := virtual.arena_allocator(v)
+
 	input := `
 	local a = {
 		b = 1,
@@ -338,8 +362,12 @@ test_list :: proc(t: ^testing.T) {
 	`
 
 
-	p := NEW_PARSER(input, varena)
-	nodeid := p->PARSE_CHUNK()
+	p := NEW_PARSER(input, v)
+	nodeid, errr := p->PARSE_CHUNK()
+	if errr != nil {
+		log.errorf("Error parsing chunk %v", errr)
+		testing.fail(t)
+	}
 
 	DUMP_AST(&p)
 
@@ -376,7 +404,7 @@ test_logic :: proc(t: ^testing.T) {
 	ensure(err == nil)
 	defer virtual.arena_destroy(v)
 	defer free_all(context.allocator)
-	varena := virtual.arena_allocator(v)
+
 	input := `
 	local a = true and false 
 	local b = true or false
@@ -394,8 +422,13 @@ test_logic :: proc(t: ^testing.T) {
 	`
 
 
-	p := NEW_PARSER(input, varena)
-	nodeid := p->PARSE_CHUNK()
+	p := NEW_PARSER(input, v)
+	nodeid, errr := p->PARSE_CHUNK()
+	if errr != nil {
+		log.errorf("Error parsing chunk %v", errr)
+		testing.fail(t)
+	}
+
 	DUMP_AST(&p)
 }
 @(test)
@@ -406,7 +439,6 @@ test_bitwise :: proc(t: ^testing.T) {
 	ensure(err == nil)
 	defer virtual.arena_destroy(v)
 	defer free_all(context.allocator)
-	varena := virtual.arena_allocator(v)
 
 	input := `
 	local a = 1 << 2 
@@ -418,8 +450,12 @@ test_bitwise :: proc(t: ^testing.T) {
 	`
 
 
-	p := NEW_PARSER(input, varena)
-	nodeid := p->PARSE_CHUNK()
+	p := NEW_PARSER(input, v)
+	nodeid, errr := p->PARSE_CHUNK()
+	if errr != nil {
+		log.errorf("Error parsing chunk %v", errr)
+		testing.fail(t)
+	}
 	DUMP_AST(&p)
 }
 @(test)
@@ -431,15 +467,19 @@ test_array_assignment :: proc(t: ^testing.T) {
 	ensure(err == nil)
 	defer virtual.arena_destroy(v)
 	defer free_all(context.allocator)
-	varena := virtual.arena_allocator(v)
+
 	input := `
 	local a = {1,2,3};
 	a[1] = 5;
 	`
 
 
-	p := NEW_PARSER(input, varena)
-	nodeid := PARSE_CHUNK(&p)
+	p := NEW_PARSER(input, v)
+	nodeid, errr := PARSE_CHUNK(&p)
+	if errr != nil {
+		log.errorf("Error parsing chunk %v", errr)
+		testing.fail(t)
+	}
 	DUMP_AST(&p)
 }
 @(test)
@@ -450,15 +490,19 @@ test_array_access :: proc(t: ^testing.T) {
 	ensure(err == nil)
 	defer virtual.arena_destroy(v)
 	defer free_all(context.allocator)
-	varena := virtual.arena_allocator(v)
+
 	input := `
 	a[1];
 	`
 
 
-	p := NEW_PARSER(input, varena)
-	nodeid := PARSE_CHUNK(&p)
-	// DUMP_AST(&p)
+	p := NEW_PARSER(input, v)
+	nodeid, errr := PARSE_CHUNK(&p)
+	if errr != nil {
+		log.errorf("Error parsing chunk %v", errr)
+		testing.fail(t)
+	}
+	DUMP_AST(&p)
 }
 @(test)
 test_string :: proc(t: ^testing.T) {
@@ -468,15 +512,19 @@ test_string :: proc(t: ^testing.T) {
 	ensure(err == nil)
 	defer virtual.arena_destroy(v)
 	defer free_all(context.allocator)
-	varena := virtual.arena_allocator(v)
 
 	input := `
 	local a = "Hello World";
 	`
 
 
-	p := NEW_PARSER(input, varena)
-	nodeid := p->PARSE_CHUNK()
+	p := NEW_PARSER(input, v)
+	nodeid, errr := p->PARSE_CHUNK()
+	if errr != nil {
+		log.errorf("Error parsing chunk %v", errr)
+		testing.fail(t)
+	}
+
 	DUMP_AST(&p)
 }
 @(test)
@@ -487,7 +535,6 @@ test_global :: proc(t: ^testing.T) {
 	ensure(err == nil)
 	defer virtual.arena_destroy(v)
 	defer free_all(context.allocator)
-	varena := virtual.arena_allocator(v)
 
 	input := `
 	do
@@ -497,8 +544,13 @@ test_global :: proc(t: ^testing.T) {
 	`
 
 
-	p := NEW_PARSER(input, varena)
-	nodeid := p->PARSE_CHUNK()
+	p := NEW_PARSER(input, v)
+	nodeid, errr := p->PARSE_CHUNK()
+	if errr != nil {
+		log.errorf("Error parsing chunk %v", errr)
+		testing.fail(t)
+	}
+
 	DUMP_AST(&p)
 }
 

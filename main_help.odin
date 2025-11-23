@@ -16,14 +16,17 @@ OUAU_RUN_STRING :: proc(
 	i: ^Interpreter,
 ) {
 	p := NEW_PARSER(input, v)
-	root := PARSE_CHUNK(&p)
+	root, err := PARSE_CHUNK(&p)
+	if err != nil {
+		OUAU_ERR("ERR: Failed to parse chunk", err, sb, is_exit, 1)
+	}
 	i.nodes = &p.nodes
 	val := INTERPRET(i, root)
 	fmt.println("RET:", val)
 }
 OUAU_ERR :: proc(
 	msg: string,
-	err: os.Error,
+	err: OuauError,
 	sb: ^strings.Builder,
 	is_exit := true,
 	exit_code := 1,
@@ -34,8 +37,7 @@ OUAU_ERR :: proc(
 	if is_exit {
 		fmt.eprintln(err_msg)
 		os.exit(exit_code)
-	}
-	 else {
+	} else {
 		fmt.println(err_msg)
 	}
 }
@@ -46,8 +48,7 @@ OUAU_RESULT :: proc(res: string, msg: string, sb: ^strings.Builder, is_exit := t
 	if is_exit {
 		fmt.println("IS", result)
 		os.exit(0)
-	}
-	 else {
+	} else {
 		fmt.println("IS", result)
 	}
 }

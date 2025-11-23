@@ -1,6 +1,8 @@
+#+private
 package ouau
 import "core:bufio"
 import "core:fmt"
+import "core:io"
 import "core:mem/virtual"
 import "core:os"
 import "core:strings"
@@ -12,15 +14,28 @@ import "core:strings"
 HELP_MSG :: "Usage: lua-odin <file|repl|ast|regs> <file>"
 PROMPT :: "(Ouau)$ "
 EXIT_MSG :: "Bye!"
-
 main :: proc() {
+	if err := Ouau(); err != nil {
+		fmt.eprintln("Error: %v", err)
+		os.exit(1)
+	} else {
+		os.exit(0)
+	}
+}
+@(require_results)
+Ouau :: proc() -> (main_err: Maybe(OuauError)) {
+
 	v := new(virtual.Arena, context.allocator)
 	err := virtual.arena_init_growing(v)
 	ensure(err == nil)
+
 	defer virtual.arena_destroy(v)
 	defer free_all(context.allocator)
 
+	old_allocator := context.allocator
 	context.allocator = virtual.arena_allocator(v)
+	defer context.allocator = old_allocator
+
 	sb := strings.builder_make()
 	defer strings.builder_destroy(&sb)
 
@@ -36,8 +51,7 @@ main :: proc() {
 		reader: bufio.Reader
 		bufio.reader_init(&reader, os.stream_from_handle(os.stdin), bufio.DEFAULT_BUF_SIZE)
 		xtra_args := user_args[1:]
-		i := NEW_INTERPRETER(nil, v)
-
+		i := NEW_INTERPRETER(nil, v) // nodes empty
 		for {
 
 			fmt.println(PROMPT)
@@ -56,8 +70,7 @@ main :: proc() {
 					strings.write_byte(&input_builder, '\n')
 					fmt.print("...")
 					continue
-				}
-				 else {
+				} else {
 					strings.write_string(&input_builder, line)
 					break
 				}
@@ -71,18 +84,19 @@ main :: proc() {
 		assert(user_args[1] != "")
 		file_path := user_args[1]
 		file, ok := os.read_entire_file_from_filename(file_path)
-		if !ok do OUAU_ERR("ERR: Failed to read file", err, &sb, false, 1)
+		if !ok do OUAU_ERR("ERR: Failed to read file", io.Error{}, &sb, false, 1)
 		OUAU_RUN_STRING(string(file), &sb, false, v, i)
 	case "ast":
 		assert(user_args[1] != "")
 		file_path := user_args[1]
 		file, ok := os.read_entire_file_from_filename(file_path)
-		if !ok do OUAU_ERR("ERR: Failed to read file", err, &sb, false, 1)
+		if !ok do OUAU_ERR("ERR: Failed to read file", io.Error{}, &sb, false, 1)
 		p := NEW_PARSER(string(file), v)
-		_ = p->PARSE_CHUNK()
+		_, main_err = p->PARSE_CHUNK()
 		DUMP_AST(&p)
 	case "regs":
 		unimplemented("TODO")
 	}
+	return nil
 }
 

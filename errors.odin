@@ -1,4 +1,5 @@
 package ouau
+import "core:io"
 import "core:log"
 /*
 *	 ./errors.odin
@@ -29,5 +30,6 @@ GET_SYNTAX_ERROR :: proc(l: ^Lexer, tok: TokenDefinition) -> OuauError {
 }
 OuauError :: union {
 	SyntaxError,
+	io.Error,
 }
 
