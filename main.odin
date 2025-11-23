@@ -14,6 +14,7 @@ HELP_MSG :: "Usage: lua-odin <file|repl|ast|regs> <file>"
 PROMPT :: "(Ouau)$ "
 EXIT_MSG :: "Bye!"
 VERSION :: "0.0.1"
+
 main :: proc() {
 	if err := Ouau(); err != nil {
 		fmt.eprintln("[ERROR]::(%v)", err)
