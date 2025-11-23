@@ -1,4 +1,5 @@
 package ouau
+import "core:fmt"
 import "core:log"
 import "core:mem/virtual"
 /*
@@ -214,8 +215,7 @@ COMPILE_BLOCK :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 		next_child := c.nodes.next_sibling[child]
 		if next_child != 0 && result >= 0 {
 			FREE_REG(c, result)
-		}
-		 else {
+		} else {
 			last_result = result
 		}
 
@@ -352,8 +352,6 @@ COMPILE_RETURN :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 }
 @(private = "file")
 COMPILE_FUNCTION :: proc(c: ^Compiler, nodeid: NODEID) -> int {
-	context.allocator = virtual.arena_allocator(c.arena)
-
 	func_name := c.nodes.name[nodeid]
 
 	// Get function body (first child)
@@ -362,12 +360,12 @@ COMPILE_FUNCTION :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 		return COMPILE_ERR(c, "FUNCTION node missing body")
 	}
 
-	prototype := new(Prototype)
-	function_compiler := NEW_COMPILER(c.nodes, c.arena) // I think this is fine if it all goes into the same arena.
+	prototype := new(Prototype, context.allocator)
+	function_compiler := NEW_COMPILER(c.nodes, c.arena)
 	saved_locals := c.locals
 	saved_local_count := c.local_count
 
-	function_compiler.locals = make(map[string]int) // locals get allocated with the previous arena(c.arena) which should be the same space. If I'm correct. Don't know if this matters.
+	function_compiler.locals = make(map[string]int, context.allocator)
 	function_compiler.local_count = 0
 
 	body_result := COMPILE_NODE(function_compiler, body)
@@ -499,8 +497,7 @@ COMPILE_UBLOCK :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 		next_child := c.nodes.next_sibling[child]
 		if next_child != 0 && result >= 0 {
 			FREE_REG(c, result)
-		}
-		 else {
+		} else {
 			last_result = result
 		}
 		child = next_child
@@ -729,8 +726,7 @@ COMPILE_TABLE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 			EMITABC(c, .SETTABLE, u32(dest), u32(key_reg), u32(value_reg))
 			FREE_REG(c, key_reg)
 			FREE_REG(c, value_reg)
-		}
-		 else {
+		} else {
 			// Array-style element (just a value)
 			value_reg := COMPILE_NODE(c, child)
 			if value_reg < 0 {
@@ -750,5 +746,45 @@ COMPILE_TABLE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 		child = c.nodes.next_sibling[child]
 	}
 	return dest
+}
+
+COMPILE_ERR :: proc(c: ^Compiler, msg: string, xtra: ..any) -> int {
+	if len(xtra) == 0 {
+		fmt.println(msg)
+	} else {
+		fmt.printfln(msg, xtra)
+	}
+	return -1
+}
+ADD_CONST :: proc(c: ^Compiler, v: Value) -> u32 {
+	idx := u32(len(c.constants))
+	append(&c.constants, v)
+	return idx
+}
+EMITABC :: proc(compiler: ^Compiler, op: Opcodes, a, b, c: u32) -> int {
+	inst := MAKE_ABC(u32(op), a, b, c)
+	pc := len(compiler.instructions)
+	append(&compiler.instructions, inst)
+	return pc
+}
+EMITABX :: proc(c: ^Compiler, op: Opcodes, a, bx: u32) -> int {
+	inst := MAKE_ABX(u32(op), a, bx)
+	pc := len(c.instructions)
+	append(&c.instructions, inst)
+	return pc
+}
+EMITASBX :: proc(c: ^Compiler, op: Opcodes, a: u32, sbx: i32) -> int {
+	inst := MAKE_ASBX(u32(op), a, sbx)
+	pc := len(c.instructions)
+	append(&c.instructions, inst)
+	return pc
+}
+EMIT_JUMP :: proc(c: ^Compiler) -> int {
+	return EMITASBX(c, .JMP, 0, 0)
+}
+PATCH_JUMP :: proc(c: ^Compiler, pc_slot: int, target_pc: int) {
+	offset := target_pc - (pc_slot + 1)
+	op, a, _ := DECODE_ASBX(c.instructions[pc_slot])
+	c.instructions[pc_slot] = MAKE_ASBX(u32(op), u32(a), i32(offset))
 }
 
