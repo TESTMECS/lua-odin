@@ -1,3 +1,5 @@
 {
-	"brace_style": "Stroustrup"
+	"brace_style": "_1TBS",
+	"space_single_line_blocks": true,
+	"convert_do": true
 }
