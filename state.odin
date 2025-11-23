@@ -5,7 +5,7 @@ import "core:mem"
 	 Copyright(C) 2025 TESTMEE
 	 Defines the global state shared across compilation/threads for Ouau.
 
-	 <@GlobalState, @StringTable, @String|String Interning Helpers.>
+	 <@GlobalState, @String | >
 
 	 <@Compiler, @Prototype, @UpValueDesc, @UpValue| Closure Resolutions.>
 
@@ -18,41 +18,21 @@ import "core:mem"
 STACK_LIMIT :: 1024 * 1024
 
 GlobalState :: struct {
-	thread:       ^ThreadState,
-	registry:     ^Table,
-	string_table: StringTable,
-	gc:           ^GC_HEAP,
-	globals:      ^Table,
-	debug_level:  int,
-	panic:        proc(state: ^ThreadState, msg: string, level: int),
-	builtins:     [dynamic]^Table, // builtin functions
-	gc_threshold: int,
+	thread:      ^ThreadState, // Main Thread
+	globals:     ^Table, // Global Table
+	debug_level: int,
+	builtins:    [dynamic]^Table, // builtin functions
+	panic:       proc(state: ^ThreadState, msg: string, level: int),
 }
 
 @(require_results)
 NEW_GLOBAL_STATE :: proc(allocator := context.allocator) -> ^GlobalState {
 	gs := new(GlobalState, allocator)
 	gs.builtins = make([dynamic]^Table, allocator)
-	gs.string_table.hash = make([dynamic]^String, allocator)
-	gs.string_table.size = 0
-	gs.string_table.count = 0
-	gs.gc = NEW_GC_HEAP(allocator)
-	gs.registry = NEW_TABLE(allocator)
 	gs.globals = NEW_TABLE(allocator)
-	gs.gc_threshold = 1024 * 1024
 	return gs
 }
-StringTable :: struct {
-	hash:  [dynamic]^String,
-	size:  int,
-	count: int,
-}
-String :: struct {
-	using header: GC_HEADER,
-	next:         ^String,
-	hash:         u32,
-	data:         string,
-} // <<=
+
 Compiler :: struct {
 	instructions: [dynamic]u32,
 	constants:    [dynamic]Value, // pool for LoadK
@@ -67,6 +47,7 @@ Compiler :: struct {
 	prototypes:   [dynamic]^Prototype, // nested function prototypes
 	parent:       ^Prototype, // upvalue resolution
 }
+
 @(require_results)
 NEW_COMPILER :: proc(bytecode: ^NODES, allocator := context.allocator) -> ^Compiler {
 	c := new(Compiler, allocator)
@@ -79,8 +60,8 @@ NEW_COMPILER :: proc(bytecode: ^NODES, allocator := context.allocator) -> ^Compi
 	c.parent = nil
 	return c
 }
+
 Prototype :: struct {
-	using header: GC_HEADER,
 	instructions: []u32,
 	constants:    []Value,
 	proto:        []^Prototype,
@@ -88,46 +69,7 @@ Prototype :: struct {
 	max_stack:    int,
 	num_params:   int,
 }
-//=>> GC
-GCType :: enum u8 {
-	STRING,
-	TABLE,
-	CLOSURE,
-	UPVALUE,
-	PROTOTYPE,
-	THREAD,
-}
 
-GC_HEADER :: struct {
-	marked:     bool,
-	generation: u8, // 0 = young, 1 = old
-	gctype:     GCType,
-}
-
-GCObject :: struct {
-	using header: GC_HEADER,
-}
-GC_HEAP :: struct {
-	young:          [dynamic]^GCObject,
-	old:            [dynamic]^GCObject,
-	remembered_set: [dynamic]^GCObject, // for generational WB
-	gray:           [dynamic]^GCObject, // mark queue
-	state:          GC_STATE,
-}
-GC_STATE :: enum u8 {
-	IDLE,
-	MARK,
-	SWEEP,
-}
-@(require_results)
-NEW_GC_HEAP :: proc(allocator := context.allocator) -> ^GC_HEAP {
-	heap := new(GC_HEAP, allocator)
-	heap.young = make([dynamic]^GCObject, allocator)
-	heap.old = make([dynamic]^GCObject, allocator)
-	heap.remembered_set = make([dynamic]^GCObject, allocator)
-	heap.gray = make([dynamic]^GCObject, allocator)
-	return heap
-}
 
 VMFrame :: struct {
 	func:        ^Closure,
@@ -155,6 +97,7 @@ VM :: struct {
 	gc_running:      bool,
 	pause_threshold: int,
 }
+
 @(require_results)
 NEW_VM :: proc(config: ^VM_Config, allocator := context.allocator) -> ^VM {
 	vm := new(VM, allocator)
@@ -166,6 +109,7 @@ NEW_VM :: proc(config: ^VM_Config, allocator := context.allocator) -> ^VM {
 	append(&vm.all_threads, vm.current_thread)
 	return vm
 }
+
 VM_Config :: struct {
 	stack_size:   int,
 	call_depth:   int,
@@ -201,6 +145,7 @@ ThreadState :: struct {
 	base:        int,
 	call_stack:  [dynamic]VMFrame,
 }
+
 @(require_results)
 NEW_THREAD :: proc(
 	gs: ^GlobalState,

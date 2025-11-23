@@ -7,13 +7,11 @@ import "core:testing"
 
 @(rodata)
 config := vm.VM_Config {
-	stack_size   = 256,
-	call_depth   = 32,
-	gc_threshold = 1024 * 1024,
-	max_threads  = 4,
-	debug_level  = 2,
-	trace_gc     = true,
-	trace_stack  = false,
+	stack_size  = 256,
+	call_depth  = 32,
+	max_threads = 4,
+	debug_level = 2,
+	trace_stack = false,
 }
 
 @(test)
@@ -51,20 +49,14 @@ test_block :: proc(t: ^testing.T) {
 	// log.info("VM %v", vm)
 
 	main_proto := Prototype {
-		header = GC_HEADER{marked = false, generation = 0, gctype = .PROTOTYPE},
 		instructions = insts,
-		constants = c.constants[:],
-		proto = c.prototypes[:],
-		upvalues = {},
-		max_stack = c.max_stack,
-		num_params = 0,
+		constants    = c.constants[:],
+		proto        = c.prototypes[:],
+		upvalues     = {},
+		max_stack    = c.max_stack,
+		num_params   = 0,
 	}
 	my_closure := new(Closure, varena)
-	my_closure.header = GC_HEADER {
-		marked     = false,
-		generation = 0,
-		gctype     = .CLOSURE,
-	}
 	my_closure.is_native = false
 	my_closure.proto = &main_proto
 	my_closure.upvalues = {}
@@ -110,20 +102,14 @@ test_function :: proc(t: ^testing.T) {
 	vm: ^VM = NEW_VM(&config)
 	// log.info("VM %v", vm)
 	main_proto := Prototype {
-		header = GC_HEADER{marked = false, generation = 0, gctype = .PROTOTYPE},
 		instructions = insts,
-		constants = c.constants[:],
-		proto = c.prototypes[:],
-		upvalues = {},
-		max_stack = c.max_stack,
-		num_params = 0,
+		constants    = c.constants[:],
+		proto        = c.prototypes[:],
+		upvalues     = {},
+		max_stack    = c.max_stack,
+		num_params   = 0,
 	}
 	my_closure := new(Closure, varena)
-	my_closure.header = GC_HEADER {
-		marked     = false,
-		generation = 0,
-		gctype     = .CLOSURE,
-	}
 	my_closure.is_native = false
 	my_closure.proto = &main_proto
 	my_closure.upvalues = {}
