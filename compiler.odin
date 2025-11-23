@@ -747,7 +747,7 @@ COMPILE_TABLE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	}
 	return dest
 }
-
+@(private = "file")
 COMPILE_ERR :: proc(c: ^Compiler, msg: string, xtra: ..any) -> int {
 	if len(xtra) == 0 {
 		fmt.println(msg)
@@ -756,32 +756,38 @@ COMPILE_ERR :: proc(c: ^Compiler, msg: string, xtra: ..any) -> int {
 	}
 	return -1
 }
+@(private = "file")
 ADD_CONST :: proc(c: ^Compiler, v: Value) -> u32 {
 	idx := u32(len(c.constants))
 	append(&c.constants, v)
 	return idx
 }
+@(private = "file")
 EMITABC :: proc(compiler: ^Compiler, op: Opcodes, a, b, c: u32) -> int {
 	inst := MAKE_ABC(u32(op), a, b, c)
 	pc := len(compiler.instructions)
 	append(&compiler.instructions, inst)
 	return pc
 }
+@(private = "file")
 EMITABX :: proc(c: ^Compiler, op: Opcodes, a, bx: u32) -> int {
 	inst := MAKE_ABX(u32(op), a, bx)
 	pc := len(c.instructions)
 	append(&c.instructions, inst)
 	return pc
 }
+@(private = "file")
 EMITASBX :: proc(c: ^Compiler, op: Opcodes, a: u32, sbx: i32) -> int {
 	inst := MAKE_ASBX(u32(op), a, sbx)
 	pc := len(c.instructions)
 	append(&c.instructions, inst)
 	return pc
 }
+@(private = "file")
 EMIT_JUMP :: proc(c: ^Compiler) -> int {
 	return EMITASBX(c, .JMP, 0, 0)
 }
+@(private = "file")
 PATCH_JUMP :: proc(c: ^Compiler, pc_slot: int, target_pc: int) {
 	offset := target_pc - (pc_slot + 1)
 	op, a, _ := DECODE_ASBX(c.instructions[pc_slot])
