@@ -81,21 +81,12 @@ TokenDefinition :: struct {
 	kind: Token,
 	text: []u8,
 }
-SyntaxError :: struct {
-	msg:  string,
-	pos:  int,
-	kind: Token,
-	text: []u8,
-}
-LexerError :: union {
-	SyntaxError,
-}
 Lexer :: struct {
 	input:    []u8,
 	ch:       u8, //current character
 	pos:      int,
 	read_pos: int,
-	NEXT:     proc(l: ^Lexer) -> (TokenDefinition, LexerError),
+	NEXT:     proc(l: ^Lexer) -> (TokenDefinition, OuauError),
 }
 @(require_results)
 NEW_LEXER :: proc(input: string) -> Lexer {
@@ -110,7 +101,7 @@ NEW_LEXER :: proc(input: string) -> Lexer {
 	return l
 }
 @(require_results)
-NEXT :: proc(l: ^Lexer) -> (tok: TokenDefinition, err: LexerError) {
+NEXT :: proc(l: ^Lexer) -> (tok: TokenDefinition, err: OuauError) {
 	SKIP_WHITESPACE(l)
 	switch l.ch {
 	case '=':
@@ -223,23 +214,6 @@ NEXT :: proc(l: ^Lexer) -> (tok: TokenDefinition, err: LexerError) {
 	EAT(l)
 	if tok.kind == .ILLEGAL do return tok, GET_SYNTAX_ERROR(l, tok)
 	return tok, nil // EOF
-}
-@(private = "file")
-GET_SYNTAX_ERROR :: proc(l: ^Lexer, tok: TokenDefinition) -> LexerError {
-	s := SyntaxError {
-		msg  = string(tok.text),
-		pos  = l.pos,
-		kind = tok.kind,
-		text = tok.text,
-	}
-	log.errorf(
-		"[Syntax Error]::at position::(%d) of kind::(%v) with text::('%s'/%d)",
-		s.pos,
-		s.kind,
-		s.msg,
-		s.text,
-	)
-	return s
 }
 @(private = "file")
 GET_TOKEN :: proc(type: Token, input: []u8, start: int, length: int) -> TokenDefinition {
