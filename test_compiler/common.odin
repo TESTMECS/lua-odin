@@ -13,6 +13,7 @@ CHECK_DECODE_ABC :: proc(t: ^testing.T, instruction: u32, op: compiler.Opcodes) 
 DEBUG_INSTRUCTION :: proc(testptr: ^testing.T, instruction: u32) {
 	using compiler
 	op, a, b, c := DECODE_ABC(instruction)
-	log.debugf("op: %v, a: %v, b: %v, c: %v", op, a, b, c)
+	log.debugf("op::%v/%v, reg_a::%v, reg_b::%v, reg_c::%v", op, Opcodes(op), a, b, c)
+
 }
 

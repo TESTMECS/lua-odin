@@ -311,10 +311,6 @@ COMPILE_FUNCTION :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	}
 
 	prototype := new(Prototype, context.allocator)
-	prototype.header.gctype = .PROTOTYPE
-	prototype.header.marked = false
-	prototype.header.generation = 0
-
 	function_compiler := NEW_COMPILER(c.nodes, context.allocator)
 	saved_locals := c.locals
 	saved_local_count := c.local_count

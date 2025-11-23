@@ -26,6 +26,12 @@ test_local :: proc(t: ^testing.T) {
 	if len(insts) == 0 {
 		testing.fail(t)
 	}
+
+	context.logger.lowest_level = .Debug
+	for i in insts {
+		DEBUG_INSTRUCTION(t, i)
+	}
+
 	CHECK_DECODE_ABC(t, insts[0], Opcodes.LOADK)
 	CHECK_DECODE_ABC(t, insts[1], Opcodes.MOVE)
 }

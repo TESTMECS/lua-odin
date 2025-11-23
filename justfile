@@ -24,8 +24,9 @@ alias tf := test-file
 test-file:
 	odin run . -- file {{test_file_dir}}/{{test_file_name}}
 
-test_compiler TEST_NAME:
-	odin test ./test_compiler -define:ODIN_TEST_NAMES={{TEST_NAME}}
+test_compiler_name := "test_local"
+test_compiler:
+	odin test ./test_compiler -define:ODIN_TEST_NAMES={{test_compiler_name}}
 
 test_function:
 	odin test ./test_compiler -define:ODIN_TEST_NAMES=test_function

@@ -18,12 +18,6 @@ DEBUG_VM_STATE :: proc(vm: ^VM, msg: string) {
 		thread.top,
 		len(thread.stack),
 	)
-	log.infof(
-		"  GC State: %v, Young: %d, Old: %d",
-		vm.global_state.gc.state,
-		len(vm.global_state.gc.young),
-		len(vm.global_state.gc.old),
-	)
 }
 
 @(private = "file")
@@ -65,39 +59,7 @@ DEBUG_CALL_STACK :: proc(vm: ^VM, msg: string) {
 		)
 	}
 }
-@(private = "file")
-DEBUG_GC_STATS :: proc(vm: ^VM, msg: string) {
-	gc := vm.global_state.gc
-	log.infof("GC [%s]:", msg)
-	log.infof("  State: %v", gc.state)
-	log.infof("  Young Objects: %d, Old Objects: %d", len(gc.young), len(gc.old))
-	log.infof("  Remembered Set: %d, Gray Queue: %d", len(gc.remembered_set), len(gc.gray))
 
-	// Log object types if needed
-	young_count := make(map[GCType]int, vm.allocator)
-	old_count := make(map[GCType]int, vm.allocator)
-
-	for obj in gc.young {
-		young_count[obj.header.gctype] += 1
-	}
-	for obj in gc.old {
-		old_count[obj.header.gctype] += 1
-	}
-
-	log.infof("  Young by type: %v", young_count)
-	log.infof("  Old by type: %v", old_count)
-}
-@(private = "file")
-DEBUG_OBJECT :: proc(vm: ^VM, msg: string, obj: ^GCObject) {
-	log.infof(
-		"Object [%s]: %p (type=%v, marked=%v, gen=%d)",
-		msg,
-		obj,
-		obj.header.gctype,
-		obj.header.marked,
-		obj.header.generation,
-	)
-}
 @(private = "file")
 VM_ERROR :: proc(vm: ^VM, thread: ^ThreadState, msg: string, details: ..any) {
 	log.errorf("VM Error: %s", msg)
