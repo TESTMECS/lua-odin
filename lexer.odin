@@ -1,5 +1,4 @@
 package ouau
-import "core:log"
 /*
 *	 ./lexer.odin
 *	 Copyright(C) 2025 TESTMEE

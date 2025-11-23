@@ -20,7 +20,7 @@ test_lexer_init :: proc(t: ^testing.T) {
 	if
 	then
 	else
-	elseif@@
+	elseif
 	`
 
 
