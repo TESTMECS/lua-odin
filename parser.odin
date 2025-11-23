@@ -104,7 +104,18 @@ NEW_PARSER :: proc(input: string, arena: ^virtual.Arena) -> (p: Parser) {
 		SET_NODEID_TOKEN = SET_NODEID_TOKEN,
 		ADD_NODEID_CHILD = ADD_NODEID_CHILD,
 	}
-	NODES_INIT(&p)
+	// Initalize Nodes
+	old_allocator := context.allocator
+	context.allocator = virtual.arena_allocator(arena)
+	defer context.allocator = old_allocator
+
+	p.nodes.kind = make([dynamic]NODE_KIND)
+	p.nodes.first_child = make([dynamic]NODEID)
+	p.nodes.next_sibling = make([dynamic]NODEID)
+	p.nodes.token = make([dynamic]Token)
+	p.nodes.int_value = make([dynamic]i64)
+	p.nodes.string_value = make([dynamic]string)
+	p.nodes.name = make([dynamic]string)
 	return
 }
 @(require_results)
@@ -120,20 +131,6 @@ PARSE_CHUNK :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 	ADVANCE(p, "p.current::tok[0]") or_return
 	block := PARSE_BLOCK(p) or_return
 	return block, nil
-}
-@(private = "file")
-NODES_INIT :: proc(p: ^Parser) {
-	old_allocator := context.allocator
-	context.allocator = virtual.arena_allocator(p.arena)
-	defer context.allocator = old_allocator
-
-	p.nodes.kind = make([dynamic]NODE_KIND)
-	p.nodes.first_child = make([dynamic]NODEID)
-	p.nodes.next_sibling = make([dynamic]NODEID)
-	p.nodes.token = make([dynamic]Token)
-	p.nodes.int_value = make([dynamic]i64)
-	p.nodes.string_value = make([dynamic]string)
-	p.nodes.name = make([dynamic]string)
 }
 @(private = "file")
 NEW_NODE :: proc(p: ^Parser, k: NODE_KIND) -> NODEID {
