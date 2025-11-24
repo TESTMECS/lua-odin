@@ -8,78 +8,11 @@ import "core:strconv"
 	 This file defines the parser functions for Ouau.
 */
 @(require_results)
-NEW_PARSER :: proc(
-	input: string,
-	param_arena: ^virtual.Arena,
-) -> (
-	new_parser: Parser,
-	err: OuauError,
-) {
-	new_parser = Parser {
-		pos                        = 0,
-		arena                      = param_arena,
-		nodes                      = NODES{},
-		current                    = TokenDefinition{},
-		peek                       = TokenDefinition{},
-		lexer                      = NEW_LEXER(input),
-		ADVANCE                    = ADVANCE,
-		EXPECT                     = EXPECT,
-		NEW_NODE                   = NEW_NODE,
-		PARSE_BLOCK                = PARSE_BLOCK,
-		PARSE_CHUNK                = PARSE_CHUNK,
-		PARSE_EXP                  = PARSE_EXP,
-		PARSE_EXPLIST              = PARSE_EXPLIST,
-		PARSE_STMT                 = PARSE_STMT,
-		PARSE_WHILE                = PARSE_WHILE,
-		PARSE_REPEAT               = PARSE_REPEAT,
-		PARSE_DO                   = PARSE_DO,
-		PARSE_IF                   = PARSE_IF,
-		PARSE_FUNCTION             = PARSE_FUNCTION,
-		PARSE_FOR                  = PARSE_FOR,
-		PARSE_LOCAL                = PARSE_LOCAL,
-		PARSE_GLOBAL               = PARSE_GLOBAL,
-		PARSE_BREAK                = PARSE_BREAK,
-		PARSE_RETURN               = PARSE_RETURN,
-		PARSE_CALL                 = PARSE_CALL,
-		PARSE_EXPRESSION_STATEMENT = PARSE_EXPRESSION_STATEMENT,
-		PARSE_UBLOCK               = PARSE_UBLOCK,
-		PARSE_PREFIX_EXP           = PARSE_PREFIX_EXP,
-		PARSE_TABLE                = PARSE_TABLE,
-		PARSE_PRIMARY              = PARSE_PRIMARY,
-		PARSE_INFIX                = PARSE_INFIX,
-		PARSE_PRECEDENCE           = PARSE_PRECEDENCE,
-		CURRENT_IS_KIND            = CURRENT_IS_KIND,
-		GET_CURRENT_TEXT           = GET_CURRENT_TEXT,
-		GET_CURRENT_KIND           = GET_CURRENT_KIND,
-		SET_NODEID_TOKEN           = SET_NODEID_TOKEN,
-		SET_NODEID_NAME            = SET_NODEID_NAME,
-		ADD_NODEID_CHILD           = ADD_NODEID_CHILD,
-	}
-	// Initalize current and peek
-	first_token := new_parser.lexer->NEXT() or_return
-	new_parser.peek = first_token
-	// Initalize Nodes
-	varena := virtual.arena_allocator(param_arena)
-	new_parser.nodes.kind = make([dynamic]NODE_KIND, varena)
-	new_parser.nodes.first_child = make([dynamic]NODEID, varena)
-	new_parser.nodes.next_sibling = make([dynamic]NODEID, varena)
-	new_parser.nodes.token = make([dynamic]Token, varena)
-	new_parser.nodes.int_value = make([dynamic]i64, varena)
-	new_parser.nodes.string_value = make([dynamic]string, varena)
-	new_parser.nodes.name = make([dynamic]string, varena)
-	return new_parser, nil
-}
-@(private = "file", require_results)
-NEW_NODE :: proc(p: ^Parser, k: NODE_KIND) -> (new_nodeid: NODEID) {
-	new_nodeid = cast(NODEID)len(p.nodes.kind)
-	append(&p.nodes.kind, k)
-	append(&p.nodes.first_child, NODEID(0))
-	append(&p.nodes.next_sibling, NODEID(0))
-	append(&p.nodes.token, Token{})
-	append(&p.nodes.int_value, 0)
-	append(&p.nodes.string_value, "")
-	append(&p.nodes.name, "")
-	return
+PARSE_CHUNK :: proc(p: ^Parser) -> (chunk_node: NODEID, err: OuauError) {
+	p->ADVANCE() or_return
+	p->ADVANCE() or_return
+	chunk_node = p->PARSE_BLOCK() or_return
+	return chunk_node, nil
 }
 @(private = "file", require_results)
 ADVANCE :: proc(p: ^Parser, description := "") -> (err: OuauError) {
@@ -87,25 +20,6 @@ ADVANCE :: proc(p: ^Parser, description := "") -> (err: OuauError) {
 	next_token := p.lexer->NEXT() or_return
 	p.peek = next_token
 	return nil
-}
-@(require_results)
-PARSE_CHUNK :: proc(p: ^Parser) -> (chunk_node: NODEID, err: OuauError) {
-	p->ADVANCE() or_return
-	p->ADVANCE() or_return
-	chunk_node = p->PARSE_BLOCK() or_return
-	return chunk_node, nil
-}
-@(private = "file")
-ADD_NODEID_CHILD :: proc(p: ^Parser, parent, child: NODEID) {
-	if p.nodes.first_child[parent] == 0 {
-		p.nodes.first_child[parent] = child
-	} else {
-		n := p.nodes.first_child[parent]
-		for p.nodes.next_sibling[n] != 0 {
-			n = p.nodes.next_sibling[n]
-		}
-		p.nodes.next_sibling[n] = child
-	}
 }
 @(private = "file", require_results)
 EXPECT :: proc(p: ^Parser, kind: Token) -> (err: OuauError) {
@@ -128,18 +42,15 @@ IS_TERMINAL :: proc(p: ^Parser) -> bool {
 @(private = "file", require_results)
 PARSE_BLOCK :: proc(p: ^Parser) -> (block_node: NODEID, err: OuauError) {
 	block_node = p->NEW_NODE(.BLOCK)
-	// segfault here?
-	count := 0
-	loop: for {
-		log.info("PARSE_BLOCK::count", count)
+	block_loop: for {
 		#partial switch p->GET_CURRENT_KIND() {
 		case .SEMI, .END, .ELSE, .ELSEIF:
 			p->ADVANCE() or_return
-			continue loop
+			continue block_loop
 		case .ILLEGAL:
 			return block_node, GET_PARSE_ERROR(p, "PARSE_BLOCK::Unexpected teriminal::()")
 		case .EOF:
-			break loop
+			break block_loop
 		case:
 			child := p->PARSE_STMT() or_return
 			p->ADD_NODEID_CHILD(block_node, child)
@@ -722,5 +633,91 @@ CURRENT_IS_KIND :: proc(p: ^Parser, kind: Token) -> bool {
 GET_CURRENT_TEXT :: proc(p: ^Parser) -> (text: string) {
 	text = string(p.current.text)
 	return
+}
+@(require_results)
+NEW_PARSER :: proc(
+	input: string,
+	param_arena: ^virtual.Arena,
+) -> (
+	new_parser: Parser,
+	err: OuauError,
+) {
+	new_parser = Parser {
+		pos                        = 0,
+		arena                      = param_arena,
+		nodes                      = NODES{},
+		current                    = TokenDefinition{},
+		peek                       = TokenDefinition{},
+		lexer                      = NEW_LEXER(input),
+		ADVANCE                    = ADVANCE,
+		EXPECT                     = EXPECT,
+		NEW_NODE                   = NEW_NODE,
+		PARSE_BLOCK                = PARSE_BLOCK,
+		PARSE_CHUNK                = PARSE_CHUNK,
+		PARSE_EXP                  = PARSE_EXP,
+		PARSE_EXPLIST              = PARSE_EXPLIST,
+		PARSE_STMT                 = PARSE_STMT,
+		PARSE_WHILE                = PARSE_WHILE,
+		PARSE_REPEAT               = PARSE_REPEAT,
+		PARSE_DO                   = PARSE_DO,
+		PARSE_IF                   = PARSE_IF,
+		PARSE_FUNCTION             = PARSE_FUNCTION,
+		PARSE_FOR                  = PARSE_FOR,
+		PARSE_LOCAL                = PARSE_LOCAL,
+		PARSE_GLOBAL               = PARSE_GLOBAL,
+		PARSE_BREAK                = PARSE_BREAK,
+		PARSE_RETURN               = PARSE_RETURN,
+		PARSE_CALL                 = PARSE_CALL,
+		PARSE_EXPRESSION_STATEMENT = PARSE_EXPRESSION_STATEMENT,
+		PARSE_UBLOCK               = PARSE_UBLOCK,
+		PARSE_PREFIX_EXP           = PARSE_PREFIX_EXP,
+		PARSE_TABLE                = PARSE_TABLE,
+		PARSE_PRIMARY              = PARSE_PRIMARY,
+		PARSE_INFIX                = PARSE_INFIX,
+		PARSE_PRECEDENCE           = PARSE_PRECEDENCE,
+		CURRENT_IS_KIND            = CURRENT_IS_KIND,
+		GET_CURRENT_TEXT           = GET_CURRENT_TEXT,
+		GET_CURRENT_KIND           = GET_CURRENT_KIND,
+		SET_NODEID_TOKEN           = SET_NODEID_TOKEN,
+		SET_NODEID_NAME            = SET_NODEID_NAME,
+		ADD_NODEID_CHILD           = ADD_NODEID_CHILD,
+	}
+	// Initalize current and peek
+	first_token := new_parser.lexer->NEXT() or_return
+	new_parser.peek = first_token
+	// Initalize Nodes
+	varena := virtual.arena_allocator(param_arena)
+	new_parser.nodes.kind = make([dynamic]NODE_KIND, varena)
+	new_parser.nodes.first_child = make([dynamic]NODEID, varena)
+	new_parser.nodes.next_sibling = make([dynamic]NODEID, varena)
+	new_parser.nodes.token = make([dynamic]Token, varena)
+	new_parser.nodes.int_value = make([dynamic]i64, varena)
+	new_parser.nodes.string_value = make([dynamic]string, varena)
+	new_parser.nodes.name = make([dynamic]string, varena)
+	return new_parser, nil
+}
+@(private = "file", require_results)
+NEW_NODE :: proc(p: ^Parser, k: NODE_KIND) -> (new_nodeid: NODEID) {
+	new_nodeid = cast(NODEID)len(p.nodes.kind)
+	append(&p.nodes.kind, k)
+	append(&p.nodes.first_child, NODEID(0))
+	append(&p.nodes.next_sibling, NODEID(0))
+	append(&p.nodes.token, Token{})
+	append(&p.nodes.int_value, 0)
+	append(&p.nodes.string_value, "")
+	append(&p.nodes.name, "")
+	return
+}
+@(private = "file")
+ADD_NODEID_CHILD :: proc(p: ^Parser, parent, child: NODEID) {
+	if p.nodes.first_child[parent] == 0 {
+		p.nodes.first_child[parent] = child
+	} else {
+		n := p.nodes.first_child[parent]
+		for p.nodes.next_sibling[n] != 0 {
+			n = p.nodes.next_sibling[n]
+		}
+		p.nodes.next_sibling[n] = child
+	}
 }
 
