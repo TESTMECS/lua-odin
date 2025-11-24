@@ -126,20 +126,14 @@ EXP :: proc(p: ^Parser) -> (exp: NODEID, err: OuauError) {
 	return exp, nil
 }
 @(private = "file", require_results)
-PRECEDENCE :: proc(
-	p: ^Parser,
-	precedence: Precedence,
-) -> (
-	left_expression: NODEID,
-	err: OuauError,
-) {
-	left_expression = p->PREFIX_EXP() or_return
+PRECEDENCE :: proc(p: ^Parser, precedence: Precedence) -> (lhs: NODEID, err: OuauError) {
+	lhs = p->PREFIX_EXP() or_return
 	loop: for {
 		current_prec := GET_PRECEDENCE(p->CURRENT_TOKEN())
 		if precedence >= current_prec { break loop }
-		left_expression = p->INFIX(left_expression) or_return
+		lhs = p->INFIX(lhs) or_return
 	}
-	return
+	return lhs, nil
 }
 @(private = "file", require_results)
 GET_PRECEDENCE :: proc(tok: Token) -> Precedence {
