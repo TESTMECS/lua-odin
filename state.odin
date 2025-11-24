@@ -1,9 +1,12 @@
 package ouau
 import "core:mem"
+import "core:mem/virtual"
 /*
 	 ./state.odin
 	 Copyright(C) 2025 TESTMEE
 	 Defines the global state shared across compilation/threads for Ouau.
+
+		<@NODEID, @NODE_KIND, @NODES, @Precedence, @Parser>
 
 	 <@GlobalState, @String | >
 
@@ -15,6 +18,114 @@ import "core:mem"
 
 	 <@Thread, @ThreadState, @ThreadStatus|Threads State.>
 */
+NODEID :: u32
+NODE_KIND :: enum {
+	INVALID,
+	BLOCK,
+	UBLOCK,
+	IF,
+	WHILE,
+	ASSIGN,
+	FUNCTION,
+	CALL,
+	LITERAL,
+	IDENTIFIER,
+	UNARY,
+	BINARY,
+	STRING,
+	GLOBAL,
+	TABLE,
+	REPEAT,
+	DO,
+	FOR,
+	LOCAL,
+	RETURN,
+	BREAK,
+	VARARGS,
+	UPVALUE,
+}
+NODES :: struct {
+	kind:         [dynamic]NODE_KIND,
+	first_child:  [dynamic]NODEID,
+	next_sibling: [dynamic]NODEID,
+	token:        [dynamic]Token,
+	int_value:    [dynamic]i64,
+	string_value: [dynamic]string,
+	name:         [dynamic]string,
+}
+Precedence :: enum u8 {
+	LOWEST,
+	ASSIGN,
+	EQUALS,
+	LESSGREATER,
+	SUM,
+	PRODUCT,
+	PREFIX,
+	CALL,
+	INDEX,
+}
+Parser :: struct {
+	pos:                        int,
+	nodes:                      NODES,
+	lexer:                      Lexer,
+	current:                    TokenDefinition,
+	peek:                       TokenDefinition,
+	arena:                      ^virtual.Arena,
+	ADVANCE:                    proc(p: ^Parser, description := "") -> (err: OuauError),
+	EXPECT:                     proc(p: ^Parser, kind: Token) -> (err: OuauError),
+	IS_TERMINAL:                proc(p: ^Parser) -> bool,
+	PARSE_CHUNK:                proc(p: ^Parser) -> (NODEID, OuauError),
+	PARSE_BLOCK:                proc(p: ^Parser) -> (NODEID, OuauError),
+	PARSE_STMT:                 proc(p: ^Parser) -> (NODEID, OuauError),
+	PARSE_WHILE:                proc(p: ^Parser) -> (NODEID, OuauError),
+	PARSE_REPEAT:               proc(p: ^Parser) -> (NODEID, OuauError),
+	PARSE_DO:                   proc(p: ^Parser) -> (NODEID, OuauError),
+	PARSE_IF:                   proc(p: ^Parser) -> (NODEID, OuauError),
+	PARSE_FUNCTION:             proc(p: ^Parser) -> (NODEID, OuauError),
+	PARSE_FOR:                  proc(p: ^Parser) -> (NODEID, OuauError),
+	PARSE_LOCAL:                proc(p: ^Parser) -> (NODEID, OuauError),
+	PARSE_GLOBAL:               proc(p: ^Parser) -> (NODEID, OuauError),
+	PARSE_BREAK:                proc(p: ^Parser) -> (NODEID, OuauError),
+	PARSE_RETURN:               proc(p: ^Parser) -> (NODEID, OuauError),
+	PARSE_CALL:                 proc(p: ^Parser) -> (NODEID, OuauError),
+	PARSE_EXPRESSION_STATEMENT: proc(p: ^Parser) -> (NODEID, OuauError),
+	PARSE_PREFIX_EXP:           proc(p: ^Parser) -> (NODEID, OuauError),
+	PARSE_TABLE:                proc(p: ^Parser) -> (NODEID, OuauError),
+	PARSE_UBLOCK:               proc(p: ^Parser) -> (NODEID, OuauError),
+	PARSE_PRIMARY:              proc(p: ^Parser) -> (NODEID, OuauError),
+	PARSE_INFIX:                proc(p: ^Parser, left_expression: NODEID) -> (NODEID, OuauError),
+	PARSE_PRECEDENCE:           proc(p: ^Parser, precedence: Precedence) -> (NODEID, OuauError),
+	NEW_NODE:                   proc(p: ^Parser, k: NODE_KIND) -> (new_nodeid: NODEID),
+	PARSE_EXP:                  proc(p: ^Parser) -> (expression: NODEID, err: OuauError),
+	PARSE_EXPLIST:              proc(p: ^Parser) -> (parsed_expressions: []NODEID, err: OuauError),
+	GET_CURRENT_TEXT:           proc(p: ^Parser) -> (text: string),
+	CURRENT_IS_KIND:            proc(p: ^Parser, kind: Token) -> bool,
+	SET_NODEID_TOKEN:           proc(p: ^Parser, node: NODEID, token: Token),
+	ADD_NODEID_CHILD:           proc(p: ^Parser, parent, child: NODEID),
+}
+
+@(rodata)
+PRECEDENCES := #partial [Token]Precedence {
+	.ASSIGN = .ASSIGN,
+	.EQ     = .EQUALS,
+	.NE     = .EQUALS,
+	.NEQ    = .EQUALS,
+	.LE     = .LESSGREATER,
+	.LT     = .LESSGREATER,
+	.GE     = .LESSGREATER,
+	.GT     = .LESSGREATER,
+	.PLUS   = .SUM,
+	.MINUS  = .SUM,
+	.MUL    = .PRODUCT,
+	.DIV    = .PRODUCT,
+	.MOD    = .PRODUCT,
+	.POW    = .PRODUCT,
+	.POUND  = .PREFIX,
+	.OPEN   = .CALL,
+	.DOT    = .CALL,
+	.BOPEN  = .INDEX,
+	.BCLOSE = .LOWEST,
+}
 STACK_LIMIT :: 1024 * 1024
 
 GlobalState :: struct {
