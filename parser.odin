@@ -185,17 +185,16 @@ PARSE_INFIX :: proc(p: ^Parser, lhs: NODEID) -> (infix: NODEID, err: OuauError) 
 		return infix, nil
 	case .DOT:
 		p->ADVANCE() or_return
-		#partial switch p->CURRENT_TOKEN() {
-		case .IDENTIFIER:
+		if p->IS(.IDENTIFIER) {
 			rhs := p->NEW_NODE(.IDENTIFIER)
-			p->SET_NODEID_NAME(rhs, p->CURRENT_TEXT())
+			p->SET_NAME(rhs, p->CURRENT_TEXT())
 			p->ADVANCE() or_return // past identifier
 			infix = p->NEW_NODE(.BINARY)
 			p->SET_NODEID_TOKEN(infix, p->CURRENT_TOKEN())
 			p->APPEND_CHILD(infix, lhs)
 			p->APPEND_CHILD(infix, rhs)
 			return infix, nil
-		case:
+		} else {
 			return 0, GET_PARSE_ERROR(p, "Invalid Identifier in Dot Expression")
 		}
 	case .BOPEN:
@@ -223,22 +222,22 @@ PARSE_PRIMARY :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 		node = p->NEW_NODE(.LITERAL)
 		val, ok := strconv.parse_i64(p->CURRENT_TEXT())
 		if !ok { return 0, GET_PARSE_ERROR(p, "InvalidNumber::i64") }
-		p->SET_INT_VALUE(node, val)
+		p->SET_INT(node, val)
 		p->ADVANCE() or_return
 		return node, nil
 	case .STRING:
 		node = p->NEW_NODE(.STRING)
-		p->SET_STRING_VALUE(node, p->CURRENT_TEXT())
+		p->SET_STRING(node, p->CURRENT_TEXT())
 		p->ADVANCE() or_return
 		return node, nil
 	case .IDENTIFIER:
 		node := p->NEW_NODE(.IDENTIFIER)
-		p->SET_NODEID_NAME(node, p->CURRENT_TEXT())
+		p->SET_NAME(node, p->CURRENT_TEXT())
 		p->ADVANCE() or_return
 		return node, nil
 	case .NIL, .TRUE, .FALSE:
 		node = p->NEW_NODE(.LITERAL)
-		p->SET_STRING_VALUE(node, p->CURRENT_TEXT())
+		p->SET_STRING(node, p->CURRENT_TEXT())
 		p->ADVANCE() or_return
 		return node, nil
 	case .OPEN:
@@ -348,7 +347,7 @@ PARSE_FUNCTION :: proc(p: ^Parser) -> (function_node: NODEID, err: OuauError) {
 	p->EXPECT(.FUNCTION) or_return
 	function_name := p->CURRENT_TEXT()
 	function_node = p->NEW_NODE(.FUNCTION)
-	p->SET_NODEID_NAME(function_node, function_name) or_return
+	p->SET_NAME(function_node, function_name) or_return
 	p->ADVANCE() or_return // past 'function name'
 	#partial switch p->CURRENT_TOKEN() {
 	case .OPEN:
@@ -358,7 +357,7 @@ PARSE_FUNCTION :: proc(p: ^Parser) -> (function_node: NODEID, err: OuauError) {
 				#partial switch (p->CURRENT_TOKEN()) {
 				case .IDENTIFIER:
 					fn_param := p->NEW_NODE(.IDENTIFIER)
-					p->SET_NODEID_NAME(fn_param, p->CURRENT_TEXT())
+					p->SET_NAME(fn_param, p->CURRENT_TEXT())
 					p->APPEND_CHILD(function_node, fn_param)
 					p->ADVANCE() or_return // past param
 					p->EXPECT(.COMMA) or_return
@@ -385,7 +384,7 @@ PARSE_FOR :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 	induction_var := p->CURRENT_TEXT()
 	p->ADVANCE() or_return
 	node = p->NEW_NODE(.FOR)
-	p->SET_NODEID_NAME(node, induction_var)
+	p->SET_NAME(node, induction_var)
 	#partial switch p->CURRENT_TOKEN() {
 	case .ASSIGN:
 		p->ADVANCE() or_return
@@ -407,7 +406,7 @@ PARSE_FOR :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 		for p->IS(.COMMA) {
 			p->ADVANCE() or_return
 			next_var := p->NEW_NODE(.IDENTIFIER)
-			p->SET_NODEID_NAME(next_var, p->CURRENT_TEXT())
+			p->SET_NAME(next_var, p->CURRENT_TEXT())
 			p->ADVANCE() or_return
 			p->APPEND_CHILD(node, next_var)
 		}
@@ -501,7 +500,7 @@ PARSE_TABLE :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 				p->APPEND_CHILD(table, pair)
 			} else if p->IS(.IDENTIFIER) && p->IS(.ASSIGN) {
 				key := p->NEW_NODE(.IDENTIFIER)
-				p->SET_NODEID_NAME(key, p->CURRENT_TEXT())
+				p->SET_NAME(key, p->CURRENT_TEXT())
 				p->ADVANCE() or_return
 				p->EXPECT(.ASSIGN) or_return
 				value := p->PARSE_EXP() or_return
@@ -552,7 +551,7 @@ PARSE_GLOBAL :: proc(p: ^Parser) -> (global_node: NODEID, err: OuauError) {
 	return global_node, nil
 }
 @(private = "file", require_results)
-SET_NODEID_NAME :: proc(p: ^Parser, node: NODEID, name: string) -> (err: OuauError) {
+SET_NAME :: proc(p: ^Parser, node: NODEID, name: string) -> (err: OuauError) {
 	if p.nodes.name[node] == "" {
 		p.nodes.name[node] = name
 		return nil
@@ -560,7 +559,7 @@ SET_NODEID_NAME :: proc(p: ^Parser, node: NODEID, name: string) -> (err: OuauErr
 	return GET_PARSE_ERROR(p, "Name Already set for node.")
 }
 @(private = "file", require_results)
-SET_STRING_VALUE :: proc(p: ^Parser, node: NODEID, value: string) -> (err: OuauError) {
+SET_STRING :: proc(p: ^Parser, node: NODEID, value: string) -> (err: OuauError) {
 	if p.nodes.string_value[node] == "" {
 		p.nodes.string_value[node] = value
 		return nil
@@ -568,7 +567,7 @@ SET_STRING_VALUE :: proc(p: ^Parser, node: NODEID, value: string) -> (err: OuauE
 	return GET_PARSE_ERROR(p, "String Value Already set for node.")
 }
 @(private = "file", require_results)
-SET_INT_VALUE :: proc(p: ^Parser, node: NODEID, value: i64) -> (err: OuauError) {
+SET_INT :: proc(p: ^Parser, node: NODEID, value: i64) -> (err: OuauError) {
 	if p.nodes.int_value[node] == 0 {
 		p.nodes.int_value[node] = value
 		return nil
@@ -664,9 +663,9 @@ PARSER_VTABLE := ParserVTable {
 	PARSE_PRIMARY              = PARSE_PRIMARY,
 	PARSE_INFIX                = PARSE_INFIX,
 	PARSE_PRECEDENCE           = PARSE_PRECEDENCE,
-	SET_NODEID_NAME            = SET_NODEID_NAME,
-	SET_STRING_VALUE           = SET_STRING_VALUE,
-	SET_INT_VALUE              = SET_INT_VALUE,
+	SET_NAME                   = SET_NAME,
+	SET_STRING                 = SET_STRING,
+	SET_INT                    = SET_INT,
 	SET_NODEID_TOKEN           = SET_NODEID_TOKEN,
 }
 

@@ -96,9 +96,9 @@ ParserVTable :: struct {
 	PARSE_PRIMARY:              proc(p: ^Parser) -> (NODEID, OuauError),
 	PARSE_INFIX:                proc(p: ^Parser, left_expression: NODEID) -> (NODEID, OuauError),
 	PARSE_PRECEDENCE:           proc(p: ^Parser, precedence: Precedence) -> (NODEID, OuauError),
-	SET_NODEID_NAME:            proc(p: ^Parser, node: NODEID, name: string) -> (err: OuauError),
-	SET_STRING_VALUE:           proc(p: ^Parser, node: NODEID, value: string) -> (err: OuauError),
-	SET_INT_VALUE:              proc(p: ^Parser, node: NODEID, value: i64) -> (err: OuauError),
+	SET_NAME:                   proc(p: ^Parser, node: NODEID, name: string) -> (err: OuauError),
+	SET_STRING:                 proc(p: ^Parser, node: NODEID, value: string) -> (err: OuauError),
+	SET_INT:                    proc(p: ^Parser, node: NODEID, value: i64) -> (err: OuauError),
 	NEW_NODE:                   proc(p: ^Parser, k: NODE_KIND) -> (new_nodeid: NODEID),
 	SET_NODEID_TOKEN:           proc(p: ^Parser, node: NODEID, token: Token),
 }
