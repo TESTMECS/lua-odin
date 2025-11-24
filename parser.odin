@@ -288,11 +288,12 @@ GET_PRECEDENCE :: proc(tok: Token) -> Precedence {
 }
 @(private = "file", require_results)
 PARSE_INFIX :: proc(p: ^Parser, left_expression: NODEID) -> (infix_node: NODEID, err: OuauError) {
+	my_alloc := virtual.arena_allocator(p.arena)
 	token := p.current.kind
 	#partial switch token {
 	case .OPEN:
 		p->ADVANCE() or_return
-		args := make([dynamic]NODEID)
+		args := make([dynamic]NODEID, my_alloc)
 		if p.current.kind != .CLOSE { 	// TODO: bad grammar
 			tmp_expression := p->PARSE_EXP() or_return
 			append(&args, tmp_expression)
