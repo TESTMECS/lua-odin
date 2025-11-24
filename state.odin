@@ -64,18 +64,19 @@ Precedence :: enum u8 {
 	CALL,
 	INDEX,
 }
-Parser :: struct {
-	pos:                        int,
-	nodes:                      NODES,
-	lexer:                      Lexer,
-	current:                    TokenDefinition,
-	peek:                       TokenDefinition,
-	arena:                      ^virtual.Arena,
-	ADVANCE:                    proc(p: ^Parser, description := "") -> (err: OuauError),
+
+ParserVTable :: struct {
+	ADVANCE:                    proc(p: ^Parser) -> (err: OuauError),
+	APPEND_NODEID_CHILD:        proc(p: ^Parser, parent, child: NODEID),
+	CURRENT_IS_KIND:            proc(p: ^Parser, kind: Token) -> bool,
 	EXPECT:                     proc(p: ^Parser, kind: Token) -> (err: OuauError),
+	GET_CURRENT_TEXT:           proc(p: ^Parser) -> (text: string),
+	GET_CURRENT_KIND:           proc(p: ^Parser) -> (kind: Token),
 	IS_TERMINAL:                proc(p: ^Parser) -> bool,
 	PARSE_CHUNK:                proc(p: ^Parser) -> (NODEID, OuauError),
 	PARSE_BLOCK:                proc(p: ^Parser) -> (NODEID, OuauError),
+	PARSE_EXP:                  proc(p: ^Parser) -> (expression: NODEID, err: OuauError),
+	PARSE_EXPLIST:              proc(p: ^Parser) -> (parsed_expressions: []NODEID, err: OuauError),
 	PARSE_STMT:                 proc(p: ^Parser) -> (NODEID, OuauError),
 	PARSE_WHILE:                proc(p: ^Parser) -> (NODEID, OuauError),
 	PARSE_REPEAT:               proc(p: ^Parser) -> (NODEID, OuauError),
@@ -98,16 +99,49 @@ Parser :: struct {
 	SET_NODEID_NAME:            proc(p: ^Parser, node: NODEID, name: string) -> (err: OuauError),
 	SET_STRING_VALUE:           proc(p: ^Parser, node: NODEID, value: string) -> (err: OuauError),
 	SET_INT_VALUE:              proc(p: ^Parser, node: NODEID, value: i64) -> (err: OuauError),
-	GET_CURRENT_KIND:           proc(p: ^Parser) -> (kind: Token),
 	NEW_NODE:                   proc(p: ^Parser, k: NODE_KIND) -> (new_nodeid: NODEID),
-	PARSE_EXP:                  proc(p: ^Parser) -> (expression: NODEID, err: OuauError),
-	PARSE_EXPLIST:              proc(p: ^Parser) -> (parsed_expressions: []NODEID, err: OuauError),
-	GET_CURRENT_TEXT:           proc(p: ^Parser) -> (text: string),
-	CURRENT_IS_KIND:            proc(p: ^Parser, kind: Token) -> bool,
 	SET_NODEID_TOKEN:           proc(p: ^Parser, node: NODEID, token: Token),
-	APPEND_NODEID_CHILD:        proc(p: ^Parser, parent, child: NODEID),
 }
-
+Parser :: struct {
+	pos:          int,
+	nodes:        NODES,
+	lexer:        Lexer,
+	current:      TokenDefinition,
+	peek:         TokenDefinition,
+	arena:        ^virtual.Arena,
+	using vtable: ParserVTable,
+}
+@(require_results)
+NEW_PARSER :: proc(
+	input: string,
+	param_arena: ^virtual.Arena,
+) -> (
+	new_parser: Parser,
+	err: OuauError,
+) {
+	new_parser = Parser {
+		pos     = 0,
+		arena   = param_arena,
+		nodes   = NODES{},
+		current = TokenDefinition{},
+		peek    = TokenDefinition{},
+		lexer   = NEW_LEXER(input),
+		vtable  = PARSER_VTABLE,
+	}
+	// Initalize current and peek
+	first_token := new_parser.lexer->NEXT() or_return
+	new_parser.peek = first_token
+	// Initalize Nodes
+	varena := virtual.arena_allocator(param_arena)
+	new_parser.nodes.kind = make([dynamic]NODE_KIND, varena)
+	new_parser.nodes.first_child = make([dynamic]NODEID, varena)
+	new_parser.nodes.next_sibling = make([dynamic]NODEID, varena)
+	new_parser.nodes.token = make([dynamic]Token, varena)
+	new_parser.nodes.int_value = make([dynamic]i64, varena)
+	new_parser.nodes.string_value = make([dynamic]string, varena)
+	new_parser.nodes.name = make([dynamic]string, varena)
+	return new_parser, nil
+}
 @(rodata)
 PRECEDENCES := #partial [Token]Precedence {
 	.ASSIGN = .ASSIGN,
