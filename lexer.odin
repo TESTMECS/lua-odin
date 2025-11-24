@@ -120,9 +120,15 @@ NEXT :: proc(l: ^Lexer) -> (tok: TokenDefinition, err: OuauError) {
 		if PEEK(l) == '.' {
 			start := l.pos
 			EAT(l)
-			tok = GET_TOKEN(.DOTDOT, l.input, start, 2)
+			if PEEK(l) == '.' {
+				EAT(l)
+				tok = GET_TOKEN(.DOTS, l.input, start, 3)
+			} else {
+				tok = GET_TOKEN(.DOTDOT, l.input, start, 2)
+			}
+		} else {
+			tok = GET_TOKEN(.DOT, l.input, l.pos, 1)
 		}
-		tok = GET_TOKEN(.DOT, l.input, l.pos, 1)
 	case '/':
 		tok = GET_TOKEN(.DIV, l.input, l.pos, 1)
 	case '%':

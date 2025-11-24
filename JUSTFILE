@@ -37,6 +37,6 @@ test_function:
 
 test_parser_name := "test_do"
 test_parser:
-	odin test ./test_parser -define:ODIN_TEST_NAMES={{test_parser_name}} -sanitize:address
+	timeout 2 odin test ./test_parser -define:ODIN_TEST_NAMES={{test_parser_name}} -sanitize:address
 
 
