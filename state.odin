@@ -72,7 +72,6 @@ ParserVTable :: struct {
 	EXPECT:       proc(p: ^Parser, kind: Token) -> (err: OuauError),
 	GET_TEXT:     proc(p: ^Parser) -> (text: string),
 	GET_TOKEN:    proc(p: ^Parser) -> (kind: Token),
-	IS_TERMINAL:  proc(p: ^Parser) -> bool,
 	CHUNK:        proc(p: ^Parser) -> (NODEID, OuauError),
 	BLOCK:        proc(p: ^Parser) -> (NODEID, OuauError),
 	EXP:          proc(p: ^Parser) -> (expression: NODEID, err: OuauError),

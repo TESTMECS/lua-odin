@@ -529,17 +529,6 @@ IS :: proc(p: ^Parser, kind: Token) -> bool {
 	return p.current.kind == kind
 }
 @(private = "file", require_results)
-IS_TERMINAL :: proc(p: ^Parser) -> bool {
-	return(
-		p->GET_TOKEN() == .SEMI ||
-		p->GET_TOKEN() == .END ||
-		p->GET_TOKEN() == .ELSE ||
-		p->GET_TOKEN() == .ELSEIF ||
-		p->GET_TOKEN() == .EOF ||
-		p->GET_TOKEN() == .ILLEGAL \
-	)
-}
-@(private = "file", require_results)
 PEEK_PRECEDENCE :: proc(p: ^Parser) -> Precedence {
 	return PRECEDENCES[p.peek.kind]
 }
@@ -573,7 +562,6 @@ PARSER_VTABLE := ParserVTable {
 	EXPECT       = EXPECT,
 	GET_TEXT     = GET_TEXT,
 	GET_TOKEN    = GET_TOKEN,
-	IS_TERMINAL  = IS_TERMINAL,
 	NEW_NODE     = NEW_NODE,
 	BLOCK        = BLOCK,
 	CHUNK        = CHUNK,
