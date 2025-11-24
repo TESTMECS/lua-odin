@@ -188,7 +188,7 @@ PARSE_INFIX :: proc(p: ^Parser, lhs: NODEID) -> (infix: NODEID, err: OuauError) 
 		#partial switch p->GET_CURRENT() {
 		case .IDENTIFIER:
 			rhs := p->NEW_NODE(.IDENTIFIER)
-			p->SET_NODEID_NAME(rhs, p->GET_CURRENT_TEXT())
+			p->SET_NODEID_NAME(rhs, p->CURRENT_TEXT())
 			p->ADVANCE() or_return // past identifier
 			infix = p->NEW_NODE(.BINARY)
 			p->SET_NODEID_TOKEN(infix, p->GET_CURRENT())
@@ -221,24 +221,24 @@ PARSE_PRIMARY :: proc(p: ^Parser) -> (primary_node: NODEID, err: OuauError) {
 	#partial switch p->GET_CURRENT() {
 	case .NUMBER:
 		primary_node = p->NEW_NODE(.LITERAL)
-		val, ok := strconv.parse_i64(p->GET_CURRENT_TEXT())
+		val, ok := strconv.parse_i64(p->CURRENT_TEXT())
 		if !ok { return 0, GET_PARSE_ERROR(p, "InvalidNumber::i64") }
 		p->SET_INT_VALUE(primary_node, val)
 		p->ADVANCE() or_return
 		return primary_node, nil
 	case .STRING:
 		primary_node = p->NEW_NODE(.STRING)
-		p->SET_STRING_VALUE(primary_node, p->GET_CURRENT_TEXT())
+		p->SET_STRING_VALUE(primary_node, p->CURRENT_TEXT())
 		p->ADVANCE() or_return
 		return primary_node, nil
 	case .IDENTIFIER:
 		primary_node := p->NEW_NODE(.IDENTIFIER)
-		p->SET_NODEID_NAME(primary_node, p->GET_CURRENT_TEXT())
+		p->SET_NODEID_NAME(primary_node, p->CURRENT_TEXT())
 		p->ADVANCE() or_return
 		return primary_node, nil
 	case .NIL, .TRUE, .FALSE:
 		primary_node = p->NEW_NODE(.LITERAL)
-		p->SET_STRING_VALUE(primary_node, p->GET_CURRENT_TEXT())
+		p->SET_STRING_VALUE(primary_node, p->CURRENT_TEXT())
 		p->ADVANCE() or_return
 		return primary_node, nil
 	case .OPEN:
@@ -353,7 +353,7 @@ PARSE_DO :: proc(p: ^Parser) -> (do_block_body: NODEID, err: OuauError) {
 @(private = "file", require_results)
 PARSE_FUNCTION :: proc(p: ^Parser) -> (function_node: NODEID, err: OuauError) {
 	p->EXPECT(.FUNCTION) or_return
-	function_name := p->GET_CURRENT_TEXT()
+	function_name := p->CURRENT_TEXT()
 	function_node = p->NEW_NODE(.FUNCTION)
 	p->SET_NODEID_NAME(function_node, function_name)
 	p->ADVANCE() or_return // past 'function name'
@@ -364,7 +364,7 @@ PARSE_FUNCTION :: proc(p: ^Parser) -> (function_node: NODEID, err: OuauError) {
 				#partial switch p->GET_CURRENT() {
 				case .IDENTIFIER:
 					function_parameter := p->NEW_NODE(.IDENTIFIER)
-					p->SET_NODEID_NAME(function_parameter, p->GET_CURRENT_TEXT())
+					p->SET_NODEID_NAME(function_parameter, p->CURRENT_TEXT())
 					p->APPEND_NODEID_CHILD(function_node, function_parameter)
 					p->ADVANCE() or_return // past param
 					if p->CURRENT_IS(.COMMA) {
@@ -388,7 +388,7 @@ PARSE_FUNCTION :: proc(p: ^Parser) -> (function_node: NODEID, err: OuauError) {
 @(private = "file", require_results)
 PARSE_FOR :: proc(p: ^Parser) -> (for_node: NODEID, err: OuauError) {
 	p->EXPECT(.FOR) or_return
-	var_name := p->GET_CURRENT_TEXT()
+	var_name := p->CURRENT_TEXT()
 	p->ADVANCE() or_return
 	for_node = p->NEW_NODE(.FOR)
 	p->SET_NODEID_NAME(for_node, var_name)
@@ -412,7 +412,7 @@ PARSE_FOR :: proc(p: ^Parser) -> (for_node: NODEID, err: OuauError) {
 		for p->CURRENT_IS(.COMMA) {
 			p->ADVANCE() or_return
 			next_var := p->NEW_NODE(.IDENTIFIER)
-			p->SET_NODEID_NAME(next_var, p->GET_CURRENT_TEXT())
+			p->SET_NODEID_NAME(next_var, p->CURRENT_TEXT())
 			p->ADVANCE() or_return
 			p->APPEND_NODEID_CHILD(for_node, next_var)
 		}
@@ -509,7 +509,7 @@ PARSE_TABLE :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 				p->APPEND_NODEID_CHILD(table, pair)
 			} else if p->CURRENT_IS(.IDENTIFIER) && p->CURRENT_IS(.ASSIGN) {
 				key := p->NEW_NODE(.IDENTIFIER)
-				p->SET_NODEID_NAME(key, p->GET_CURRENT_TEXT())
+				p->SET_NODEID_NAME(key, p->CURRENT_TEXT())
 				p->ADVANCE() or_return
 				p->EXPECT(.ASSIGN) or_return
 				value := p->PARSE_EXP() or_return
@@ -584,7 +584,7 @@ SET_INT_VALUE :: proc(p: ^Parser, node: NODEID, value: i64) -> (err: OuauError) 
 	return GET_PARSE_ERROR(p, "Int Value Already set for node.")
 }
 @(private = "file", require_results)
-GET_CURRENT_TEXT :: proc(p: ^Parser) -> (text: string) {
+CURRENT_TEXT :: proc(p: ^Parser) -> (text: string) {
 	text = string(p.current.text)
 	return
 }
@@ -637,7 +637,7 @@ PARSER_VTABLE := ParserVTable {
 	APPEND_NODEID_CHILD        = APPEND_NODEID_CHILD,
 	CURRENT_IS                 = CURRENT_IS,
 	EXPECT                     = EXPECT,
-	GET_CURRENT_TEXT           = GET_CURRENT_TEXT,
+	CURRENT_TEXT               = CURRENT_TEXT,
 	GET_CURRENT                = GET_CURRENT,
 	IS_TERMINAL                = IS_TERMINAL,
 	NEW_NODE                   = NEW_NODE,

@@ -70,7 +70,7 @@ ParserVTable :: struct {
 	APPEND_NODEID_CHILD:        proc(p: ^Parser, parent, child: NODEID),
 	CURRENT_IS:                 proc(p: ^Parser, kind: Token) -> bool,
 	EXPECT:                     proc(p: ^Parser, kind: Token) -> (err: OuauError),
-	GET_CURRENT_TEXT:           proc(p: ^Parser) -> (text: string),
+	CURRENT_TEXT:               proc(p: ^Parser) -> (text: string),
 	GET_CURRENT:                proc(p: ^Parser) -> (kind: Token),
 	IS_TERMINAL:                proc(p: ^Parser) -> bool,
 	PARSE_CHUNK:                proc(p: ^Parser) -> (NODEID, OuauError),
