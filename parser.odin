@@ -25,16 +25,7 @@ EXPECT :: proc(p: ^Parser, kind: Token) -> (err: OuauError) {
 	if p->CURRENT_IS_KIND(kind) { return p->ADVANCE() }
 	return nil
 }
-IS_TERMINAL :: proc(p: ^Parser) -> bool {
-	return(
-		p->GET_CURRENT_KIND() == .SEMI ||
-		p->GET_CURRENT_KIND() == .END ||
-		p->GET_CURRENT_KIND() == .ELSE ||
-		p->GET_CURRENT_KIND() == .ELSEIF ||
-		p->GET_CURRENT_KIND() == .EOF ||
-		p->GET_CURRENT_KIND() == .ILLEGAL \
-	)
-}
+
 @(private = "file", require_results)
 PARSE_BLOCK :: proc(p: ^Parser) -> (block_node: NODEID, err: OuauError) {
 	block_node = p->NEW_NODE(.BLOCK)
@@ -54,7 +45,7 @@ PARSE_BLOCK :: proc(p: ^Parser) -> (block_node: NODEID, err: OuauError) {
 	}
 	return block_node, nil
 }
-@(require_results)
+@(private = "file", require_results)
 PARSE_STMT :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 	#partial switch p->GET_CURRENT_KIND() {
 	case .WHILE:
@@ -130,7 +121,7 @@ PARSE_IF :: proc(p: ^Parser) -> (if_node: NODEID, err: OuauError) {
 	p->EXPECT(.END) or_return
 	return if_node, nil
 }
-@(require_results)
+@(private = "file", require_results)
 PARSE_EXP :: proc(p: ^Parser) -> (expression: NODEID, err: OuauError) {
 	expression = p->PARSE_PRECEDENCE(.LOWEST) or_return
 	return expression, nil
@@ -151,6 +142,7 @@ PARSE_PRECEDENCE :: proc(
 	}
 	return
 }
+@(private = "file", require_results)
 GET_PRECEDENCE :: proc(tok: Token) -> Precedence {
 	#partial switch tok {
 	case .ASSIGN:
@@ -171,10 +163,9 @@ GET_PRECEDENCE :: proc(tok: Token) -> Precedence {
 		return .LOWEST
 	}
 }
-@(require_results)
+@(private = "file", require_results)
 PARSE_INFIX :: proc(p: ^Parser, left_expression: NODEID) -> (infix_node: NODEID, err: OuauError) {
 	my_alloc := virtual.arena_allocator(p.arena)
-
 	#partial switch p->GET_CURRENT_KIND() {
 	case .OPEN:
 		p->ADVANCE() or_return // past )
@@ -260,7 +251,7 @@ PARSE_PRIMARY :: proc(p: ^Parser) -> (primary_node: NODEID, err: OuauError) {
 	}
 	return p->NEW_NODE(.INVALID), nil
 }
-@(require_results)
+@(private = "file", require_results)
 PARSE_EXPRESSION_STATEMENT :: proc(p: ^Parser) -> (lhs: NODEID, err: OuauError) {
 	lhs = p->PARSE_EXP() or_return
 	if p->CURRENT_IS_KIND(.ASSIGN) {
@@ -273,12 +264,15 @@ PARSE_EXPRESSION_STATEMENT :: proc(p: ^Parser) -> (lhs: NODEID, err: OuauError) 
 	}
 	return lhs, nil
 }
+@(private = "file", require_results)
 PEEK_PRECEDENCE :: proc(p: ^Parser) -> Precedence {
 	return PRECEDENCES[p.peek.kind]
 }
+@(private = "file")
 SET_NODEID_TOKEN :: proc(p: ^Parser, node: NODEID, token: Token) {
 	p.nodes.token[node] = token
 }
+@(private = "file", require_results)
 PARSE_PREFIX_EXP :: proc(p: ^Parser) -> (prefix_node: NODEID, err: OuauError) {
 	#partial switch p->GET_CURRENT_KIND() {
 	case .NOT, .MINUS, .POUND, .BANG:
@@ -317,7 +311,7 @@ PARSE_EXPLIST :: proc(p: ^Parser) -> (parsed_expressions: []NODEID, err: OuauErr
 	err = GET_PARSE_ERROR(p, "PARSE_EXPLIST::parsed_expressions")
 	return parsed_expressions, err
 }
-@(require_results)
+@(private = "file", require_results)
 PARSE_REPEAT :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 	p->EXPECT(.REPEAT) or_return
 	node = p->NEW_NODE(.REPEAT)
@@ -347,7 +341,7 @@ PARSE_UBLOCK :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 	p->APPEND_NODEID_CHILD(node, cond)
 	return node, nil
 }
-@(require_results)
+@(private = "file", require_results)
 PARSE_DO :: proc(p: ^Parser) -> (do_block_body: NODEID, err: OuauError) {
 	p->EXPECT(.DO) or_return
 	do_block_body = p->PARSE_BLOCK() or_return // segfault here.
@@ -389,7 +383,7 @@ PARSE_FUNCTION :: proc(p: ^Parser) -> (function_node: NODEID, err: OuauError) {
 	p->APPEND_NODEID_CHILD(function_node, body)
 	return function_node, nil
 }
-@(require_results)
+@(private = "file", require_results)
 PARSE_FOR :: proc(p: ^Parser) -> (for_node: NODEID, err: OuauError) {
 	p->EXPECT(.FOR) or_return
 	var_name := p->GET_CURRENT_TEXT()
@@ -475,11 +469,11 @@ PARSE_LOCAL :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 				p->APPEND_NODEID_CHILD(node, v)
 			}
 		}
-		return
+		return node, nil
 	}
-	return
+	return node, nil
 }
-@(require_results)
+@(private = "file", require_results)
 PARSE_BREAK :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 	p->EXPECT(.BREAK) or_return
 	node = p->NEW_NODE(.BREAK)
@@ -495,7 +489,7 @@ PARSE_RETURN :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 	}
 	return node, nil
 }
-@(require_results)
+@(private = "file", require_results)
 PARSE_TABLE :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 	p->EXPECT(.TOPEN) or_return
 	table := p->NEW_NODE(.TABLE)
@@ -579,19 +573,6 @@ SET_STRING_VALUE :: proc(p: ^Parser, node: NODEID, value: string) -> (err: OuauE
 	}
 	return GET_PARSE_ERROR(p, "String Value Already set for node.")
 }
-@(require_results)
-GET_CURRENT_KIND :: proc(p: ^Parser) -> (kind: Token) {
-	return p.current.kind
-}
-@(private = "file", require_results)
-CURRENT_IS_KIND :: proc(p: ^Parser, kind: Token) -> bool {
-	return p.current.kind == kind
-}
-@(require_results)
-GET_CURRENT_TEXT :: proc(p: ^Parser) -> (text: string) {
-	text = string(p.current.text)
-	return
-}
 @(private = "file", require_results)
 SET_INT_VALUE :: proc(p: ^Parser, node: NODEID, value: i64) -> (err: OuauError) {
 	if p.nodes.int_value[node] == 0 {
@@ -599,6 +580,30 @@ SET_INT_VALUE :: proc(p: ^Parser, node: NODEID, value: i64) -> (err: OuauError) 
 		return nil
 	}
 	return GET_PARSE_ERROR(p, "Int Value Already set for node.")
+}
+@(require_results)
+GET_CURRENT_KIND :: proc(p: ^Parser) -> (kind: Token) {
+	return p.current.kind
+}
+@(private = "file", require_results)
+GET_CURRENT_TEXT :: proc(p: ^Parser) -> (text: string) {
+	text = string(p.current.text)
+	return
+}
+@(private = "file", require_results)
+CURRENT_IS_KIND :: proc(p: ^Parser, kind: Token) -> bool {
+	return p.current.kind == kind
+}
+@(private = "file", require_results)
+IS_TERMINAL :: proc(p: ^Parser) -> bool {
+	return(
+		p->GET_CURRENT_KIND() == .SEMI ||
+		p->GET_CURRENT_KIND() == .END ||
+		p->GET_CURRENT_KIND() == .ELSE ||
+		p->GET_CURRENT_KIND() == .ELSEIF ||
+		p->GET_CURRENT_KIND() == .EOF ||
+		p->GET_CURRENT_KIND() == .ILLEGAL \
+	)
 }
 @(private = "file", require_results)
 NEW_NODE :: proc(p: ^Parser, k: NODE_KIND) -> (new_nodeid: NODEID) {
