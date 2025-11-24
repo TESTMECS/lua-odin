@@ -559,7 +559,7 @@ PARSE_TABLE :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 				p->ADD_NODEID_CHILD(table, pair)
 			} else if p->CURRENT_IS_KIND(.IDENTIFIER) && p->CURRENT_IS_KIND(.ASSIGN) {
 				key := p->NEW_NODE(.IDENTIFIER)
-				p.nodes.name[key] = string(p.current.text)
+				p->SET_NODEID_NAME(key, p->GET_CURRENT_TEXT())
 				p->ADVANCE() or_return
 				p->EXPECT(.ASSIGN) or_return
 				value := p->PARSE_EXP() or_return
