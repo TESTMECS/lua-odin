@@ -70,7 +70,7 @@ STMT :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 	case .OPEN:
 		node = p->CALL() or_return
 	case:
-		node = p->EXPRESSION_STATEMENT() or_return
+		node = p->EXP_STMT() or_return
 	}
 	return node, nil
 }
@@ -254,7 +254,7 @@ PRIMARY :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 	unreachable()
 }
 @(private = "file", require_results)
-EXPRESSION_STATEMENT :: proc(p: ^Parser) -> (lhs: NODEID, err: OuauError) {
+EXP_STMT :: proc(p: ^Parser) -> (lhs: NODEID, err: OuauError) {
 	lhs = p->EXP() or_return
 	if p->IS(.ASSIGN) {
 		p->ADVANCE() or_return
@@ -632,40 +632,40 @@ APPEND_CHILD :: proc(p: ^Parser, parent, child: NODEID) {
 }
 @(rodata)
 PARSER_VTABLE := ParserVTable {
-	ADVANCE              = ADVANCE,
-	APPEND_CHILD         = APPEND_CHILD,
-	IS                   = IS,
-	EXPECT               = EXPECT,
-	CURRENT_TEXT         = CURRENT_TEXT,
-	CURRENT_TOKEN        = CURRENT_TOKEN,
-	IS_TERMINAL          = IS_TERMINAL,
-	NEW_NODE             = NEW_NODE,
-	BLOCK                = BLOCK,
-	CHUNK                = CHUNK,
-	EXP                  = EXP,
-	EXPLIST              = EXPLIST,
-	STMT                 = STMT,
-	WHILE                = WHILE,
-	REPEAT               = REPEAT,
-	DO                   = DO,
-	IF                   = IF,
-	FUNCTION             = FUNCTION,
-	FOR                  = FOR,
-	LOCAL                = LOCAL,
-	GLOBAL               = GLOBAL,
-	BREAK                = BREAK,
-	RETURN               = RETURN,
-	CALL                 = CALL,
-	EXPRESSION_STATEMENT = EXPRESSION_STATEMENT,
-	UBLOCK               = UBLOCK,
-	PREFIX_EXP           = PREFIX_EXP,
-	TABLE                = TABLE,
-	PRIMARY              = PRIMARY,
-	INFIX                = INFIX,
-	PRECEDENCE           = PRECEDENCE,
-	SET_NAME             = SET_NAME,
-	SET_STRING           = SET_STRING,
-	SET_INT              = SET_INT,
-	SET_TOKEN            = SET_TOKEN,
+	ADVANCE       = ADVANCE,
+	APPEND_CHILD  = APPEND_CHILD,
+	IS            = IS,
+	EXPECT        = EXPECT,
+	CURRENT_TEXT  = CURRENT_TEXT,
+	CURRENT_TOKEN = CURRENT_TOKEN,
+	IS_TERMINAL   = IS_TERMINAL,
+	NEW_NODE      = NEW_NODE,
+	BLOCK         = BLOCK,
+	CHUNK         = CHUNK,
+	EXP           = EXP,
+	EXPLIST       = EXPLIST,
+	STMT          = STMT,
+	WHILE         = WHILE,
+	REPEAT        = REPEAT,
+	DO            = DO,
+	IF            = IF,
+	FUNCTION      = FUNCTION,
+	FOR           = FOR,
+	LOCAL         = LOCAL,
+	GLOBAL        = GLOBAL,
+	BREAK         = BREAK,
+	RETURN        = RETURN,
+	CALL          = CALL,
+	EXP_STMT      = EXP_STMT,
+	UBLOCK        = UBLOCK,
+	PREFIX_EXP    = PREFIX_EXP,
+	TABLE         = TABLE,
+	PRIMARY       = PRIMARY,
+	INFIX         = INFIX,
+	PRECEDENCE    = PRECEDENCE,
+	SET_NAME      = SET_NAME,
+	SET_STRING    = SET_STRING,
+	SET_INT       = SET_INT,
+	SET_TOKEN     = SET_TOKEN,
 }
 
