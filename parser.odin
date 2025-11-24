@@ -1,5 +1,4 @@
 package ouau
-import "core:log"
 import "core:mem/virtual"
 import "core:strconv"
 /*
@@ -318,10 +317,8 @@ PARSE_EXPLIST :: proc(p: ^Parser) -> (parsed_expressions: []NODEID, err: OuauErr
 	list_of_expr := make([dynamic]NODEID, 0, my_alloc)
 
 	expression_node := p->PARSE_EXP() or_return
-	log.infof("PARSE_EXPLIST::expression_node(%v)", expression_node)
 	append(&list_of_expr, expression_node)
 
-	log.infof("PARSE_EXPLIST::parsed_expressions(%v)", p->GET_CURRENT_KIND())
 	#partial switch p->GET_CURRENT_KIND() {
 	case .COMMA:
 		for p->CURRENT_IS_KIND(.COMMA) {
@@ -332,9 +329,7 @@ PARSE_EXPLIST :: proc(p: ^Parser) -> (parsed_expressions: []NODEID, err: OuauErr
 		parsed_expressions = list_of_expr[:]
 		return parsed_expressions, nil
 	case:
-		log.infof("PARSE_EXPLIST::parsed_expressions(%v)", list_of_expr)
 		parsed_expressions = list_of_expr[:]
-		log.infof("PARSE_EXPLIST::parsed_expressions(%v)", parsed_expressions)
 		return parsed_expressions, nil
 	}
 	err = GET_PARSE_ERROR(p, "PARSE_EXPLIST::parsed_expressions")
@@ -372,7 +367,6 @@ PARSE_UBLOCK :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 }
 @(private = "file", require_results)
 PARSE_DO :: proc(p: ^Parser) -> (do_block_body: NODEID, err: OuauError) {
-	log.infof("PARSE_DO::starting")
 	p->EXPECT(.DO) or_return
 	do_block_body = p->PARSE_BLOCK() or_return // segfault here.
 	p->EXPECT(.END) or_return
@@ -381,15 +375,12 @@ PARSE_DO :: proc(p: ^Parser) -> (do_block_body: NODEID, err: OuauError) {
 
 @(private = "file", require_results)
 PARSE_FUNCTION :: proc(p: ^Parser) -> (function_node: NODEID, err: OuauError) {
-	log.infof("PARSE_FUNCTION::starting")
 	p->EXPECT(.FUNCTION) or_return
 	function_name := p->GET_CURRENT_TEXT()
-	log.infof("PARSE_FUNCTION::name=%v", function_name)
 	function_node = p->NEW_NODE(.FUNCTION)
 	p->SET_NODEID_NAME(function_node, function_name)
 	p->ADVANCE("past 'function name'") or_return
 	if p->CURRENT_IS_KIND(.OPEN) {
-		log.infof("PARSE_FUNCTION::parsing parameters")
 		p->ADVANCE("past '(' ") or_return
 		if !p->CURRENT_IS_KIND(.CLOSE) {
 			for !p->CURRENT_IS_KIND(.CLOSE) {
@@ -411,14 +402,10 @@ PARSE_FUNCTION :: proc(p: ^Parser) -> (function_node: NODEID, err: OuauError) {
 			}
 		}
 		p->EXPECT(.CLOSE) or_return
-		log.infof("PARSE_FUNCTION::finished parameters")
 	}
-	log.infof("PARSE_FUNCTION::parsing body")
 	body := p->PARSE_BLOCK() or_return
-	log.infof("PARSE_FUNCTION::expecting END")
 	p->EXPECT(.END) or_return
 	p->ADD_NODEID_CHILD(function_node, body)
-	log.infof("PARSE_FUNCTION::finished")
 	return function_node, nil
 }
 
@@ -476,9 +463,7 @@ PARSE_LOCAL :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 	} else {
 		vars := make([dynamic]NODEID, my_alloc)
 		primary_expr := p->PARSE_PRIMARY() or_return
-		log.infof("PARSE_LOCAL::primary_expr(%v)", primary_expr)
 		append(&vars, primary_expr)
-		log.infof("PARSE_LOCAL::vars(%v)", vars)
 		#partial switch p->GET_CURRENT_KIND() {
 		case .COMMA:
 			for p->CURRENT_IS_KIND(.COMMA) {
@@ -497,13 +482,11 @@ PARSE_LOCAL :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 				}
 			}
 		case .ASSIGN:
-			log.infof("PARSE_LOCAL::ASSIGN")
 			p->ADVANCE() or_return
 			for v in vars {
 				p->ADD_NODEID_CHILD(node, v)
 			}
 			values := p->PARSE_EXPLIST() or_return
-			log.infof("PARSE_LOCAL::values(%v)", values)
 			for val in values {
 				p->ADD_NODEID_CHILD(node, val)
 			}
