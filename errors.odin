@@ -39,7 +39,7 @@ GET_SYNTAX_ERROR :: proc(l: ^Lexer, tok: TokenDefinition) -> OuauError {
 ParseError :: struct {
 	msg: string,
 }
-GET_PARSE_ERROR :: proc(p: ^Parser, msg: string) -> (err: OuauError) {
+PARSE_ERROR :: proc(p: ^Parser, msg: string) -> (err: OuauError) {
 	err = ParseError{msg}
 	fmt.eprintf("[Parse Error]Msg::(%s)|", msg)
 	fmt.eprintf("Pos::(%d)|", p.pos)

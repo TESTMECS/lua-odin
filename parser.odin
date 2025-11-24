@@ -39,7 +39,7 @@ BLOCK :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 		case .EOF:
 			break block_loop
 		case .ILLEGAL:
-			return node, GET_PARSE_ERROR(p, "PARSE_BLOCK::Unexpected teriminal::()")
+			return node, PARSE_ERROR(p, "PARSE_BLOCK::Unexpected teriminal::()")
 		}
 	}
 	return node, nil
@@ -189,7 +189,7 @@ INFIX :: proc(p: ^Parser, lhs: NODEID) -> (infix: NODEID, err: OuauError) {
 			p->APPEND_CHILD(infix, rhs)
 			return infix, nil
 		} else {
-			return 0, GET_PARSE_ERROR(p, "Invalid Identifier in Dot Expression")
+			return 0, PARSE_ERROR(p, "Invalid Identifier in Dot Expression")
 		}
 	case .BOPEN:
 		p->ADVANCE() or_return
@@ -215,7 +215,7 @@ PRIMARY :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 	case .NUMBER:
 		node = p->NEW_NODE(.LITERAL)
 		val, ok := strconv.parse_i64(p->CURRENT_TEXT())
-		if !ok { return 0, GET_PARSE_ERROR(p, "InvalidNumber::i64") }
+		if !ok { return 0, PARSE_ERROR(p, "InvalidNumber::i64") }
 		p->SET_INT(node, val)
 		p->ADVANCE() or_return
 		return node, nil
@@ -243,7 +243,7 @@ PRIMARY :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 		node = p->TABLE() or_return
 		return node, nil
 	case:
-		return p->NEW_NODE(.INVALID), GET_PARSE_ERROR(p, "Invalid Token in Primary Expression")
+		return p->NEW_NODE(.INVALID), PARSE_ERROR(p, "Invalid Token in Primary Expression")
 	}
 	unreachable()
 }
@@ -294,10 +294,7 @@ EXPLIST :: proc(p: ^Parser) -> (parsed_expressions: []NODEID, err: OuauError) {
 		parsed_expressions = list_of_expr[:]
 		return parsed_expressions, nil
 	}
-	return parsed_expressions, GET_PARSE_ERROR(
-		p,
-		"PARSE_EXPLIST::Unexpected Token in Expression List",
-	)
+	return parsed_expressions, PARSE_ERROR(p, "PARSE_EXPLIST::Unexpected Token in Expression List")
 }
 @(private = "file", require_results)
 REPEAT :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
@@ -365,7 +362,7 @@ FUNCTION :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 		}
 		p->EXPECT(.CLOSE) or_return
 	case:
-		return node, GET_PARSE_ERROR(p, "Invalid Token in Function Declaration")
+		return node, PARSE_ERROR(p, "Invalid Token in Function Declaration")
 	}
 	body := p->BLOCK() or_return
 	p->EXPECT(.END) or_return
@@ -413,7 +410,7 @@ FOR :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 		p->EXPECT(.END) or_return
 		p->APPEND_CHILD(node, body)
 	case:
-		return node, GET_PARSE_ERROR(p, "Invalid Token in For Loop")
+		return node, PARSE_ERROR(p, "Invalid Token in For Loop")
 	}
 	unreachable()
 }
@@ -456,7 +453,7 @@ LOCAL :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 		}
 		return node, nil
 	case:
-		return node, GET_PARSE_ERROR(p, "Invalid Token in Local Declaration")
+		return node, PARSE_ERROR(p, "Invalid Token in Local Declaration")
 	}
 	unreachable()
 }
@@ -550,7 +547,7 @@ SET_NAME :: proc(p: ^Parser, node: NODEID, name: string) -> (err: OuauError) {
 		p.nodes.name[node] = name
 		return nil
 	}
-	return GET_PARSE_ERROR(p, "Name Already set for node.")
+	return PARSE_ERROR(p, "Name Already set for node.")
 }
 @(private = "file", require_results)
 SET_STRING :: proc(p: ^Parser, node: NODEID, value: string) -> (err: OuauError) {
@@ -558,7 +555,7 @@ SET_STRING :: proc(p: ^Parser, node: NODEID, value: string) -> (err: OuauError) 
 		p.nodes.string_value[node] = value
 		return nil
 	}
-	return GET_PARSE_ERROR(p, "String Value Already set for node.")
+	return PARSE_ERROR(p, "String Value Already set for node.")
 }
 @(private = "file", require_results)
 SET_INT :: proc(p: ^Parser, node: NODEID, value: i64) -> (err: OuauError) {
@@ -566,7 +563,7 @@ SET_INT :: proc(p: ^Parser, node: NODEID, value: i64) -> (err: OuauError) {
 		p.nodes.int_value[node] = value
 		return nil
 	}
-	return GET_PARSE_ERROR(p, "Int Value Already set for node.")
+	return PARSE_ERROR(p, "Int Value Already set for node.")
 }
 @(private = "file")
 SET_TOKEN :: proc(p: ^Parser, node: NODEID, token: Token) {
