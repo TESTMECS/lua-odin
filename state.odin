@@ -5,8 +5,10 @@ import "core:mem/virtual"
 	 ./state.odin
 	 Copyright(C) 2025 TESTMEE
 	 Defines the global state shared across compilation/threads for Ouau.
+		
+	 <@Token, @TokenDefinition, @Lexer>
 
-		<@NODEID, @NODE_KIND, @NODES, @Precedence, @Parser>
+	<@NODEID, @NODE_KIND, @NODES, @Precedence, @Parser, @ParserVTable>
 
 	 <@GlobalState, @String | >
 
@@ -18,6 +20,104 @@ import "core:mem/virtual"
 
 	 <@Thread, @ThreadState, @ThreadStatus|Threads State.>
 */
+Token :: enum u8 {
+	EOF,
+	ILLEGAL,
+	// keywords
+	DO,
+	END,
+	IN,
+	WHILE,
+	REPEAT,
+	UNTIL,
+	FOR,
+	RETURN,
+	IF,
+	THEN,
+	ELSE,
+	ELSEIF,
+	FUNCTION,
+	LOCAL,
+	GLOBAL,
+	TRUE,
+	FALSE,
+	NIL,
+	BREAK,
+	OR,
+	AND,
+	NOT,
+	// operators
+	ASSIGN,
+	PLUS,
+	MINUS,
+	MUL,
+	DIV,
+	MOD,
+	POW,
+	DOT,
+	DOTDOT,
+	COMMA,
+	COLON,
+	SEMI,
+	LT,
+	LE,
+	GT,
+	GE,
+	EQ,
+	NE,
+	NEQ,
+	LEQ,
+	GEQ,
+	OROR,
+	ANDAND,
+	SHL,
+	SHR,
+	TILDE,
+	BXOR,
+	POUND,
+	DOTS,
+	BAND,
+	BOR,
+	BANG,
+	// punctuation
+	OPEN,
+	CLOSE,
+	// other
+	IDENTIFIER,
+	NUMBER,
+	STRING,
+	TOPEN,
+	TCLOSE,
+	BOPEN,
+	BCLOSE,
+}
+TokenDefinition :: struct {
+	kind: Token,
+	text: []u8,
+}
+LexerVTable :: struct {
+	NEXT: proc(l: ^Lexer) -> (TokenDefinition, OuauError),
+	EAT:  proc(l: ^Lexer),
+}
+Lexer :: struct {
+	input:        []u8,
+	ch:           u8, //current character
+	pos:          int,
+	read_pos:     int,
+	using vtable: LexerVTable,
+}
+@(require_results)
+NEW_LEXER :: proc(input: string) -> Lexer {
+	l := Lexer {
+		ch       = 0,
+		input    = transmute([]u8)input,
+		pos      = 0,
+		read_pos = 0,
+		vtable   = LEXER_VTABLE,
+	}
+	l->EAT()
+	return l
+}
 NODEID :: u32
 NODE_KIND :: enum {
 	INVALID,
@@ -64,7 +164,6 @@ Precedence :: enum u8 {
 	CALL,
 	INDEX,
 }
-
 ParserVTable :: struct {
 	ADVANCE:      proc(p: ^Parser) -> (err: OuauError),
 	APPEND_CHILD: proc(p: ^Parser, parent, child: NODEID),
