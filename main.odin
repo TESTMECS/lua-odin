@@ -105,7 +105,7 @@ OUAU_EVAL_STRING :: proc(
 	err: OuauError,
 ) {
 	p := NEW_PARSER(input, v) or_return
-	root := CHUNK(&p) or_return
+	root := p->CHUNK() or_return
 	i.nodes = &p.nodes
 	return_value = INTERPRET(i, root)
 	return return_value, nil

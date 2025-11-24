@@ -100,7 +100,7 @@ ParserVTable :: struct {
 	SET_STRING:           proc(p: ^Parser, node: NODEID, value: string) -> (err: OuauError),
 	SET_INT:              proc(p: ^Parser, node: NODEID, value: i64) -> (err: OuauError),
 	NEW_NODE:             proc(p: ^Parser, k: NODE_KIND) -> (new_nodeid: NODEID),
-	SET_NODEID_TOKEN:     proc(p: ^Parser, node: NODEID, token: Token),
+	SET_TOKEN:            proc(p: ^Parser, node: NODEID, token: Token),
 }
 Parser :: struct {
 	pos:          int,

@@ -190,7 +190,7 @@ INFIX :: proc(p: ^Parser, lhs: NODEID) -> (infix: NODEID, err: OuauError) {
 			p->SET_NAME(rhs, p->CURRENT_TEXT())
 			p->ADVANCE() or_return // past identifier
 			infix = p->NEW_NODE(.BINARY)
-			p->SET_NODEID_TOKEN(infix, p->CURRENT_TOKEN())
+			p->SET_TOKEN(infix, p->CURRENT_TOKEN())
 			p->APPEND_CHILD(infix, lhs)
 			p->APPEND_CHILD(infix, rhs)
 			return infix, nil
@@ -202,7 +202,7 @@ INFIX :: proc(p: ^Parser, lhs: NODEID) -> (infix: NODEID, err: OuauError) {
 		p->EXPECT(.BCLOSE) or_return
 		rhs := p->PRECEDENCE(.LOWEST) or_return
 		infix := p->NEW_NODE(.BINARY)
-		p->SET_NODEID_TOKEN(infix, p->CURRENT_TOKEN())
+		p->SET_TOKEN(infix, p->CURRENT_TOKEN())
 		p->APPEND_CHILD(infix, lhs)
 		p->APPEND_CHILD(infix, rhs)
 		return infix, nil
@@ -210,7 +210,7 @@ INFIX :: proc(p: ^Parser, lhs: NODEID) -> (infix: NODEID, err: OuauError) {
 	p->ADVANCE() or_return
 	rhs := p->PRECEDENCE(GET_PRECEDENCE(p->CURRENT_TOKEN())) or_return
 	infix = p->NEW_NODE(.BINARY)
-	p->SET_NODEID_TOKEN(infix, p->CURRENT_TOKEN())
+	p->SET_TOKEN(infix, p->CURRENT_TOKEN())
 	p->APPEND_CHILD(infix, lhs)
 	p->APPEND_CHILD(infix, rhs)
 	return infix, nil
@@ -271,7 +271,7 @@ PREFIX_EXP :: proc(p: ^Parser) -> (prefix_node: NODEID, err: OuauError) {
 	#partial switch p->CURRENT_TOKEN() {
 	case .NOT, .MINUS, .POUND, .BANG:
 		prefix_node = p->NEW_NODE(.UNARY)
-		p->SET_NODEID_TOKEN(prefix_node, p->CURRENT_TOKEN())
+		p->SET_TOKEN(prefix_node, p->CURRENT_TOKEN())
 		p->ADVANCE() or_return
 		rhs := p->PREFIX_EXP() or_return
 		p->APPEND_CHILD(prefix_node, rhs)
@@ -575,7 +575,7 @@ SET_INT :: proc(p: ^Parser, node: NODEID, value: i64) -> (err: OuauError) {
 	return GET_PARSE_ERROR(p, "Int Value Already set for node.")
 }
 @(private = "file")
-SET_NODEID_TOKEN :: proc(p: ^Parser, node: NODEID, token: Token) {
+SET_TOKEN :: proc(p: ^Parser, node: NODEID, token: Token) {
 	p.nodes.token[node] = token
 }
 @(private = "file", require_results)
@@ -666,6 +666,6 @@ PARSER_VTABLE := ParserVTable {
 	SET_NAME             = SET_NAME,
 	SET_STRING           = SET_STRING,
 	SET_INT              = SET_INT,
-	SET_NODEID_TOKEN     = SET_NODEID_TOKEN,
+	SET_TOKEN            = SET_TOKEN,
 }
 
