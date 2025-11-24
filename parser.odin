@@ -290,7 +290,8 @@ GET_PRECEDENCE :: proc(tok: Token) -> Precedence {
 PARSE_INFIX :: proc(p: ^Parser, left_expression: NODEID) -> (infix_node: NODEID, err: OuauError) {
 	my_alloc := virtual.arena_allocator(p.arena)
 
-	#partial switch p.current.kind {
+	token := p.current.kind
+	#partial switch token {
 	case .OPEN:
 		p->ADVANCE() or_return
 		args := make([dynamic]NODEID, my_alloc)
