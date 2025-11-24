@@ -239,8 +239,9 @@ PARSE_PRIMARY :: proc(p: ^Parser) -> (primary_node: NODEID, err: OuauError) {
 	case .NUMBER:
 		primary_node = p->NEW_NODE(.LITERAL)
 		val, ok := strconv.parse_i64(p->GET_CURRENT_TEXT())
-		if !ok do return 0, GET_PARSE_ERROR(p, "Invalid Number")
-		p.nodes.int_value[primary_node] = val
+		if !ok do return 0, GET_PARSE_ERROR(p, "InvalidNumber::i64")
+		p->SET_INT_VALUE(primary_node, val)
+		// p.nodes.int_value[primary_node] = val
 		p->ADVANCE() or_return
 		return primary_node, nil
 	case .STRING:
@@ -611,6 +612,14 @@ GET_CURRENT_TEXT :: proc(p: ^Parser) -> (text: string) {
 	text = string(p.current.text)
 	return
 }
+@(private = "file", require_results)
+SET_INT_VALUE :: proc(p: ^Parser, node: NODEID, value: i64) -> (err: OuauError) {
+	if p.nodes.int_value[node] == 0 {
+		p.nodes.int_value[node] = value
+		return nil
+	}
+	return GET_PARSE_ERROR(p, "Int Value Already set for node.")
+}
 @(require_results)
 NEW_PARSER :: proc(
 	input: string,
@@ -658,6 +667,7 @@ NEW_PARSER :: proc(
 		SET_NODEID_TOKEN           = SET_NODEID_TOKEN,
 		SET_NODEID_NAME            = SET_NODEID_NAME,
 		SET_STRING_VALUE           = SET_STRING_VALUE,
+		SET_INT_VALUE              = SET_INT_VALUE,
 		ADD_NODEID_CHILD           = ADD_NODEID_CHILD,
 	}
 	// Initalize current and peek
