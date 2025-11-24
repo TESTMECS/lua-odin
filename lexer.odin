@@ -107,8 +107,7 @@ NEXT :: proc(l: ^Lexer) -> (tok: TokenDefinition, err: OuauError) {
 		tok.kind = .EOF
 	case:
 		if IS_LETTER(l.ch) {
-			tok = CREATE_IDENTIFIER(l)
-			UPDATE_KW(&tok)
+			tok = CREATE_IDENTIFIER_OR_KEYWORD(l)
 			return tok, nil
 		} else if IS_DIGIT(l.ch) do return CREATE_NUMBER(l), nil
 		tok = GET_TOKEN(.ILLEGAL, l.input, l.pos, 1)
@@ -120,47 +119,6 @@ NEXT :: proc(l: ^Lexer) -> (tok: TokenDefinition, err: OuauError) {
 @(private = "file")
 GET_TOKEN :: proc(type: Token, input: []u8, start: int, length: int) -> TokenDefinition {
 	return TokenDefinition{kind = type, text = input[start:start + length]}
-}
-@(private = "file")
-UPDATE_KW :: proc(tok: ^TokenDefinition) {
-	switch string(tok.text) {
-	case "do":
-		tok.kind = .DO
-	case "end":
-		tok.kind = .END
-	case "while":
-		tok.kind = .WHILE
-	case "repeat":
-		tok.kind = .REPEAT
-	case "if":
-		tok.kind = .IF
-	case "function":
-		tok.kind = .FUNCTION
-	case "local":
-		tok.kind = .LOCAL
-	case "global":
-		tok.kind = .GLOBAL
-	case "true":
-		tok.kind = .TRUE
-	case "false":
-		tok.kind = .FALSE
-	case "nil":
-		tok.kind = .NIL
-	case "break":
-		tok.kind = .BREAK
-	case "or":
-		tok.kind = .OR
-	case "and":
-		tok.kind = .AND
-	case "not":
-		tok.kind = .NOT
-	case "then":
-		tok.kind = .THEN
-	case "else":
-		tok.kind = .ELSE
-	case "elseif":
-		tok.kind = .ELSEIF
-	}
 }
 @(private = "file")
 IS_LETTER :: proc(ch: u8) -> bool {
@@ -193,56 +151,14 @@ PEEK :: proc(l: ^Lexer) -> u8 {
 	return l.read_pos >= len(l.input) ? 0 : l.input[l.read_pos]
 }
 @(private = "file")
-CREATE_IDENTIFIER :: proc(l: ^Lexer) -> TokenDefinition {
+CREATE_IDENTIFIER_OR_KEYWORD :: proc(l: ^Lexer) -> TokenDefinition {
 	start := l.pos
 	l->EAT()
 	for IS_LETTER(l.ch) || IS_DIGIT(l.ch) { l->EAT() }
-	ident := string(l.input[start:l.pos])
-	switch ident {
-	case "do":
-		return GET_TOKEN(.DO, l.input, start, l.pos - start)
-	case "end":
-		return GET_TOKEN(.END, l.input, start, l.pos - start)
-	case "in":
-		return GET_TOKEN(.IN, l.input, start, l.pos - start)
-	case "while":
-		return GET_TOKEN(.WHILE, l.input, start, l.pos - start)
-	case "repeat":
-		return GET_TOKEN(.REPEAT, l.input, start, l.pos - start)
-	case "until":
-		return GET_TOKEN(.UNTIL, l.input, start, l.pos - start)
-	case "for":
-		return GET_TOKEN(.FOR, l.input, start, l.pos - start)
-	case "return":
-		return GET_TOKEN(.RETURN, l.input, start, l.pos - start)
-	case "if":
-		return GET_TOKEN(.IF, l.input, start, l.pos - start)
-	case "then":
-		return GET_TOKEN(.THEN, l.input, start, l.pos - start)
-	case "else":
-		return GET_TOKEN(.ELSE, l.input, start, l.pos - start)
-	case "elseif":
-		return GET_TOKEN(.ELSEIF, l.input, start, l.pos - start)
-	case "function":
-		return GET_TOKEN(.FUNCTION, l.input, start, l.pos - start)
-	case "local":
-		return GET_TOKEN(.LOCAL, l.input, start, l.pos - start)
-	case "global":
-		return GET_TOKEN(.GLOBAL, l.input, start, l.pos - start)
-	case "true":
-		return GET_TOKEN(.TRUE, l.input, start, l.pos - start)
-	case "false":
-		return GET_TOKEN(.FALSE, l.input, start, l.pos - start)
-	case "nil":
-		return GET_TOKEN(.NIL, l.input, start, l.pos - start)
-	case "break":
-		return GET_TOKEN(.BREAK, l.input, start, l.pos - start)
-	case "or":
-		return GET_TOKEN(.OR, l.input, start, l.pos - start)
-	case "and":
-		return GET_TOKEN(.AND, l.input, start, l.pos - start)
-	case "not":
-		return GET_TOKEN(.NOT, l.input, start, l.pos - start)
+	// Check if keyword first
+	text := string(l.input[start:l.pos])
+	if ok, kind := LOOKUP_KEYWORD(text); ok {
+		return GET_TOKEN(kind, l.input, start, l.pos - start)
 	}
 	return GET_TOKEN(.IDENTIFIER, l.input, start, l.pos - start)
 }

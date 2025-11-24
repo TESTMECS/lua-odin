@@ -91,6 +91,52 @@ Token :: enum u8 {
 	BOPEN,
 	BCLOSE,
 }
+@(rodata)
+KEYWORDS := [?]struct {
+	// Must be sorted alphabetically
+	text: string,
+	kind: Token,
+} {
+	{"and", .AND},
+	{"break", .BREAK},
+	{"do", .DO},
+	{"else", .ELSE},
+	{"elseif", .ELSEIF},
+	{"end", .END},
+	{"false", .FALSE},
+	{"for", .FOR},
+	{"function", .FUNCTION},
+	{"global", .GLOBAL},
+	{"if", .IF},
+	{"in", .IN},
+	{"local", .LOCAL},
+	{"nil", .NIL},
+	{"not", .NOT},
+	{"or", .OR},
+	{"repeat", .REPEAT},
+	{"return", .RETURN},
+	{"then", .THEN},
+	{"true", .TRUE},
+	{"until", .UNTIL},
+	{"while", .WHILE},
+}
+LOOKUP_KEYWORD :: proc(name: string) -> (ok: bool, kind: Token) {
+	// binary search
+	lo := 0
+	hi := len(KEYWORDS) - 1
+	for lo <= hi {
+		mid := (lo + hi) >> 1
+		entry := KEYWORDS[mid]
+		if name < entry.text {
+			hi = mid - 1
+		} else if name > entry.text {
+			lo = mid + 1
+		} else {
+			return true, entry.kind
+		}
+	}
+	return false, .IDENTIFIER
+}
 TokenDefinition :: struct {
 	kind: Token,
 	text: []u8,
