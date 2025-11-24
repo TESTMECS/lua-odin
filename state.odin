@@ -105,7 +105,7 @@ Parser :: struct {
 	GET_CURRENT_TEXT:           proc(p: ^Parser) -> (text: string),
 	CURRENT_IS_KIND:            proc(p: ^Parser, kind: Token) -> bool,
 	SET_NODEID_TOKEN:           proc(p: ^Parser, node: NODEID, token: Token),
-	ADD_NODEID_CHILD:           proc(p: ^Parser, parent, child: NODEID),
+	APPEND_NODEID_CHILD:        proc(p: ^Parser, parent, child: NODEID),
 }
 
 @(rodata)
