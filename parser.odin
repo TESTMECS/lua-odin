@@ -157,16 +157,14 @@ NEW_PARSER :: proc(
 	first_token := new_parser.lexer->NEXT() or_return
 	new_parser.peek = first_token
 	// Initalize Nodes
-	old_allocator := context.allocator
-	context.allocator = virtual.arena_allocator(param_arena)
-	defer context.allocator = old_allocator
-	new_parser.nodes.kind = make([dynamic]NODE_KIND)
-	new_parser.nodes.first_child = make([dynamic]NODEID)
-	new_parser.nodes.next_sibling = make([dynamic]NODEID)
-	new_parser.nodes.token = make([dynamic]Token)
-	new_parser.nodes.int_value = make([dynamic]i64)
-	new_parser.nodes.string_value = make([dynamic]string)
-	new_parser.nodes.name = make([dynamic]string)
+	varena := virtual.arena_allocator(new_parser.arena)
+	new_parser.nodes.kind = make([dynamic]NODE_KIND, varena)
+	new_parser.nodes.first_child = make([dynamic]NODEID, varena)
+	new_parser.nodes.next_sibling = make([dynamic]NODEID, varena)
+	new_parser.nodes.token = make([dynamic]Token, varena)
+	new_parser.nodes.int_value = make([dynamic]i64, varena)
+	new_parser.nodes.string_value = make([dynamic]string, varena)
+	new_parser.nodes.name = make([dynamic]string, varena)
 	return new_parser, nil
 }
 @(require_results)

@@ -9,10 +9,6 @@ import "core:testing"
 * Copyright(C) 2025 TESTMEE
 * Defines the common functions and errors for parser tests.
 * */
-ParserTestingError :: union {
-	virtual.Allocator_Error,
-	Ouau.OuauError,
-}
 DUMP_AST :: proc(p: ^Ouau.Parser) {
 	using Ouau
 	fmt.println("=== AST DUMP ===")

@@ -1,5 +1,6 @@
 package parser_test
 
+import "base:runtime"
 import "core:log"
 import "core:mem/virtual"
 import "core:testing"
@@ -9,14 +10,11 @@ import parser "../"
 @(test)
 test_do :: proc(t: ^testing.T) {
 	using parser
-	using testing
-	err: ParserTestingError
 
-	v := new(virtual.Arena, context.allocator)
-	err = virtual.arena_init_growing(v)
-	expectf(t, err == nil, "Error initializing arena %v", err)
-	defer virtual.arena_destroy(v)
-	defer free_all(context.allocator)
+	v: virtual.Arena
+	err := virtual.arena_init_growing(&v)
+	defer virtual.arena_destroy(&v)
+	testing.expectf(t, err == nil, "Error initializing arena %v", err)
 
 	input := `
 	do
@@ -27,11 +25,15 @@ test_do :: proc(t: ^testing.T) {
 	`
 
 
-	p, errr := NEW_PARSER(input, v)
-	expectf(t, errr == nil, "Error parsing chunk %v", err)
+	log.info("about to parse")
+	p, errr := NEW_PARSER(input, &v)
+	log.info("parsed")
+	testing.expectf(t, errr == nil, "Error parsing chunk %v", err)
 
+	log.info("about to parse chunk")
 	nodeid, errrr := p->PARSE_CHUNK()
-	expectf(t, errrr == nil, "Error parsing chunk %v", err)
+	log.info("parsed chunk")
+	testing.expectf(t, errrr == nil, "Error parsing chunk %v", err)
 
 	DUMP_AST(&p)
 
@@ -375,9 +377,10 @@ test_list :: proc(t: ^testing.T) {
 test_logic :: proc(t: ^testing.T) {
 	using parser
 	using testing
+
 	v := new(virtual.Arena, context.allocator)
 	err := virtual.arena_init_growing(v)
-	ensure(err == nil)
+	expectf(t, err == nil, "Error initializing arena %v", err)
 	defer virtual.arena_destroy(v)
 	defer free_all(context.allocator)
 
