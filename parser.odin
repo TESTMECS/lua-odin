@@ -133,10 +133,7 @@ PARSE_BLOCK :: proc(p: ^Parser) -> (block_node: NODEID, err: OuauError) {
 	// segfault here?
 	count := 0
 	loop: for {
-		count += 1
 		log.info("PARSE_BLOCK::count", count)
-		if count > 20 do break
-
 		#partial switch p.current.kind {
 		case .SEMI, .END, .ELSE, .ELSEIF:
 			p->ADVANCE() or_return
