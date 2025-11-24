@@ -173,8 +173,10 @@ GET_PRECEDENCE :: proc(tok: Token) -> Precedence {
 
 	case .BANG, .POUND:
 		return .PREFIX
+
 	case .BOPEN:
 		return .INDEX
+
 	case:
 		return .LOWEST
 	}
