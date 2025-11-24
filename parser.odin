@@ -563,7 +563,7 @@ PARSE_GLOBAL :: proc(p: ^Parser) -> (global_node: NODEID, err: OuauError) {
 	}
 	return global_node, nil
 }
-@(require_results)
+@(private = "file", require_results)
 SET_NODEID_NAME :: proc(p: ^Parser, node: NODEID, name: string) -> (err: OuauError) {
 	if p.nodes.name[node] == "" {
 		p.nodes.name[node] = name
@@ -600,7 +600,7 @@ SET_INT_VALUE :: proc(p: ^Parser, node: NODEID, value: i64) -> (err: OuauError) 
 	}
 	return GET_PARSE_ERROR(p, "Int Value Already set for node.")
 }
-@(require_results)
+@(private = "file", require_results)
 NEW_NODE :: proc(p: ^Parser, k: NODE_KIND) -> (new_nodeid: NODEID) {
 	new_nodeid = cast(NODEID)len(p.nodes.kind)
 	append(&p.nodes.kind, k)
@@ -612,6 +612,7 @@ NEW_NODE :: proc(p: ^Parser, k: NODE_KIND) -> (new_nodeid: NODEID) {
 	append(&p.nodes.name, "")
 	return
 }
+@(private = "file")
 APPEND_NODEID_CHILD :: proc(p: ^Parser, parent, child: NODEID) {
 	if p.nodes.first_child[parent] == 0 {
 		p.nodes.first_child[parent] = child
