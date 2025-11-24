@@ -41,7 +41,6 @@ BLOCK :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 		case .ILLEGAL:
 			return node, PARSE_ERROR(p, "PARSE_BLOCK::Unexpected teriminal::()")
 		}
-		unreachable()
 	}
 	return node, nil
 }
