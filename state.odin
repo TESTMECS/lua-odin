@@ -95,6 +95,7 @@ Parser :: struct {
 	PARSE_PRIMARY:              proc(p: ^Parser) -> (NODEID, OuauError),
 	PARSE_INFIX:                proc(p: ^Parser, left_expression: NODEID) -> (NODEID, OuauError),
 	PARSE_PRECEDENCE:           proc(p: ^Parser, precedence: Precedence) -> (NODEID, OuauError),
+	SET_NODEID_NAME:            proc(p: ^Parser, node: NODEID, name: string) -> (err: OuauError),
 	NEW_NODE:                   proc(p: ^Parser, k: NODE_KIND) -> (new_nodeid: NODEID),
 	PARSE_EXP:                  proc(p: ^Parser) -> (expression: NODEID, err: OuauError),
 	PARSE_EXPLIST:              proc(p: ^Parser) -> (parsed_expressions: []NODEID, err: OuauError),

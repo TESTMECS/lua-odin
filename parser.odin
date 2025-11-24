@@ -51,6 +51,7 @@ NEW_PARSER :: proc(
 		CURRENT_IS_KIND            = CURRENT_IS_KIND,
 		GET_CURRENT_TEXT           = GET_CURRENT_TEXT,
 		SET_NODEID_TOKEN           = SET_NODEID_TOKEN,
+		SET_NODEID_NAME            = SET_NODEID_NAME,
 		ADD_NODEID_CHILD           = ADD_NODEID_CHILD,
 	}
 	// Initalize current and peek
@@ -286,26 +287,25 @@ GET_PRECEDENCE :: proc(tok: Token) -> Precedence {
 		return .LOWEST
 	}
 }
+
 @(private = "file", require_results)
 PARSE_INFIX :: proc(p: ^Parser, left_expression: NODEID) -> (infix_node: NODEID, err: OuauError) {
 	my_alloc := virtual.arena_allocator(p.arena)
-
-
 	#partial switch p.current.kind {
 	case .OPEN:
-		p->ADVANCE() or_return
+		p->ADVANCE(" past ) ") or_return
 		args := make([dynamic]NODEID, my_alloc)
-		if !(p->CURRENT_IS_KIND(.CLOSE)) { 	// TODO: bad grammar
+		if !(p->CURRENT_IS_KIND(.CLOSE)) {
 			tmp_expression := p->PARSE_EXP() or_return
 			append(&args, tmp_expression)
 			for p->CURRENT_IS_KIND(.COMMA) {
-				p->ADVANCE() or_return
+				p->ADVANCE(" past , ") or_return
 				tmp_expression := p->PARSE_EXP() or_return
 				append(&args, tmp_expression)
 			}
 		}
 		p->EXPECT(.CLOSE) or_return
-		infix_node = p->NEW_NODE(.CALL) // create node
+		infix_node = p->NEW_NODE(.CALL)
 		p->ADD_NODEID_CHILD(infix_node, left_expression)
 		for arg in args {
 			p->ADD_NODEID_CHILD(infix_node, arg)
@@ -313,14 +313,15 @@ PARSE_INFIX :: proc(p: ^Parser, left_expression: NODEID) -> (infix_node: NODEID,
 		return infix_node, nil
 	case .DOT:
 		p->ADVANCE() or_return
-		if p.current.kind == .IDENTIFIER { 	// TODO: bad grammar
-			right_expression := p->NEW_NODE(.IDENTIFIER)
-			p.nodes.name[right_expression] = p->GET_CURRENT_TEXT()
+		if p->CURRENT_IS_KIND(.IDENTIFIER) {
+			rhs_node := p->NEW_NODE(.IDENTIFIER)
+			p->SET_NODEID_NAME(rhs_node, p->GET_CURRENT_TEXT())
+			// p.nodes.name[rhs_node] = p->GET_CURRENT_TEXT()
 			p->ADVANCE() or_return
 			infix_node := p->NEW_NODE(.BINARY)
 			p.nodes.token[infix_node] = p.current.kind // TODO: bad grammar
 			p->ADD_NODEID_CHILD(infix_node, left_expression)
-			p->ADD_NODEID_CHILD(infix_node, right_expression)
+			p->ADD_NODEID_CHILD(infix_node, rhs_node)
 			return infix_node, nil
 		}
 	case .BOPEN:
@@ -495,7 +496,7 @@ PARSE_FUNCTION :: proc(p: ^Parser) -> (function_node: NODEID, err: OuauError) {
 	function_name := p->GET_CURRENT_TEXT()
 	log.infof("PARSE_FUNCTION::name=%v", function_name)
 	function_node = p->NEW_NODE(.FUNCTION)
-	SET_NODE_NAME(p, function_node, function_name)
+	p->SET_NODEID_NAME(function_node, function_name)
 	p->ADVANCE("past 'function name'") or_return
 	if p->CURRENT_IS_KIND(.OPEN) {
 		log.infof("PARSE_FUNCTION::parsing parameters")
@@ -711,7 +712,7 @@ PARSE_GLOBAL :: proc(p: ^Parser) -> (global_node: NODEID, err: OuauError) {
 	return global_node, nil
 }
 @(private = "file")
-SET_NODE_NAME :: proc(p: ^Parser, node: NODEID, name: string) -> (err: OuauError) {
+SET_NODEID_NAME :: proc(p: ^Parser, node: NODEID, name: string) -> (err: OuauError) {
 	if p.nodes.name[node] == "" {
 		p.nodes.name[node] = name
 		return nil
