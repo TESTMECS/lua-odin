@@ -71,7 +71,7 @@ ParserVTable :: struct {
 	CURRENT_IS:                 proc(p: ^Parser, kind: Token) -> bool,
 	EXPECT:                     proc(p: ^Parser, kind: Token) -> (err: OuauError),
 	CURRENT_TEXT:               proc(p: ^Parser) -> (text: string),
-	GET_CURRENT:                proc(p: ^Parser) -> (kind: Token),
+	CURRENT_TOKEN:              proc(p: ^Parser) -> (kind: Token),
 	IS_TERMINAL:                proc(p: ^Parser) -> bool,
 	PARSE_CHUNK:                proc(p: ^Parser) -> (NODEID, OuauError),
 	PARSE_BLOCK:                proc(p: ^Parser) -> (NODEID, OuauError),
