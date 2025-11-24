@@ -1,4 +1,5 @@
 package ouau
+import "core:log"
 import "core:mem/virtual"
 import "core:strconv"
 /*
@@ -79,8 +80,8 @@ Parser :: struct {
 	PARSE_EXPRESSION_STATEMENT: proc(p: ^Parser) -> (NODEID, OuauError),
 	PARSE_PREFIX_EXP:           proc(p: ^Parser) -> (NODEID, OuauError),
 	PARSE_TABLE:                proc(p: ^Parser) -> (NODEID, OuauError),
-	PARSE_PRIMARY:              proc(p: ^Parser) -> (NODEID, OuauError),
 	PARSE_UBLOCK:               proc(p: ^Parser) -> (NODEID, OuauError),
+	PARSE_PRIMARY:              proc(p: ^Parser) -> (NODEID, OuauError),
 	PARSE_INFIX:                proc(p: ^Parser, left_expression: NODEID) -> (NODEID, OuauError),
 	PARSE_PRECEDENCE:           proc(p: ^Parser, precedence: Precedence) -> (NODEID, OuauError),
 	NEW_NODE:                   proc(p: ^Parser, k: NODE_KIND) -> (new_nodeid: NODEID),
@@ -148,6 +149,12 @@ NEW_PARSER :: proc(
 		PARSE_RETURN               = PARSE_RETURN,
 		PARSE_CALL                 = PARSE_CALL,
 		PARSE_EXPRESSION_STATEMENT = PARSE_EXPRESSION_STATEMENT,
+		PARSE_UBLOCK               = PARSE_UBLOCK,
+		PARSE_PREFIX_EXP           = PARSE_PREFIX_EXP,
+		PARSE_TABLE                = PARSE_TABLE,
+		PARSE_PRIMARY              = PARSE_PRIMARY,
+		PARSE_INFIX                = PARSE_INFIX,
+		PARSE_PRECEDENCE           = PARSE_PRECEDENCE,
 		CURRENT_IS_KIND            = CURRENT_IS_KIND,
 		GET_CURRENT_TEXT           = GET_CURRENT_TEXT,
 		SET_NODEID_TOKEN           = SET_NODEID_TOKEN,
@@ -157,7 +164,7 @@ NEW_PARSER :: proc(
 	first_token := new_parser.lexer->NEXT() or_return
 	new_parser.peek = first_token
 	// Initalize Nodes
-	varena := virtual.arena_allocator(new_parser.arena)
+	varena := virtual.arena_allocator(param_arena)
 	new_parser.nodes.kind = make([dynamic]NODE_KIND, varena)
 	new_parser.nodes.first_child = make([dynamic]NODEID, varena)
 	new_parser.nodes.next_sibling = make([dynamic]NODEID, varena)
@@ -176,7 +183,7 @@ ADVANCE :: proc(p: ^Parser, description := "") -> (err: OuauError) {
 }
 @(require_results)
 PARSE_CHUNK :: proc(p: ^Parser) -> (chunk_node: NODEID, err: OuauError) {
-	// ADVANCE(p, "p.current::tok[-1] and p.peek::tok[0]") or_return
+	p->ADVANCE() or_return
 	p->ADVANCE("p.current::tok[0]") or_return
 	chunk_node = p->PARSE_BLOCK() or_return
 	return chunk_node, nil
@@ -215,12 +222,18 @@ EXPECT :: proc(p: ^Parser, kind: Token) -> (err: OuauError) {
 @(private = "file", require_results)
 PARSE_BLOCK :: proc(p: ^Parser) -> (block_node: NODEID, err: OuauError) {
 	block_node = p->NEW_NODE(.BLOCK)
+	iter := 5
 	for {
+		iter -= 1
+		if iter == 0 {
+			break
+		}
 		#partial switch p.current.kind {
 		case .SEMI:
 			p->ADVANCE() or_return
 			continue
 		case .END, .ELSE, .ELSEIF, .EOF, .ILLEGAL:
+			log.infof("PARSE_BLOCK::END")
 			break
 		case:
 			child := p->PARSE_STMT() or_return
@@ -487,7 +500,7 @@ PARSE_PREFIX_EXP :: proc(p: ^Parser) -> (prefix_node: NODEID, err: OuauError) {
 		p->SET_NODEID_TOKEN(unary_node, p.current.kind)
 		p->ADVANCE("past unary operator") or_return
 		right_expression := p->PARSE_PREFIX_EXP() or_return
-		p->ADD_NODEID_CHILD(prefix_node, right_expression)
+		p->ADD_NODEID_CHILD(unary_node, right_expression)
 		prefix_node = unary_node
 		return prefix_node, nil
 	case:
@@ -497,19 +510,31 @@ PARSE_PREFIX_EXP :: proc(p: ^Parser) -> (prefix_node: NODEID, err: OuauError) {
 }
 @(private = "file", require_results)
 PARSE_EXPLIST :: proc(p: ^Parser) -> (parsed_expressions: []NODEID, err: OuauError) {
-	old_allocator := context.allocator
-	context.allocator = virtual.arena_allocator(p.arena)
-	defer context.allocator = old_allocator
-	list_of_expr := make([dynamic]NODEID)
+	my_alloc := virtual.arena_allocator(p.arena)
+	list_of_expr := make([dynamic]NODEID, 0, my_alloc)
+
 	expression_node := p->PARSE_EXP() or_return
+	log.infof("PARSE_EXPLIST::expression_node(%v)", expression_node)
 	append(&list_of_expr, expression_node)
-	for p->CURRENT_IS_KIND(.COMMA) {
-		p->ADVANCE() or_return
-		expression_node = p->PARSE_EXP() or_return
-		append(&list_of_expr, expression_node)
+
+	log.infof("PARSE_EXPLIST::parsed_expressions(%v)", p.current.kind)
+	#partial switch p.current.kind {
+	case .COMMA:
+		for p->CURRENT_IS_KIND(.COMMA) {
+			p->ADVANCE() or_return
+			expression_node = p->PARSE_EXP() or_return
+			append(&list_of_expr, expression_node)
+		}
+		parsed_expressions = list_of_expr[:]
+		return parsed_expressions, nil
+	case:
+		log.infof("PARSE_EXPLIST::parsed_expressions(%v)", list_of_expr)
+		parsed_expressions = list_of_expr[:]
+		log.infof("PARSE_EXPLIST::parsed_expressions(%v)", parsed_expressions)
+		return parsed_expressions, nil
 	}
-	parsed_expressions = list_of_expr[:]
-	return
+	err = GET_PARSE_ERROR(p, "PARSE_EXPLIST::parsed_expressions")
+	return parsed_expressions, err
 }
 @(private = "file", require_results)
 PARSE_REPEAT :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
@@ -635,10 +660,8 @@ PARSE_FOR :: proc(p: ^Parser) -> (for_node: NODEID, err: OuauError) {
 }
 @(private = "file", require_results)
 PARSE_LOCAL :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
-	old_allocator := context.allocator
-	context.allocator = virtual.arena_allocator(p.arena)
-	defer context.allocator = old_allocator
-
+	my_alloc := virtual.arena_allocator(p.arena)
+	log.infof("PARSE_LOCAL::(%v)", p.current.kind)
 	p->EXPECT(.LOCAL) or_return
 	node = p->NEW_NODE(.LOCAL)
 	if p->CURRENT_IS_KIND(.FUNCTION) {
@@ -646,21 +669,33 @@ PARSE_LOCAL :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 		p->ADD_NODEID_CHILD(node, function_node)
 		return
 	} else {
-		vars := make([dynamic]NODEID)
-		primary_expr := PARSE_PRIMARY(p) or_return
+		vars := make([dynamic]NODEID, context.allocator) // segfault here
+		defer free_all(context.allocator)
+		primary_expr := p->PARSE_PRIMARY() or_return
+		log.infof("PARSE_LOCAL::primary_expr(%v)", primary_expr)
 		append(&vars, primary_expr)
-
-		for p->CURRENT_IS_KIND(.COMMA) {
-			p->ADVANCE() or_return
-			primary_expr = PARSE_PRIMARY(p) or_return
-			append(&vars, primary_expr)
-		}
-		for v in vars { p->ADD_NODEID_CHILD(node, v) }
-		if p.current.kind == .ASSIGN {
+		log.infof("PARSE_LOCAL::vars(%v)", vars)
+		#partial switch p.current.kind {
+		case .COMMA:
+			for p->CURRENT_IS_KIND(.COMMA) {
+				p->ADVANCE() or_return
+				primary_expr = p->PARSE_PRIMARY() or_return
+				append(&vars, primary_expr)
+			}
+			clone_vars := new_clone(vars, context.allocator)
+			for v in clone_vars {
+				p->ADD_NODEID_CHILD(node, v)
+			}
+		case .ASSIGN:
+			log.infof("PARSE_LOCAL::ASSIGN")
 			p->ADVANCE() or_return
 			values := p->PARSE_EXPLIST() or_return
-			for val in values { p->ADD_NODEID_CHILD(node, val) }
+			log.infof("PARSE_LOCAL::values(%v)", values)
+			for val in values {
+				p->ADD_NODEID_CHILD(node, val)
+			}
 		}
+		return
 	}
 	return
 }

@@ -19,7 +19,7 @@ test_do :: proc(t: ^testing.T) {
 	input := `
 	do
 		local a = 1;
-		function add(a,b) return a+b end;
+		function add(a,b) return a + b end;
 		add(1,2);
 	end
 	`
