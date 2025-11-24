@@ -22,7 +22,7 @@ ADVANCE :: proc(p: ^Parser) -> (err: OuauError) {
 }
 @(private = "file", require_results)
 EXPECT :: proc(p: ^Parser, kind: Token) -> (err: OuauError) {
-	if (p->IS(kind)) { return p->ADVANCE() }
+	if p->IS(kind) { return p->ADVANCE() }
 	return nil
 }
 @(private = "file", require_results)
@@ -41,6 +41,7 @@ BLOCK :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 		case .ILLEGAL:
 			return node, PARSE_ERROR(p, "PARSE_BLOCK::Unexpected teriminal::()")
 		}
+		unreachable()
 	}
 	return node, nil
 }
