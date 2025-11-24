@@ -158,24 +158,18 @@ GET_PRECEDENCE :: proc(tok: Token) -> Precedence {
 	#partial switch tok {
 	case .ASSIGN:
 		return .ASSIGN
-	case .EQ, .NEQ, .LT, .LE, .GT, .GE:
+
+	case .EQ, .NEQ, .LT, .LE, .GT, .GE, .TILDE, .BOR, .BXOR, .BAND, .OR, .OROR:
 		return .EQUALS
+
 	case .PLUS, .MINUS:
 		return .SUM
 	case .SHR, .SHL:
 		return .SUM
-	case .TILDE:
-		return .EQUALS
-	case .BAND:
-		return .EQUALS
-	case .BOR, .BXOR:
-		return .EQUALS
+
 	case .MUL, .DIV, .MOD:
 		return .PRODUCT
-	case .OR, .OROR:
-		return .EQUALS
-	case .AND, .ANDAND:
-		return .EQUALS
+
 	case .POW:
 		return .CALL
 	case .OPEN:
