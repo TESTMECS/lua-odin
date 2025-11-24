@@ -9,8 +9,8 @@ import "core:strconv"
 */
 @(require_results)
 PARSE_CHUNK :: proc(p: ^Parser) -> (chunk_node: NODEID, err: OuauError) {
-	p->ADVANCE() or_return
-	p->ADVANCE() or_return
+	p->ADVANCE("Init p.peek") or_return
+	p->ADVANCE("Init p.current to p.peek") or_return
 	chunk_node = p->PARSE_BLOCK() or_return
 	return chunk_node, nil
 }
@@ -23,9 +23,7 @@ ADVANCE :: proc(p: ^Parser, description := "") -> (err: OuauError) {
 }
 @(private = "file", require_results)
 EXPECT :: proc(p: ^Parser, kind: Token) -> (err: OuauError) {
-	if p->CURRENT_IS_KIND(kind) {
-		return p->ADVANCE()
-	}
+	if p->CURRENT_IS_KIND(kind) { return p->ADVANCE() }
 	return nil
 }
 @(private = "file")
@@ -60,8 +58,7 @@ PARSE_BLOCK :: proc(p: ^Parser) -> (block_node: NODEID, err: OuauError) {
 }
 @(private = "file", require_results)
 PARSE_STMT :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
-	tk := p->GET_CURRENT_KIND()
-	#partial switch tk {
+	#partial switch p->GET_CURRENT_KIND() {
 	case .WHILE:
 		node = p->PARSE_WHILE() or_return
 	case .REPEAT:
@@ -120,7 +117,7 @@ PARSE_IF :: proc(p: ^Parser) -> (if_node: NODEID, err: OuauError) {
 	p->ADD_NODEID_CHILD(if_node, cond)
 	p->ADD_NODEID_CHILD(if_node, blk)
 	for p->CURRENT_IS_KIND(.ELSEIF) {
-		p->ADVANCE() or_return
+		p->ADVANCE("past 'elseif'") or_return
 		econd := p->PARSE_EXP() or_return
 		p->EXPECT(.THEN) or_return
 		eblk := p->PARSE_BLOCK() or_return
@@ -138,7 +135,7 @@ PARSE_IF :: proc(p: ^Parser) -> (if_node: NODEID, err: OuauError) {
 @(private = "file", require_results)
 PARSE_EXP :: proc(p: ^Parser) -> (expression: NODEID, err: OuauError) {
 	expression = p->PARSE_PRECEDENCE(.LOWEST) or_return
-	return
+	return expression, nil
 }
 @(private = "file", require_results)
 PARSE_PRECEDENCE :: proc(
@@ -225,7 +222,7 @@ PARSE_INFIX :: proc(p: ^Parser, left_expression: NODEID) -> (infix_node: NODEID,
 			p->SET_NODEID_NAME(rhs_node, p->GET_CURRENT_TEXT())
 			p->ADVANCE(" past identifier ") or_return
 			infix_node := p->NEW_NODE(.BINARY)
-			p.nodes.token[infix_node] = p->GET_CURRENT_KIND() // TODO: bad grammar
+			p->SET_NODEID_TOKEN(infix_node, p->GET_CURRENT_KIND())
 			p->ADD_NODEID_CHILD(infix_node, left_expression)
 			p->ADD_NODEID_CHILD(infix_node, rhs_node)
 			return infix_node, nil
@@ -235,7 +232,7 @@ PARSE_INFIX :: proc(p: ^Parser, left_expression: NODEID) -> (infix_node: NODEID,
 		right_expression := p->PARSE_PRECEDENCE(.LOWEST) or_return
 		p->EXPECT(.BCLOSE) or_return
 		infix_node := p->NEW_NODE(.BINARY)
-		p.nodes.token[infix_node] = p->GET_CURRENT_KIND()
+		p->SET_NODEID_TOKEN(infix_node, p->GET_CURRENT_KIND())
 		p->ADD_NODEID_CHILD(infix_node, left_expression)
 		p->ADD_NODEID_CHILD(infix_node, right_expression)
 		return infix_node, nil
@@ -243,15 +240,14 @@ PARSE_INFIX :: proc(p: ^Parser, left_expression: NODEID) -> (infix_node: NODEID,
 	p->ADVANCE() or_return
 	right_expression := p->PARSE_PRECEDENCE(GET_PRECEDENCE(p->GET_CURRENT_KIND())) or_return
 	infix_node = p->NEW_NODE(.BINARY)
-	p.nodes.token[infix_node] = p->GET_CURRENT_KIND() // TODO: bad grammar
+	p->SET_NODEID_TOKEN(infix_node, p->GET_CURRENT_KIND())
 	p->ADD_NODEID_CHILD(infix_node, left_expression)
 	p->ADD_NODEID_CHILD(infix_node, right_expression)
 	return infix_node, nil
 }
 @(private = "file", require_results)
 PARSE_PRIMARY :: proc(p: ^Parser) -> (primary_node: NODEID, err: OuauError) {
-	token_kind := p->GET_CURRENT_KIND()
-	#partial switch token_kind {
+	#partial switch p->GET_CURRENT_KIND() {
 	case .NUMBER:
 		primary_node = p->NEW_NODE(.LITERAL)
 		val, _ := strconv.parse_i64(p->GET_CURRENT_TEXT())
@@ -265,7 +261,7 @@ PARSE_PRIMARY :: proc(p: ^Parser) -> (primary_node: NODEID, err: OuauError) {
 		return primary_node, nil
 	case .IDENTIFIER:
 		primary_node := p->NEW_NODE(.IDENTIFIER)
-		p.nodes.name[primary_node] = p->GET_CURRENT_TEXT()
+		p->SET_NODEID_NAME(primary_node, p->GET_CURRENT_TEXT())
 		p->ADVANCE() or_return
 		return primary_node, nil
 	case .NIL, .TRUE, .FALSE:
@@ -409,7 +405,7 @@ PARSE_FUNCTION :: proc(p: ^Parser) -> (function_node: NODEID, err: OuauError) {
 				#partial switch p->GET_CURRENT_KIND() {
 				case .IDENTIFIER:
 					function_parameter := p->NEW_NODE(.IDENTIFIER)
-					p.nodes.name[function_parameter] = p->GET_CURRENT_TEXT()
+					p->SET_NODEID_NAME(function_parameter, p->GET_CURRENT_TEXT())
 					p->ADD_NODEID_CHILD(function_node, function_parameter)
 					p->ADVANCE("past param") or_return
 					if p->CURRENT_IS_KIND(.COMMA) {
@@ -441,7 +437,7 @@ PARSE_FOR :: proc(p: ^Parser) -> (for_node: NODEID, err: OuauError) {
 	var_name := p->GET_CURRENT_TEXT()
 	p->ADVANCE() or_return
 	for_node = p->NEW_NODE(.FOR)
-	p.nodes.name[for_node] = var_name
+	p->SET_NODEID_NAME(for_node, var_name)
 	if p->CURRENT_IS_KIND(.ASSIGN) {
 		p->ADVANCE() or_return
 		init := p->PARSE_EXP() or_return
@@ -462,7 +458,7 @@ PARSE_FOR :: proc(p: ^Parser) -> (for_node: NODEID, err: OuauError) {
 		for p->CURRENT_IS_KIND(.COMMA) {
 			p->ADVANCE() or_return
 			next_var := p->NEW_NODE(.IDENTIFIER)
-			p.nodes.name[next_var] = string(p.current.text)
+			p->SET_NODEID_NAME(next_var, p->GET_CURRENT_TEXT())
 			p->ADVANCE() or_return
 			p->ADD_NODEID_CHILD(for_node, next_var)
 		}
