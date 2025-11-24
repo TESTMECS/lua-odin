@@ -162,24 +162,17 @@ GET_PRECEDENCE :: proc(tok: Token) -> Precedence {
 	case .EQ, .NEQ, .LT, .LE, .GT, .GE, .TILDE, .BOR, .BXOR, .BAND, .OR, .OROR:
 		return .EQUALS
 
-	case .PLUS, .MINUS:
-		return .SUM
-	case .SHR, .SHL:
+	case .PLUS, .MINUS, .SHR, .SHL:
 		return .SUM
 
 	case .MUL, .DIV, .MOD:
 		return .PRODUCT
 
-	case .POW:
+	case .POW, .OPEN, .DOT:
 		return .CALL
-	case .OPEN:
-		return .CALL
-	case .BANG:
+
+	case .BANG, .POUND:
 		return .PREFIX
-	case .POUND:
-		return .PREFIX
-	case .DOT:
-		return .CALL
 	case .BOPEN:
 		return .INDEX
 	case:
