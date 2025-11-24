@@ -27,12 +27,11 @@ test_do :: proc(t: ^testing.T) {
 	`
 
 
-	p, err = NEW_PARSER(input, v)
-	expectf(t, err == nil, "Error parsing chunk %v", err)
+	p, errr := NEW_PARSER(input, v)
+	expectf(t, errr == nil, "Error parsing chunk %v", err)
 
-	testing.fail(t)
-	nodeid, errr := p->PARSE_CHUNK()
-
+	nodeid, errrr := p->PARSE_CHUNK()
+	expectf(t, errrr == nil, "Error parsing chunk %v", err)
 
 	DUMP_AST(&p)
 
@@ -69,6 +68,8 @@ test_do :: proc(t: ^testing.T) {
 @(test)
 test_conditionals :: proc(t: ^testing.T) {
 	using parser
+	using testing
+
 	v := new(virtual.Arena, context.allocator)
 	err := virtual.arena_init_growing(v)
 	ensure(err == nil)
@@ -89,12 +90,10 @@ test_conditionals :: proc(t: ^testing.T) {
 	`
 
 
-	p := NEW_PARSER(input, v)
-	nodeid, errr := p->PARSE_CHUNK()
-	if errr != nil {
-		log.errorf("Error parsing chunk %v", errr)
-		testing.fail(t)
-	}
+	p, errr := NEW_PARSER(input, v)
+	expectf(t, errr == nil, "Error parsing chunk %v", err)
+	nodeid, errrr := p->PARSE_CHUNK()
+	expectf(t, errrr == nil, "Error parsing chunk %v", err)
 
 	DUMP_AST(&p)
 
@@ -140,6 +139,8 @@ test_conditionals :: proc(t: ^testing.T) {
 @(test)
 test_functions :: proc(t: ^testing.T) {
 	using parser
+	using testing
+
 	v := new(virtual.Arena, context.allocator)
 	err := virtual.arena_init_growing(v)
 	ensure(err == nil)
@@ -154,19 +155,17 @@ test_functions :: proc(t: ^testing.T) {
 	`
 
 
-	p := NEW_PARSER(input, v)
-
-	nodeid, errr := p->PARSE_CHUNK()
-	if errr != nil {
-		log.errorf("Error parsing chunk %v", errr)
-		testing.fail(t)
-	}
-
+	p, errr := NEW_PARSER(input, v)
+	expectf(t, errr == nil, "Error parsing chunk %v", err)
+	nodeid, errrr := p->PARSE_CHUNK()
+	expectf(t, errrr == nil, "Error parsing chunk %v", err)
 	DUMP_AST(&p)
 }
 @(test)
 test_tables :: proc(t: ^testing.T) {
 	using parser
+	using testing
+
 	v := new(virtual.Arena, context.allocator)
 	err := virtual.arena_init_growing(v)
 	ensure(err == nil)
@@ -182,12 +181,11 @@ test_tables :: proc(t: ^testing.T) {
 	`
 
 
-	p := NEW_PARSER(input, v)
-	nodeid, errr := p->PARSE_CHUNK()
-	if errr != nil {
-		log.errorf("Error parsing chunk %v", errr)
-		testing.fail(t)
-	}
+	p, errr := NEW_PARSER(input, v)
+	expectf(t, errr == nil, "Error parsing chunk %v", err)
+
+	nodeid, errrr := p->PARSE_CHUNK()
+	expectf(t, errrr == nil, "Error parsing chunk %v", err)
 
 	DUMP_AST(&p)
 
@@ -212,6 +210,8 @@ test_tables :: proc(t: ^testing.T) {
 @(test)
 test_for :: proc(t: ^testing.T) {
 	using parser
+	using testing
+
 	v := new(virtual.Arena, context.allocator)
 	err := virtual.arena_init_growing(v)
 	ensure(err == nil)
@@ -225,12 +225,10 @@ test_for :: proc(t: ^testing.T) {
 	`
 
 
-	p := NEW_PARSER(input, v)
-	program, errr := p->PARSE_CHUNK()
-	if errr != nil {
-		log.errorf("Error parsing chunk %v", errr)
-		testing.fail(t)
-	}
+	p, errr := NEW_PARSER(input, v)
+	expectf(t, errr == nil, "Error parsing chunk %v", err)
+	program, errrr := p->PARSE_CHUNK()
+	expectf(t, errrr == nil, "Error parsing chunk %v", err)
 
 	DUMP_AST(&p)
 
@@ -248,6 +246,7 @@ test_for :: proc(t: ^testing.T) {
 @(test)
 test_while :: proc(t: ^testing.T) {
 	using parser
+	using testing
 	v := new(virtual.Arena, context.allocator)
 	err := virtual.arena_init_growing(v)
 	ensure(err == nil)
@@ -261,12 +260,10 @@ test_while :: proc(t: ^testing.T) {
 	`
 
 
-	p := NEW_PARSER(input, v)
-	program, errr := p->PARSE_CHUNK()
-	if errr != nil {
-		log.errorf("Error parsing chunk %v", errr)
-		testing.fail(t)
-	}
+	p, errr := NEW_PARSER(input, v)
+	expectf(t, errr == nil, "Error parsing chunk %v", err)
+	program, errrr := p->PARSE_CHUNK()
+	expectf(t, errrr == nil, "Error parsing chunk %v", err)
 
 	DUMP_AST(&p)
 
@@ -282,6 +279,7 @@ test_while :: proc(t: ^testing.T) {
 @(test)
 test_repeat :: proc(t: ^testing.T) {
 	using parser
+	using testing
 	v := new(virtual.Arena, context.allocator)
 	err := virtual.arena_init_growing(v)
 	ensure(err == nil)
@@ -296,12 +294,10 @@ test_repeat :: proc(t: ^testing.T) {
 	`
 
 
-	p := NEW_PARSER(input, v)
-	program, errr := p->PARSE_CHUNK()
-	if errr != nil {
-		log.errorf("Error parsing chunk %v", errr)
-		testing.fail(t)
-	}
+	p, errr := NEW_PARSER(input, v)
+	expectf(t, errr == nil, "Error parsing chunk %v", err)
+	program, errrr := p->PARSE_CHUNK()
+	expectf(t, errrr == nil, "Error parsing chunk %v", err)
 
 	DUMP_AST(&p)
 
@@ -326,6 +322,7 @@ test_repeat :: proc(t: ^testing.T) {
 @(test)
 test_list :: proc(t: ^testing.T) {
 	using parser
+	using testing
 	v := new(virtual.Arena, context.allocator)
 	err := virtual.arena_init_growing(v)
 	ensure(err == nil)
@@ -342,12 +339,10 @@ test_list :: proc(t: ^testing.T) {
 	`
 
 
-	p := NEW_PARSER(input, v)
-	nodeid, errr := p->PARSE_CHUNK()
-	if errr != nil {
-		log.errorf("Error parsing chunk %v", errr)
-		testing.fail(t)
-	}
+	p, errr := NEW_PARSER(input, v)
+	expectf(t, errr == nil, "Error parsing chunk %v", err)
+	nodeid, errrr := p->PARSE_CHUNK()
+	expectf(t, errrr == nil, "Error parsing chunk %v", err)
 
 	DUMP_AST(&p)
 
@@ -379,6 +374,7 @@ test_list :: proc(t: ^testing.T) {
 @(test)
 test_logic :: proc(t: ^testing.T) {
 	using parser
+	using testing
 	v := new(virtual.Arena, context.allocator)
 	err := virtual.arena_init_growing(v)
 	ensure(err == nil)
@@ -402,18 +398,16 @@ test_logic :: proc(t: ^testing.T) {
 	`
 
 
-	p := NEW_PARSER(input, v)
-	nodeid, errr := p->PARSE_CHUNK()
-	if errr != nil {
-		log.errorf("Error parsing chunk %v", errr)
-		testing.fail(t)
-	}
-
+	p, errr := NEW_PARSER(input, v)
+	expectf(t, errr == nil, "Error parsing chunk %v", err)
+	nodeid, errrr := p->PARSE_CHUNK()
+	expectf(t, errrr == nil, "Error parsing chunk %v", err)
 	DUMP_AST(&p)
 }
 @(test)
 test_bitwise :: proc(t: ^testing.T) {
 	using parser
+	using testing
 	v := new(virtual.Arena, context.allocator)
 	err := virtual.arena_init_growing(v)
 	ensure(err == nil)
@@ -430,8 +424,10 @@ test_bitwise :: proc(t: ^testing.T) {
 	`
 
 
-	p := NEW_PARSER(input, v)
-	nodeid, errr := p->PARSE_CHUNK()
+	p, errr := NEW_PARSER(input, v)
+	expectf(t, errr == nil, "Error parsing chunk %v", err)
+	nodeid, errrr := p->PARSE_CHUNK()
+	expectf(t, errrr == nil, "Error parsing chunk %v", err)
 	if errr != nil {
 		log.errorf("Error parsing chunk %v", errr)
 		testing.fail(t)
@@ -442,6 +438,7 @@ test_bitwise :: proc(t: ^testing.T) {
 test_array_assignment :: proc(t: ^testing.T) {
 	// Not sure about this one.
 	using parser
+	using testing
 	v := new(virtual.Arena, context.allocator)
 	err := virtual.arena_init_growing(v)
 	ensure(err == nil)
@@ -454,17 +451,16 @@ test_array_assignment :: proc(t: ^testing.T) {
 	`
 
 
-	p := NEW_PARSER(input, v)
-	nodeid, errr := PARSE_CHUNK(&p)
-	if errr != nil {
-		log.errorf("Error parsing chunk %v", errr)
-		testing.fail(t)
-	}
+	p, errr := NEW_PARSER(input, v)
+	expectf(t, errr == nil, "Error parsing chunk %v", err)
+	nodeid, errrr := PARSE_CHUNK(&p)
+	expectf(t, errrr == nil, "Error parsing chunk %v", err)
 	DUMP_AST(&p)
 }
 @(test)
 test_array_access :: proc(t: ^testing.T) {
 	using parser
+	using testing
 	v := new(virtual.Arena, context.allocator)
 	err := virtual.arena_init_growing(v)
 	ensure(err == nil)
@@ -476,17 +472,16 @@ test_array_access :: proc(t: ^testing.T) {
 	`
 
 
-	p := NEW_PARSER(input, v)
-	nodeid, errr := PARSE_CHUNK(&p)
-	if errr != nil {
-		log.errorf("Error parsing chunk %v", errr)
-		testing.fail(t)
-	}
+	p, errr := NEW_PARSER(input, v)
+	expectf(t, errr == nil, "Error parsing chunk %v", err)
+	nodeid, errrr := PARSE_CHUNK(&p)
+	expectf(t, errrr == nil, "Error parsing chunk %v", err)
 	DUMP_AST(&p)
 }
 @(test)
 test_string :: proc(t: ^testing.T) {
 	using parser
+	using testing
 	v := new(virtual.Arena, context.allocator)
 	err := virtual.arena_init_growing(v)
 	ensure(err == nil)
@@ -498,18 +493,16 @@ test_string :: proc(t: ^testing.T) {
 	`
 
 
-	p := NEW_PARSER(input, v)
-	nodeid, errr := p->PARSE_CHUNK()
-	if errr != nil {
-		log.errorf("Error parsing chunk %v", errr)
-		testing.fail(t)
-	}
-
+	p, errr := NEW_PARSER(input, v)
+	expectf(t, errr == nil, "Error parsing chunk %v", err)
+	nodeid, errrr := p->PARSE_CHUNK()
+	expectf(t, errrr == nil, "Error parsing chunk %v", err)
 	DUMP_AST(&p)
 }
 @(test)
 test_global :: proc(t: ^testing.T) {
 	using parser
+	using testing
 	v := new(virtual.Arena, context.allocator)
 	err := virtual.arena_init_growing(v)
 	ensure(err == nil)
@@ -524,13 +517,10 @@ test_global :: proc(t: ^testing.T) {
 	`
 
 
-	p := NEW_PARSER(input, v)
-	nodeid, errr := p->PARSE_CHUNK()
-	if errr != nil {
-		log.errorf("Error parsing chunk %v", errr)
-		testing.fail(t)
-	}
-
+	p, errr := NEW_PARSER(input, v)
+	expectf(t, errr == nil, "Error parsing chunk %v", err)
+	nodeid, errrr := p->PARSE_CHUNK()
+	expectf(t, errrr == nil, "Error parsing chunk %v", err)
 	DUMP_AST(&p)
 }
 
