@@ -22,15 +22,14 @@ ADVANCE :: proc(p: ^Parser) -> (err: OuauError) {
 }
 @(private = "file", require_results)
 EXPECT :: proc(p: ^Parser, kind: Token) -> (err: OuauError) {
-	if p->CURRENT_IS_KIND(kind) { return p->ADVANCE() }
+	if p->CURRENT_IS(kind) { return p->ADVANCE() }
 	return nil
 }
-
 @(private = "file", require_results)
 PARSE_BLOCK :: proc(p: ^Parser) -> (block_node: NODEID, err: OuauError) {
 	block_node = p->NEW_NODE(.BLOCK)
 	block_loop: for {
-		#partial switch p->GET_CURRENT_KIND() {
+		#partial switch p->GET_CURRENT() {
 		case .SEMI, .END, .ELSE, .ELSEIF:
 			p->ADVANCE() or_return
 			continue block_loop
@@ -47,7 +46,7 @@ PARSE_BLOCK :: proc(p: ^Parser) -> (block_node: NODEID, err: OuauError) {
 }
 @(private = "file", require_results)
 PARSE_STMT :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
-	#partial switch p->GET_CURRENT_KIND() {
+	#partial switch p->GET_CURRENT() {
 	case .WHILE:
 		node = p->PARSE_WHILE() or_return
 	case .REPEAT:
@@ -105,7 +104,7 @@ PARSE_IF :: proc(p: ^Parser) -> (if_node: NODEID, err: OuauError) {
 	blk := p->PARSE_BLOCK() or_return
 	p->APPEND_NODEID_CHILD(if_node, cond)
 	p->APPEND_NODEID_CHILD(if_node, blk)
-	for p->CURRENT_IS_KIND(.ELSEIF) {
+	for p->CURRENT_IS(.ELSEIF) {
 		p->ADVANCE() or_return // past 'elseif'
 		econd := p->PARSE_EXP() or_return
 		p->EXPECT(.THEN) or_return
@@ -113,7 +112,7 @@ PARSE_IF :: proc(p: ^Parser) -> (if_node: NODEID, err: OuauError) {
 		p->APPEND_NODEID_CHILD(if_node, econd)
 		p->APPEND_NODEID_CHILD(if_node, eblk)
 	}
-	if p->CURRENT_IS_KIND(.ELSE) {
+	if p->CURRENT_IS(.ELSE) {
 		p->ADVANCE() or_return
 		eblk := p->PARSE_BLOCK() or_return
 		p->APPEND_NODEID_CHILD(if_node, eblk)
@@ -136,7 +135,7 @@ PARSE_PRECEDENCE :: proc(
 ) {
 	left_expression = p->PARSE_PREFIX_EXP() or_return
 	loop: for {
-		current_prec := GET_PRECEDENCE(p->GET_CURRENT_KIND())
+		current_prec := GET_PRECEDENCE(p->GET_CURRENT())
 		if precedence >= current_prec { break loop }
 		left_expression = p->PARSE_INFIX(left_expression) or_return
 	}
@@ -164,59 +163,62 @@ GET_PRECEDENCE :: proc(tok: Token) -> Precedence {
 	}
 }
 @(private = "file", require_results)
-PARSE_INFIX :: proc(p: ^Parser, left_expression: NODEID) -> (infix_node: NODEID, err: OuauError) {
+PARSE_INFIX :: proc(p: ^Parser, lhs: NODEID) -> (infix: NODEID, err: OuauError) {
 	my_alloc := virtual.arena_allocator(p.arena)
-	#partial switch p->GET_CURRENT_KIND() {
+	#partial switch p->GET_CURRENT() {
 	case .OPEN:
 		p->ADVANCE() or_return // past )
 		args := make([dynamic]NODEID, my_alloc)
-		if !(p->CURRENT_IS_KIND(.CLOSE)) {
+		if !(p->CURRENT_IS(.CLOSE)) {
 			tmp_expression := p->PARSE_EXP() or_return
 			append(&args, tmp_expression)
-			for p->CURRENT_IS_KIND(.COMMA) {
+			for p->CURRENT_IS(.COMMA) {
 				p->ADVANCE() or_return // past ,
 				tmp_expression := p->PARSE_EXP() or_return
 				append(&args, tmp_expression)
 			}
 		}
 		p->EXPECT(.CLOSE) or_return
-		infix_node = p->NEW_NODE(.CALL)
-		p->APPEND_NODEID_CHILD(infix_node, left_expression)
-		for arg in args { p->APPEND_NODEID_CHILD(infix_node, arg) }
-		return infix_node, nil
+		infix = p->NEW_NODE(.CALL)
+		p->APPEND_NODEID_CHILD(infix, lhs)
+		for arg in args { p->APPEND_NODEID_CHILD(infix, arg) }
+		return infix, nil
 	case .DOT:
 		p->ADVANCE() or_return
-		if p->CURRENT_IS_KIND(.IDENTIFIER) {
-			rhs_node := p->NEW_NODE(.IDENTIFIER)
-			p->SET_NODEID_NAME(rhs_node, p->GET_CURRENT_TEXT())
+		#partial switch p->GET_CURRENT() {
+		case .IDENTIFIER:
+			rhs := p->NEW_NODE(.IDENTIFIER)
+			p->SET_NODEID_NAME(rhs, p->GET_CURRENT_TEXT())
 			p->ADVANCE() or_return // past identifier
-			infix_node := p->NEW_NODE(.BINARY)
-			p->SET_NODEID_TOKEN(infix_node, p->GET_CURRENT_KIND())
-			p->APPEND_NODEID_CHILD(infix_node, left_expression)
-			p->APPEND_NODEID_CHILD(infix_node, rhs_node)
-			return infix_node, nil
+			infix = p->NEW_NODE(.BINARY)
+			p->SET_NODEID_TOKEN(infix, p->GET_CURRENT())
+			p->APPEND_NODEID_CHILD(infix, lhs)
+			p->APPEND_NODEID_CHILD(infix, rhs)
+			return infix, nil
+		case:
+			return 0, GET_PARSE_ERROR(p, "Invalid Identifier in Dot Expression")
 		}
 	case .BOPEN:
 		p->ADVANCE() or_return
-		right_expression := p->PARSE_PRECEDENCE(.LOWEST) or_return
 		p->EXPECT(.BCLOSE) or_return
-		infix_node := p->NEW_NODE(.BINARY)
-		p->SET_NODEID_TOKEN(infix_node, p->GET_CURRENT_KIND())
-		p->APPEND_NODEID_CHILD(infix_node, left_expression)
-		p->APPEND_NODEID_CHILD(infix_node, right_expression)
-		return infix_node, nil
+		rhs := p->PARSE_PRECEDENCE(.LOWEST) or_return
+		infix := p->NEW_NODE(.BINARY)
+		p->SET_NODEID_TOKEN(infix, p->GET_CURRENT())
+		p->APPEND_NODEID_CHILD(infix, lhs)
+		p->APPEND_NODEID_CHILD(infix, rhs)
+		return infix, nil
 	}
 	p->ADVANCE() or_return
-	right_expression := p->PARSE_PRECEDENCE(GET_PRECEDENCE(p->GET_CURRENT_KIND())) or_return
-	infix_node = p->NEW_NODE(.BINARY)
-	p->SET_NODEID_TOKEN(infix_node, p->GET_CURRENT_KIND())
-	p->APPEND_NODEID_CHILD(infix_node, left_expression)
-	p->APPEND_NODEID_CHILD(infix_node, right_expression)
-	return infix_node, nil
+	rhs := p->PARSE_PRECEDENCE(GET_PRECEDENCE(p->GET_CURRENT())) or_return
+	infix = p->NEW_NODE(.BINARY)
+	p->SET_NODEID_TOKEN(infix, p->GET_CURRENT())
+	p->APPEND_NODEID_CHILD(infix, lhs)
+	p->APPEND_NODEID_CHILD(infix, rhs)
+	return infix, nil
 }
 @(private = "file", require_results)
 PARSE_PRIMARY :: proc(p: ^Parser) -> (primary_node: NODEID, err: OuauError) {
-	#partial switch p->GET_CURRENT_KIND() {
+	#partial switch p->GET_CURRENT() {
 	case .NUMBER:
 		primary_node = p->NEW_NODE(.LITERAL)
 		val, ok := strconv.parse_i64(p->GET_CURRENT_TEXT())
@@ -254,7 +256,7 @@ PARSE_PRIMARY :: proc(p: ^Parser) -> (primary_node: NODEID, err: OuauError) {
 @(private = "file", require_results)
 PARSE_EXPRESSION_STATEMENT :: proc(p: ^Parser) -> (lhs: NODEID, err: OuauError) {
 	lhs = p->PARSE_EXP() or_return
-	if p->CURRENT_IS_KIND(.ASSIGN) {
+	if p->CURRENT_IS(.ASSIGN) {
 		p->ADVANCE() or_return
 		assign_node := p->NEW_NODE(.ASSIGN)
 		p->APPEND_NODEID_CHILD(assign_node, lhs)
@@ -274,10 +276,10 @@ SET_NODEID_TOKEN :: proc(p: ^Parser, node: NODEID, token: Token) {
 }
 @(private = "file", require_results)
 PARSE_PREFIX_EXP :: proc(p: ^Parser) -> (prefix_node: NODEID, err: OuauError) {
-	#partial switch p->GET_CURRENT_KIND() {
+	#partial switch p->GET_CURRENT() {
 	case .NOT, .MINUS, .POUND, .BANG:
 		prefix_node = p->NEW_NODE(.UNARY)
-		p->SET_NODEID_TOKEN(prefix_node, p->GET_CURRENT_KIND())
+		p->SET_NODEID_TOKEN(prefix_node, p->GET_CURRENT())
 		p->ADVANCE() or_return
 		rhs := p->PARSE_PREFIX_EXP() or_return
 		p->APPEND_NODEID_CHILD(prefix_node, rhs)
@@ -295,9 +297,9 @@ PARSE_EXPLIST :: proc(p: ^Parser) -> (parsed_expressions: []NODEID, err: OuauErr
 	expression_node := p->PARSE_EXP() or_return
 	append(&list_of_expr, expression_node)
 
-	#partial switch p->GET_CURRENT_KIND() {
+	#partial switch p->GET_CURRENT() {
 	case .COMMA:
-		for p->CURRENT_IS_KIND(.COMMA) {
+		for p->CURRENT_IS(.COMMA) {
 			p->ADVANCE() or_return
 			expression_node = p->PARSE_EXP() or_return
 			append(&list_of_expr, expression_node)
@@ -323,7 +325,7 @@ PARSE_REPEAT :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 PARSE_UBLOCK :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 	block := p->NEW_NODE(.BLOCK)
 	for {
-		#partial switch p->GET_CURRENT_KIND() {
+		#partial switch p->GET_CURRENT() {
 		case .SEMI:
 			p->ADVANCE() or_return
 			continue
@@ -355,17 +357,17 @@ PARSE_FUNCTION :: proc(p: ^Parser) -> (function_node: NODEID, err: OuauError) {
 	function_node = p->NEW_NODE(.FUNCTION)
 	p->SET_NODEID_NAME(function_node, function_name)
 	p->ADVANCE() or_return // past 'function name'
-	if p->CURRENT_IS_KIND(.OPEN) {
+	if p->CURRENT_IS(.OPEN) {
 		p->ADVANCE() or_return // past '('
-		if !p->CURRENT_IS_KIND(.CLOSE) {
-			for !p->CURRENT_IS_KIND(.CLOSE) {
-				#partial switch p->GET_CURRENT_KIND() {
+		if !p->CURRENT_IS(.CLOSE) {
+			for !p->CURRENT_IS(.CLOSE) {
+				#partial switch p->GET_CURRENT() {
 				case .IDENTIFIER:
 					function_parameter := p->NEW_NODE(.IDENTIFIER)
 					p->SET_NODEID_NAME(function_parameter, p->GET_CURRENT_TEXT())
 					p->APPEND_NODEID_CHILD(function_node, function_parameter)
 					p->ADVANCE() or_return // past param
-					if p->CURRENT_IS_KIND(.COMMA) {
+					if p->CURRENT_IS(.COMMA) {
 						p->ADVANCE() or_return // past comma to next param
 					}
 				case .DOTS:
@@ -390,14 +392,14 @@ PARSE_FOR :: proc(p: ^Parser) -> (for_node: NODEID, err: OuauError) {
 	p->ADVANCE() or_return
 	for_node = p->NEW_NODE(.FOR)
 	p->SET_NODEID_NAME(for_node, var_name)
-	if p->CURRENT_IS_KIND(.ASSIGN) {
+	if p->CURRENT_IS(.ASSIGN) {
 		p->ADVANCE() or_return
 		init := p->PARSE_EXP() or_return
 		p->EXPECT(.COMMA) or_return
 		limit := p->PARSE_EXP() or_return
 		p->APPEND_NODEID_CHILD(for_node, init)
 		p->APPEND_NODEID_CHILD(for_node, limit)
-		if p->CURRENT_IS_KIND(.COMMA) {
+		if p->CURRENT_IS(.COMMA) {
 			p->ADVANCE() or_return
 			step := p->PARSE_EXP() or_return
 			p->APPEND_NODEID_CHILD(for_node, step)
@@ -406,15 +408,15 @@ PARSE_FOR :: proc(p: ^Parser) -> (for_node: NODEID, err: OuauError) {
 		body := p->PARSE_BLOCK() or_return
 		p->EXPECT(.END) or_return
 		p->APPEND_NODEID_CHILD(for_node, body)
-	} else if p->CURRENT_IS_KIND(.COMMA) {
-		for p->CURRENT_IS_KIND(.COMMA) {
+	} else if p->CURRENT_IS(.COMMA) {
+		for p->CURRENT_IS(.COMMA) {
 			p->ADVANCE() or_return
 			next_var := p->NEW_NODE(.IDENTIFIER)
 			p->SET_NODEID_NAME(next_var, p->GET_CURRENT_TEXT())
 			p->ADVANCE() or_return
 			p->APPEND_NODEID_CHILD(for_node, next_var)
 		}
-	} else if p->CURRENT_IS_KIND(.IN) {
+	} else if p->CURRENT_IS(.IN) {
 		p->EXPECT(.IN) or_return
 		iter := p->PARSE_EXPLIST() or_return
 		for exp in iter { p->APPEND_NODEID_CHILD(for_node, exp) }
@@ -430,7 +432,7 @@ PARSE_LOCAL :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 	my_alloc := virtual.arena_allocator(p.arena)
 	p->EXPECT(.LOCAL) or_return
 	node = p->NEW_NODE(.LOCAL)
-	if p->CURRENT_IS_KIND(.FUNCTION) {
+	if p->CURRENT_IS(.FUNCTION) {
 		function_node := p->PARSE_FUNCTION() or_return
 		p->APPEND_NODEID_CHILD(node, function_node)
 		return
@@ -438,9 +440,9 @@ PARSE_LOCAL :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 		vars := make([dynamic]NODEID, my_alloc)
 		primary_expr := p->PARSE_PRIMARY() or_return
 		append(&vars, primary_expr)
-		#partial switch p->GET_CURRENT_KIND() {
+		#partial switch p->GET_CURRENT() {
 		case .COMMA:
-			for p->CURRENT_IS_KIND(.COMMA) {
+			for p->CURRENT_IS(.COMMA) {
 				p->ADVANCE() or_return
 				primary_expr = p->PARSE_PRIMARY() or_return
 				append(&vars, primary_expr)
@@ -448,7 +450,7 @@ PARSE_LOCAL :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 			for v in vars {
 				p->APPEND_NODEID_CHILD(node, v)
 			}
-			if p->CURRENT_IS_KIND(.ASSIGN) {
+			if p->CURRENT_IS(.ASSIGN) {
 				p->ADVANCE() or_return
 				values := p->PARSE_EXPLIST() or_return
 				for val in values {
@@ -483,7 +485,7 @@ PARSE_BREAK :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 PARSE_RETURN :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 	p->EXPECT(.RETURN) or_return
 	node = p->NEW_NODE(.RETURN)
-	if !(p->CURRENT_IS_KIND(.SEMI)) && !(p->CURRENT_IS_KIND(.EOF)) {
+	if !(p->CURRENT_IS(.SEMI)) && !(p->CURRENT_IS(.EOF)) {
 		values := p->PARSE_EXPLIST() or_return
 		for val in values { p->APPEND_NODEID_CHILD(node, val) }
 	}
@@ -493,9 +495,9 @@ PARSE_RETURN :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 PARSE_TABLE :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 	p->EXPECT(.TOPEN) or_return
 	table := p->NEW_NODE(.TABLE)
-	if !(p->CURRENT_IS_KIND(.TCLOSE)) {
+	if !(p->CURRENT_IS(.TCLOSE)) {
 		loop: for {
-			if p->CURRENT_IS_KIND(.OPEN) {
+			if p->CURRENT_IS(.OPEN) {
 				p->ADVANCE() or_return
 				key := p->PARSE_EXP() or_return
 				p->EXPECT(.CLOSE) or_return
@@ -505,7 +507,7 @@ PARSE_TABLE :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 				p->APPEND_NODEID_CHILD(pair, key)
 				p->APPEND_NODEID_CHILD(pair, value)
 				p->APPEND_NODEID_CHILD(table, pair)
-			} else if p->CURRENT_IS_KIND(.IDENTIFIER) && p->CURRENT_IS_KIND(.ASSIGN) {
+			} else if p->CURRENT_IS(.IDENTIFIER) && p->CURRENT_IS(.ASSIGN) {
 				key := p->NEW_NODE(.IDENTIFIER)
 				p->SET_NODEID_NAME(key, p->GET_CURRENT_TEXT())
 				p->ADVANCE() or_return
@@ -519,7 +521,7 @@ PARSE_TABLE :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 				value := p->PARSE_EXP() or_return
 				p->APPEND_NODEID_CHILD(table, value)
 			}
-			if !(p->CURRENT_IS_KIND(.COMMA)) && !(p->CURRENT_IS_KIND(.SEMI)) {
+			if !(p->CURRENT_IS(.COMMA)) && !(p->CURRENT_IS(.SEMI)) {
 				break loop
 			}
 			p->ADVANCE() or_return
@@ -533,13 +535,13 @@ PARSE_GLOBAL :: proc(p: ^Parser) -> (global_node: NODEID, err: OuauError) {
 	my_alloc := virtual.arena_allocator(p.arena)
 	p->EXPECT(.GLOBAL) or_return
 	global_node = p->NEW_NODE(.GLOBAL)
-	if p->CURRENT_IS_KIND(.FUNCTION) {
+	if p->CURRENT_IS(.FUNCTION) {
 		global_node = p->PARSE_FUNCTION() or_return // return global function
 	} else {
 		vars := make([dynamic]NODEID, my_alloc)
 		primary_node := p->PARSE_PRIMARY() or_return
 		append(&vars, primary_node)
-		for p->CURRENT_IS_KIND(.COMMA) {
+		for p->CURRENT_IS(.COMMA) {
 			p->ADVANCE() or_return
 			primary_node := p->PARSE_PRIMARY() or_return
 			append(&vars, primary_node)
@@ -547,7 +549,7 @@ PARSE_GLOBAL :: proc(p: ^Parser) -> (global_node: NODEID, err: OuauError) {
 		for v in vars {
 			p->APPEND_NODEID_CHILD(global_node, v)
 		}
-		if p->CURRENT_IS_KIND(.ASSIGN) {
+		if p->CURRENT_IS(.ASSIGN) {
 			p->ADVANCE() or_return
 			values := p->PARSE_EXPLIST() or_return
 			for val in values {
@@ -582,27 +584,27 @@ SET_INT_VALUE :: proc(p: ^Parser, node: NODEID, value: i64) -> (err: OuauError) 
 	return GET_PARSE_ERROR(p, "Int Value Already set for node.")
 }
 @(private = "file", require_results)
-GET_CURRENT_KIND :: proc(p: ^Parser) -> (kind: Token) {
-	return p.current.kind
-}
-@(private = "file", require_results)
 GET_CURRENT_TEXT :: proc(p: ^Parser) -> (text: string) {
 	text = string(p.current.text)
 	return
 }
 @(private = "file", require_results)
-CURRENT_IS_KIND :: proc(p: ^Parser, kind: Token) -> bool {
+GET_CURRENT :: proc(p: ^Parser) -> (kind: Token) {
+	return p.current.kind
+}
+@(private = "file", require_results)
+CURRENT_IS :: proc(p: ^Parser, kind: Token) -> bool {
 	return p.current.kind == kind
 }
 @(private = "file", require_results)
 IS_TERMINAL :: proc(p: ^Parser) -> bool {
 	return(
-		p->GET_CURRENT_KIND() == .SEMI ||
-		p->GET_CURRENT_KIND() == .END ||
-		p->GET_CURRENT_KIND() == .ELSE ||
-		p->GET_CURRENT_KIND() == .ELSEIF ||
-		p->GET_CURRENT_KIND() == .EOF ||
-		p->GET_CURRENT_KIND() == .ILLEGAL \
+		p->GET_CURRENT() == .SEMI ||
+		p->GET_CURRENT() == .END ||
+		p->GET_CURRENT() == .ELSE ||
+		p->GET_CURRENT() == .ELSEIF ||
+		p->GET_CURRENT() == .EOF ||
+		p->GET_CURRENT() == .ILLEGAL \
 	)
 }
 @(private = "file", require_results)
@@ -633,10 +635,10 @@ APPEND_NODEID_CHILD :: proc(p: ^Parser, parent, child: NODEID) {
 PARSER_VTABLE := ParserVTable {
 	ADVANCE                    = ADVANCE,
 	APPEND_NODEID_CHILD        = APPEND_NODEID_CHILD,
-	CURRENT_IS_KIND            = CURRENT_IS_KIND,
+	CURRENT_IS                 = CURRENT_IS,
 	EXPECT                     = EXPECT,
 	GET_CURRENT_TEXT           = GET_CURRENT_TEXT,
-	GET_CURRENT_KIND           = GET_CURRENT_KIND,
+	GET_CURRENT                = GET_CURRENT,
 	IS_TERMINAL                = IS_TERMINAL,
 	NEW_NODE                   = NEW_NODE,
 	PARSE_BLOCK                = PARSE_BLOCK,

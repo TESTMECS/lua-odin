@@ -68,10 +68,10 @@ Precedence :: enum u8 {
 ParserVTable :: struct {
 	ADVANCE:                    proc(p: ^Parser) -> (err: OuauError),
 	APPEND_NODEID_CHILD:        proc(p: ^Parser, parent, child: NODEID),
-	CURRENT_IS_KIND:            proc(p: ^Parser, kind: Token) -> bool,
+	CURRENT_IS:                 proc(p: ^Parser, kind: Token) -> bool,
 	EXPECT:                     proc(p: ^Parser, kind: Token) -> (err: OuauError),
 	GET_CURRENT_TEXT:           proc(p: ^Parser) -> (text: string),
-	GET_CURRENT_KIND:           proc(p: ^Parser) -> (kind: Token),
+	GET_CURRENT:                proc(p: ^Parser) -> (kind: Token),
 	IS_TERMINAL:                proc(p: ^Parser) -> bool,
 	PARSE_CHUNK:                proc(p: ^Parser) -> (NODEID, OuauError),
 	PARSE_BLOCK:                proc(p: ^Parser) -> (NODEID, OuauError),
