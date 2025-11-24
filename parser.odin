@@ -583,7 +583,7 @@ PARSE_GLOBAL :: proc(p: ^Parser) -> (global_node: NODEID, err: OuauError) {
 	}
 	return global_node, nil
 }
-@(private = "file")
+@(private = "file", require_results)
 SET_NODEID_NAME :: proc(p: ^Parser, node: NODEID, name: string) -> (err: OuauError) {
 	if p.nodes.name[node] == "" {
 		p.nodes.name[node] = name
@@ -591,7 +591,7 @@ SET_NODEID_NAME :: proc(p: ^Parser, node: NODEID, name: string) -> (err: OuauErr
 	}
 	return GET_PARSE_ERROR(p, "Name Already set for node.")
 }
-@(private = "file")
+@(private = "file", require_results)
 SET_STRING_VALUE :: proc(p: ^Parser, node: NODEID, value: string) -> (err: OuauError) {
 	if p.nodes.string_value[node] == "" {
 		p.nodes.string_value[node] = value
@@ -603,7 +603,7 @@ SET_STRING_VALUE :: proc(p: ^Parser, node: NODEID, value: string) -> (err: OuauE
 GET_CURRENT_KIND :: proc(p: ^Parser) -> (kind: Token) {
 	return p.current.kind
 }
-@(private = "file")
+@(private = "file", require_results)
 CURRENT_IS_KIND :: proc(p: ^Parser, kind: Token) -> bool {
 	return p.current.kind == kind
 }
