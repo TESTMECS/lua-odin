@@ -289,8 +289,8 @@ GET_PRECEDENCE :: proc(tok: Token) -> Precedence {
 @(private = "file", require_results)
 PARSE_INFIX :: proc(p: ^Parser, left_expression: NODEID) -> (infix_node: NODEID, err: OuauError) {
 	my_alloc := virtual.arena_allocator(p.arena)
-	token := p.current.kind
-	#partial switch token {
+
+	#partial switch p.current.kind {
 	case .OPEN:
 		p->ADVANCE() or_return
 		args := make([dynamic]NODEID, my_alloc)
