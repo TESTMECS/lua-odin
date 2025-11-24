@@ -85,7 +85,7 @@ Ouau :: proc() -> (main_err: Maybe(OuauError)) {
 		file_path := user_args[1]
 		if file, ok := os.read_entire_file_from_filename(file_path); ok {
 			p := NEW_PARSER(string(file), v) or_return
-			_, main_err = p->PARSE_CHUNK()
+			_, main_err = p->CHUNK()
 			DUMP_AST(&p)
 		} else {
 			return io.Error.Unexpected_EOF
@@ -105,7 +105,7 @@ OUAU_EVAL_STRING :: proc(
 	err: OuauError,
 ) {
 	p := NEW_PARSER(input, v) or_return
-	root := PARSE_CHUNK(&p) or_return
+	root := CHUNK(&p) or_return
 	i.nodes = &p.nodes
 	return_value = INTERPRET(i, root)
 	return return_value, nil

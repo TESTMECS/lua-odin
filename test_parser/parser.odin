@@ -31,7 +31,7 @@ test_do :: proc(t: ^testing.T) {
 	testing.expectf(t, errr == nil, "Error parsing chunk %v", err)
 
 	log.info("about to parse chunk")
-	nodeid, errrr := p->PARSE_CHUNK()
+	nodeid, errrr := p->CHUNK()
 	log.info("parsed chunk")
 	testing.expectf(t, errrr == nil, "Error parsing chunk %v", err)
 
@@ -94,7 +94,7 @@ test_conditionals :: proc(t: ^testing.T) {
 
 	p, errr := NEW_PARSER(input, v)
 	expectf(t, errr == nil, "Error parsing chunk %v", err)
-	nodeid, errrr := p->PARSE_CHUNK()
+	nodeid, errrr := p->CHUNK()
 	expectf(t, errrr == nil, "Error parsing chunk %v", err)
 
 	DUMP_AST(&p)
@@ -159,7 +159,7 @@ test_functions :: proc(t: ^testing.T) {
 
 	p, errr := NEW_PARSER(input, v)
 	expectf(t, errr == nil, "Error parsing chunk %v", err)
-	nodeid, errrr := p->PARSE_CHUNK()
+	nodeid, errrr := p->CHUNK()
 	expectf(t, errrr == nil, "Error parsing chunk %v", err)
 	DUMP_AST(&p)
 }
@@ -186,7 +186,7 @@ test_tables :: proc(t: ^testing.T) {
 	p, errr := NEW_PARSER(input, v)
 	expectf(t, errr == nil, "Error parsing chunk %v", err)
 
-	nodeid, errrr := p->PARSE_CHUNK()
+	nodeid, errrr := p->CHUNK()
 	expectf(t, errrr == nil, "Error parsing chunk %v", err)
 
 	DUMP_AST(&p)
@@ -229,7 +229,7 @@ test_for :: proc(t: ^testing.T) {
 
 	p, errr := NEW_PARSER(input, v)
 	expectf(t, errr == nil, "Error parsing chunk %v", err)
-	program, errrr := p->PARSE_CHUNK()
+	program, errrr := p->CHUNK()
 	expectf(t, errrr == nil, "Error parsing chunk %v", err)
 
 	DUMP_AST(&p)
@@ -264,7 +264,7 @@ test_while :: proc(t: ^testing.T) {
 
 	p, errr := NEW_PARSER(input, v)
 	expectf(t, errr == nil, "Error parsing chunk %v", err)
-	program, errrr := p->PARSE_CHUNK()
+	program, errrr := p->CHUNK()
 	expectf(t, errrr == nil, "Error parsing chunk %v", err)
 
 	DUMP_AST(&p)
@@ -298,7 +298,7 @@ test_repeat :: proc(t: ^testing.T) {
 
 	p, errr := NEW_PARSER(input, v)
 	expectf(t, errr == nil, "Error parsing chunk %v", err)
-	program, errrr := p->PARSE_CHUNK()
+	program, errrr := p->CHUNK()
 	expectf(t, errrr == nil, "Error parsing chunk %v", err)
 
 	DUMP_AST(&p)
@@ -343,7 +343,7 @@ test_list :: proc(t: ^testing.T) {
 
 	p, errr := NEW_PARSER(input, v)
 	expectf(t, errr == nil, "Error parsing chunk %v", err)
-	nodeid, errrr := p->PARSE_CHUNK()
+	nodeid, errrr := p->CHUNK()
 	expectf(t, errrr == nil, "Error parsing chunk %v", err)
 
 	DUMP_AST(&p)
@@ -403,7 +403,7 @@ test_logic :: proc(t: ^testing.T) {
 
 	p, errr := NEW_PARSER(input, v)
 	expectf(t, errr == nil, "Error parsing chunk %v", err)
-	nodeid, errrr := p->PARSE_CHUNK()
+	nodeid, errrr := p->CHUNK()
 	expectf(t, errrr == nil, "Error parsing chunk %v", err)
 	DUMP_AST(&p)
 }
@@ -429,7 +429,7 @@ test_bitwise :: proc(t: ^testing.T) {
 
 	p, errr := NEW_PARSER(input, v)
 	expectf(t, errr == nil, "Error parsing chunk %v", err)
-	nodeid, errrr := p->PARSE_CHUNK()
+	nodeid, errrr := p->CHUNK()
 	expectf(t, errrr == nil, "Error parsing chunk %v", err)
 	if errr != nil {
 		log.errorf("Error parsing chunk %v", errr)
@@ -456,7 +456,7 @@ test_array_assignment :: proc(t: ^testing.T) {
 
 	p, errr := NEW_PARSER(input, v)
 	expectf(t, errr == nil, "Error parsing chunk %v", err)
-	nodeid, errrr := PARSE_CHUNK(&p)
+	nodeid, errrr := CHUNK(&p)
 	expectf(t, errrr == nil, "Error parsing chunk %v", err)
 	DUMP_AST(&p)
 }
@@ -477,7 +477,7 @@ test_array_access :: proc(t: ^testing.T) {
 
 	p, errr := NEW_PARSER(input, v)
 	expectf(t, errr == nil, "Error parsing chunk %v", err)
-	nodeid, errrr := PARSE_CHUNK(&p)
+	nodeid, errrr := CHUNK(&p)
 	expectf(t, errrr == nil, "Error parsing chunk %v", err)
 	DUMP_AST(&p)
 }
@@ -498,7 +498,7 @@ test_string :: proc(t: ^testing.T) {
 
 	p, errr := NEW_PARSER(input, v)
 	expectf(t, errr == nil, "Error parsing chunk %v", err)
-	nodeid, errrr := p->PARSE_CHUNK()
+	nodeid, errrr := p->CHUNK()
 	expectf(t, errrr == nil, "Error parsing chunk %v", err)
 	DUMP_AST(&p)
 }
@@ -522,7 +522,7 @@ test_global :: proc(t: ^testing.T) {
 
 	p, errr := NEW_PARSER(input, v)
 	expectf(t, errr == nil, "Error parsing chunk %v", err)
-	nodeid, errrr := p->PARSE_CHUNK()
+	nodeid, errrr := p->CHUNK()
 	expectf(t, errrr == nil, "Error parsing chunk %v", err)
 	DUMP_AST(&p)
 }
