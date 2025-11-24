@@ -230,9 +230,62 @@ STMT :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 	return node, nil
 }
 @(private = "file", require_results)
-EXP :: proc(p: ^Parser) -> (exp: NODEID, err: OuauError) {
-	exp = p->PRECEDENCE(.LOWEST) or_return
-	return exp, nil
+UBLOCK :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
+	block := p->NEW_NODE(.BLOCK)
+	ublock: for {
+		#partial switch p->GET_TOKEN() {
+		case .SEMI:
+			p->ADVANCE() or_return
+			continue ublock
+		case .UNTIL:
+			break ublock
+		case:
+			child := p->STMT() or_return
+			p->APPEND_CHILD(block, child)
+		}
+	}
+	p->EXPECT(.UNTIL) or_return
+	cond := p->EXP() or_return
+	node = p->NEW_NODE(.UBLOCK)
+	p->APPEND_CHILD(node, block)
+	p->APPEND_CHILD(node, cond)
+	return node, nil
+}
+@(private = "file", require_results)
+FUNCTION :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
+	p->EXPECT(.FUNCTION) or_return
+	fn_name := p->GET_TEXT()
+	node = p->NEW_NODE(.FUNCTION)
+	p->SET_NAME(node, fn_name) or_return
+	p->ADVANCE() or_return // past 'function name'
+	#partial switch p->GET_TOKEN() {
+	case .OPEN:
+		p->ADVANCE() or_return // past '('
+		if !p->IS(.CLOSE) {
+			each_param: for !(p->IS(.CLOSE)) {
+				#partial switch (p->GET_TOKEN()) {
+				case .IDENTIFIER:
+					fn_param := p->NEW_NODE(.IDENTIFIER)
+					p->SET_NAME(fn_param, p->GET_TEXT())
+					p->APPEND_CHILD(node, fn_param)
+					p->ADVANCE() or_return // past param
+					p->EXPECT(.COMMA) or_return
+				case .DOTS:
+					p->ADVANCE() or_return // past varargs
+					break each_param
+				case:
+					break each_param
+				}
+			}
+		}
+		p->EXPECT(.CLOSE) or_return
+	case:
+		return node, PARSE_ERROR(p, "Invalid Token in Function Declaration")
+	}
+	body := p->BLOCK() or_return
+	p->EXPECT(.END) or_return
+	p->APPEND_CHILD(node, body)
+	return node, nil
 }
 @(private = "file", require_results)
 PRECEDENCE :: proc(p: ^Parser, precedence: Precedence) -> (lhs: NODEID, err: OuauError) {
@@ -264,6 +317,11 @@ GET_PRECEDENCE :: proc(tok: Token) -> Precedence {
 	case:
 		return .LOWEST
 	}
+}
+@(private = "file", require_results)
+EXP :: proc(p: ^Parser) -> (exp: NODEID, err: OuauError) {
+	exp = p->PRECEDENCE(.LOWEST) or_return
+	return exp, nil
 }
 @(private = "file", require_results)
 INFIX :: proc(p: ^Parser, lhs: NODEID) -> (infix: NODEID, err: OuauError) {
@@ -391,64 +449,6 @@ EXPLIST :: proc(p: ^Parser) -> (parsed_expressions: []NODEID, err: OuauError) {
 		return parsed_expressions, nil
 	}
 	return parsed_expressions, PARSE_ERROR(p, "PARSE_EXPLIST::Unexpected Token in Expression List")
-}
-@(private = "file", require_results)
-UBLOCK :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
-	block := p->NEW_NODE(.BLOCK)
-	ublock: for {
-		#partial switch p->GET_TOKEN() {
-		case .SEMI:
-			p->ADVANCE() or_return
-			continue ublock
-		case .UNTIL:
-			break ublock
-		case:
-			child := p->STMT() or_return
-			p->APPEND_CHILD(block, child)
-		}
-	}
-	p->EXPECT(.UNTIL) or_return
-	cond := p->EXP() or_return
-	node = p->NEW_NODE(.UBLOCK)
-	p->APPEND_CHILD(node, block)
-	p->APPEND_CHILD(node, cond)
-	return node, nil
-}
-@(private = "file", require_results)
-FUNCTION :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
-	p->EXPECT(.FUNCTION) or_return
-	fn_name := p->GET_TEXT()
-	node = p->NEW_NODE(.FUNCTION)
-	p->SET_NAME(node, fn_name) or_return
-	p->ADVANCE() or_return // past 'function name'
-	#partial switch p->GET_TOKEN() {
-	case .OPEN:
-		p->ADVANCE() or_return // past '('
-		if !p->IS(.CLOSE) {
-			each_param: for !(p->IS(.CLOSE)) {
-				#partial switch (p->GET_TOKEN()) {
-				case .IDENTIFIER:
-					fn_param := p->NEW_NODE(.IDENTIFIER)
-					p->SET_NAME(fn_param, p->GET_TEXT())
-					p->APPEND_CHILD(node, fn_param)
-					p->ADVANCE() or_return // past param
-					p->EXPECT(.COMMA) or_return
-				case .DOTS:
-					p->ADVANCE() or_return // past varargs
-					break each_param
-				case:
-					break each_param
-				}
-			}
-		}
-		p->EXPECT(.CLOSE) or_return
-	case:
-		return node, PARSE_ERROR(p, "Invalid Token in Function Declaration")
-	}
-	body := p->BLOCK() or_return
-	p->EXPECT(.END) or_return
-	p->APPEND_CHILD(node, body)
-	return node, nil
 }
 @(private = "file", require_results)
 TABLE :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
