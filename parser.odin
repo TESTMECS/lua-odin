@@ -290,15 +290,15 @@ GET_PRECEDENCE :: proc(tok: Token) -> Precedence {
 PARSE_INFIX :: proc(p: ^Parser, left_expression: NODEID) -> (infix_node: NODEID, err: OuauError) {
 	my_alloc := virtual.arena_allocator(p.arena)
 
-	current_token := p.current.kind
-	#partial switch current_token {
+
+	#partial switch p.current.kind {
 	case .OPEN:
 		p->ADVANCE() or_return
 		args := make([dynamic]NODEID, my_alloc)
-		if p.current.kind != .CLOSE { 	// TODO: bad grammar
+		if !(p->CURRENT_IS_KIND(.CLOSE)) { 	// TODO: bad grammar
 			tmp_expression := p->PARSE_EXP() or_return
 			append(&args, tmp_expression)
-			for p.current.kind == .COMMA {
+			for p->CURRENT_IS_KIND(.COMMA) {
 				p->ADVANCE() or_return
 				tmp_expression := p->PARSE_EXP() or_return
 				append(&args, tmp_expression)
@@ -318,7 +318,7 @@ PARSE_INFIX :: proc(p: ^Parser, left_expression: NODEID) -> (infix_node: NODEID,
 			p.nodes.name[right_expression] = p->GET_CURRENT_TEXT()
 			p->ADVANCE() or_return
 			infix_node := p->NEW_NODE(.BINARY)
-			p.nodes.token[infix_node] = current_token // TODO: bad grammar
+			p.nodes.token[infix_node] = p.current.kind // TODO: bad grammar
 			p->ADD_NODEID_CHILD(infix_node, left_expression)
 			p->ADD_NODEID_CHILD(infix_node, right_expression)
 			return infix_node, nil
@@ -328,15 +328,15 @@ PARSE_INFIX :: proc(p: ^Parser, left_expression: NODEID) -> (infix_node: NODEID,
 		right_expression := p->PARSE_PRECEDENCE(.LOWEST) or_return
 		p->EXPECT(.BCLOSE) or_return
 		infix_node := p->NEW_NODE(.BINARY)
-		p.nodes.token[infix_node] = current_token
+		p.nodes.token[infix_node] = p.current.kind
 		p->ADD_NODEID_CHILD(infix_node, left_expression)
 		p->ADD_NODEID_CHILD(infix_node, right_expression)
 		return infix_node, nil
 	}
 	p->ADVANCE() or_return
-	right_expression := p->PARSE_PRECEDENCE(GET_PRECEDENCE(current_token)) or_return
+	right_expression := p->PARSE_PRECEDENCE(GET_PRECEDENCE(p.current.kind)) or_return
 	infix_node = p->NEW_NODE(.BINARY)
-	p.nodes.token[infix_node] = current_token // TODO: bad grammar
+	p.nodes.token[infix_node] = p.current.kind // TODO: bad grammar
 	p->ADD_NODEID_CHILD(infix_node, left_expression)
 	p->ADD_NODEID_CHILD(infix_node, right_expression)
 	return infix_node, nil
