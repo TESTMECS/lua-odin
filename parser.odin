@@ -238,14 +238,14 @@ PARSE_PRIMARY :: proc(p: ^Parser) -> (primary_node: NODEID, err: OuauError) {
 	#partial switch p->GET_CURRENT_KIND() {
 	case .NUMBER:
 		primary_node = p->NEW_NODE(.LITERAL)
-		val, _ := strconv.parse_i64(p->GET_CURRENT_TEXT())
+		val, ok := strconv.parse_i64(p->GET_CURRENT_TEXT())
+		if !ok do return 0, GET_PARSE_ERROR(p, "Invalid Number")
 		p.nodes.int_value[primary_node] = val
 		p->ADVANCE() or_return
 		return primary_node, nil
 	case .STRING:
 		primary_node = p->NEW_NODE(.STRING)
 		p->SET_STRING_VALUE(primary_node, p->GET_CURRENT_TEXT())
-		// p.nodes.string_value[primary_node] = p->GET_CURRENT_TEXT()
 		p->ADVANCE() or_return
 		return primary_node, nil
 	case .IDENTIFIER:
@@ -256,7 +256,6 @@ PARSE_PRIMARY :: proc(p: ^Parser) -> (primary_node: NODEID, err: OuauError) {
 	case .NIL, .TRUE, .FALSE:
 		primary_node = p->NEW_NODE(.LITERAL)
 		p->SET_STRING_VALUE(primary_node, p->GET_CURRENT_TEXT())
-		// p.nodes.string_value[primary_node] = p->GET_CURRENT_TEXT()
 		p->ADVANCE() or_return
 		return primary_node, nil
 	case .OPEN:
