@@ -14,7 +14,7 @@ NEXT :: proc(l: ^Lexer) -> (tok: TokenDefinition, err: OuauError) {
 			start := l.pos
 			l->EAT()
 			tok = GET_TOKEN(.EQ, l.input, start, 2)
-		} else do tok = GET_TOKEN(.ASSIGN, l.input, l.pos, 1)
+		} else { tok = GET_TOKEN(.ASSIGN, l.input, l.pos, 1) }
 	case '+':
 		tok = GET_TOKEN(.PLUS, l.input, l.pos, 1)
 	case '-':
@@ -67,7 +67,7 @@ NEXT :: proc(l: ^Lexer) -> (tok: TokenDefinition, err: OuauError) {
 			start := l.pos
 			l->EAT()
 			tok = GET_TOKEN(.SHL, l.input, start, 2)
-		} else do tok = GET_TOKEN(.LT, l.input, l.pos, 1)
+		} else { tok = GET_TOKEN(.LT, l.input, l.pos, 1) }
 	case '>':
 		if PEEK(l) == '=' {
 			start := l.pos
@@ -77,25 +77,25 @@ NEXT :: proc(l: ^Lexer) -> (tok: TokenDefinition, err: OuauError) {
 			start := l.pos
 			l->EAT()
 			tok = GET_TOKEN(.SHR, l.input, start, 2)
-		} else do tok = GET_TOKEN(.GT, l.input, l.pos, 1)
+		} else { tok = GET_TOKEN(.GT, l.input, l.pos, 1) }
 	case '~':
 		if PEEK(l) == '=' {
 			start := l.pos
 			l->EAT()
 			tok = GET_TOKEN(.NEQ, l.input, start, 2)
-		} else do tok = GET_TOKEN(.TILDE, l.input, l.pos, 1)
+		} else { tok = GET_TOKEN(.TILDE, l.input, l.pos, 1) }
 	case '|':
 		if PEEK(l) == '|' {
 			start := l.pos
 			l->EAT()
 			tok = GET_TOKEN(.OROR, l.input, start, 2)
-		} else do tok = GET_TOKEN(.OR, l.input, l.pos, 1)
+		} else { tok = GET_TOKEN(.OR, l.input, l.pos, 1) }
 	case '&':
 		if PEEK(l) == '&' {
 			start := l.pos
 			l->EAT()
 			tok = GET_TOKEN(.ANDAND, l.input, start, 2)
-		} else do tok = GET_TOKEN(.AND, l.input, l.pos, 1)
+		} else { tok = GET_TOKEN(.AND, l.input, l.pos, 1) }
 	case '!':
 		tok = GET_TOKEN(.BANG, l.input, l.pos, 1)
 	case '#':
@@ -109,12 +109,12 @@ NEXT :: proc(l: ^Lexer) -> (tok: TokenDefinition, err: OuauError) {
 		if IS_LETTER(l.ch) {
 			tok = CREATE_IDENTIFIER_OR_KEYWORD(l)
 			return tok, nil
-		} else if IS_DIGIT(l.ch) do return CREATE_NUMBER(l), nil
+		} else if IS_DIGIT(l.ch) { return CREATE_NUMBER(l), nil }
 		tok = GET_TOKEN(.ILLEGAL, l.input, l.pos, 1)
 	}
 	l->EAT()
-	if tok.kind == .ILLEGAL do return tok, SYNTAX_ERROR(l, tok)
-	return tok, nil // EOF
+	if tok.kind == .ILLEGAL { return tok, SYNTAX_ERROR(l, tok) }
+	return tok, nil
 }
 @(private = "file")
 GET_TOKEN :: proc(type: Token, input: []u8, start: int, length: int) -> TokenDefinition {
@@ -134,7 +134,9 @@ TOKEN_FROM_CHAR :: proc(l: ^Lexer, ty: Token) -> TokenDefinition {
 }
 @(private = "file")
 SKIP_WHITESPACE :: proc(l: ^Lexer) {
-	for l.ch == ' ' || l.ch == '\t' || l.ch == '\n' || l.ch == '\r' do l->EAT()
+	for l.ch == ' ' || l.ch == '\t' || l.ch == '\n' || l.ch == '\r' {
+		l->EAT()
+	}
 }
 @(private = "file")
 EAT :: proc(l: ^Lexer) {
