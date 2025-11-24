@@ -581,7 +581,7 @@ SET_INT_VALUE :: proc(p: ^Parser, node: NODEID, value: i64) -> (err: OuauError) 
 	}
 	return GET_PARSE_ERROR(p, "Int Value Already set for node.")
 }
-@(require_results)
+@(private = "file", require_results)
 GET_CURRENT_KIND :: proc(p: ^Parser) -> (kind: Token) {
 	return p.current.kind
 }
