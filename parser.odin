@@ -290,8 +290,8 @@ GET_PRECEDENCE :: proc(tok: Token) -> Precedence {
 PARSE_INFIX :: proc(p: ^Parser, left_expression: NODEID) -> (infix_node: NODEID, err: OuauError) {
 	my_alloc := virtual.arena_allocator(p.arena)
 
-	token := p.current.kind
-	#partial switch token {
+	current_token := p.current.kind
+	#partial switch current_token {
 	case .OPEN:
 		p->ADVANCE() or_return
 		args := make([dynamic]NODEID, my_alloc)
@@ -318,7 +318,7 @@ PARSE_INFIX :: proc(p: ^Parser, left_expression: NODEID) -> (infix_node: NODEID,
 			p.nodes.name[right_expression] = p->GET_CURRENT_TEXT()
 			p->ADVANCE() or_return
 			infix_node := p->NEW_NODE(.BINARY)
-			p.nodes.token[infix_node] = token // TODO: bad grammar
+			p.nodes.token[infix_node] = current_token // TODO: bad grammar
 			p->ADD_NODEID_CHILD(infix_node, left_expression)
 			p->ADD_NODEID_CHILD(infix_node, right_expression)
 			return infix_node, nil
@@ -328,15 +328,15 @@ PARSE_INFIX :: proc(p: ^Parser, left_expression: NODEID) -> (infix_node: NODEID,
 		right_expression := p->PARSE_PRECEDENCE(.LOWEST) or_return
 		p->EXPECT(.BCLOSE) or_return
 		infix_node := p->NEW_NODE(.BINARY)
-		p.nodes.token[infix_node] = token
+		p.nodes.token[infix_node] = current_token
 		p->ADD_NODEID_CHILD(infix_node, left_expression)
 		p->ADD_NODEID_CHILD(infix_node, right_expression)
 		return infix_node, nil
 	}
 	p->ADVANCE() or_return
-	right_expression := p->PARSE_PRECEDENCE(GET_PRECEDENCE(token)) or_return
+	right_expression := p->PARSE_PRECEDENCE(GET_PRECEDENCE(current_token)) or_return
 	infix_node = p->NEW_NODE(.BINARY)
-	p.nodes.token[infix_node] = token // TODO: bad grammar
+	p.nodes.token[infix_node] = current_token // TODO: bad grammar
 	p->ADD_NODEID_CHILD(infix_node, left_expression)
 	p->ADD_NODEID_CHILD(infix_node, right_expression)
 	return infix_node, nil
