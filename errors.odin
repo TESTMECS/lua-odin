@@ -13,14 +13,13 @@ OuauError :: union {
 	virtual.Allocator_Error,
 	io.Error,
 }
-
 SyntaxError :: struct {
 	msg:  string,
 	pos:  int,
 	kind: Token,
 	text: []u8,
 }
-GET_SYNTAX_ERROR :: proc(l: ^Lexer, tok: TokenDefinition) -> OuauError {
+SYNTAX_ERROR :: proc(l: ^Lexer, tok: TokenDefinition) -> OuauError {
 	s := SyntaxError {
 		msg  = string(tok.text),
 		pos  = l.pos,

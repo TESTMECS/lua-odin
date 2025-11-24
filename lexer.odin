@@ -108,8 +108,7 @@ NEXT :: proc(l: ^Lexer) -> (tok: TokenDefinition, err: OuauError) {
 			start := l.pos
 			EAT(l)
 			tok = GET_TOKEN(.EQ, l.input, start, 2)
-		}
-		 else do tok = GET_TOKEN(.ASSIGN, l.input, l.pos, 1)
+		} else do tok = GET_TOKEN(.ASSIGN, l.input, l.pos, 1)
 	case '+':
 		tok = GET_TOKEN(.PLUS, l.input, l.pos, 1)
 	case '-':
@@ -158,46 +157,39 @@ NEXT :: proc(l: ^Lexer) -> (tok: TokenDefinition, err: OuauError) {
 			start := l.pos
 			EAT(l)
 			tok = GET_TOKEN(.LE, l.input, start, 2)
-		}
-		 else if PEEK(l) == '<' {
+		} else if PEEK(l) == '<' {
 			start := l.pos
 			EAT(l)
 			tok = GET_TOKEN(.SHL, l.input, start, 2)
-		}
-		 else do tok = GET_TOKEN(.LT, l.input, l.pos, 1)
+		} else do tok = GET_TOKEN(.LT, l.input, l.pos, 1)
 	case '>':
 		if PEEK(l) == '=' {
 			start := l.pos
 			EAT(l)
 			tok = GET_TOKEN(.GE, l.input, start, 2)
-		}
-		 else if PEEK(l) == '>' {
+		} else if PEEK(l) == '>' {
 			start := l.pos
 			EAT(l)
 			tok = GET_TOKEN(.SHR, l.input, start, 2)
-		}
-		 else do tok = GET_TOKEN(.GT, l.input, l.pos, 1)
+		} else do tok = GET_TOKEN(.GT, l.input, l.pos, 1)
 	case '~':
 		if PEEK(l) == '=' {
 			start := l.pos
 			EAT(l)
 			tok = GET_TOKEN(.NEQ, l.input, start, 2)
-		}
-		 else do tok = GET_TOKEN(.TILDE, l.input, l.pos, 1)
+		} else do tok = GET_TOKEN(.TILDE, l.input, l.pos, 1)
 	case '|':
 		if PEEK(l) == '|' {
 			start := l.pos
 			EAT(l)
 			tok = GET_TOKEN(.OROR, l.input, start, 2)
-		}
-		 else do tok = GET_TOKEN(.OR, l.input, l.pos, 1)
+		} else do tok = GET_TOKEN(.OR, l.input, l.pos, 1)
 	case '&':
 		if PEEK(l) == '&' {
 			start := l.pos
 			EAT(l)
 			tok = GET_TOKEN(.ANDAND, l.input, start, 2)
-		}
-		 else do tok = GET_TOKEN(.AND, l.input, l.pos, 1)
+		} else do tok = GET_TOKEN(.AND, l.input, l.pos, 1)
 	case '!':
 		tok = GET_TOKEN(.BANG, l.input, l.pos, 1)
 	case '#':
@@ -212,12 +204,11 @@ NEXT :: proc(l: ^Lexer) -> (tok: TokenDefinition, err: OuauError) {
 			tok = CREATE_IDENTIFIER(l)
 			UPDATE_KW(&tok)
 			return tok, nil
-		}
-		 else if IS_DIGIT(l.ch) do return CREATE_NUMBER(l), nil
+		} else if IS_DIGIT(l.ch) do return CREATE_NUMBER(l), nil
 		tok = GET_TOKEN(.ILLEGAL, l.input, l.pos, 1)
 	}
 	EAT(l)
-	if tok.kind == .ILLEGAL do return tok, GET_SYNTAX_ERROR(l, tok)
+	if tok.kind == .ILLEGAL do return tok, SYNTAX_ERROR(l, tok)
 	return tok, nil // EOF
 }
 @(private = "file")
@@ -290,8 +281,7 @@ SKIP_WHITESPACE :: proc(l: ^Lexer) {
 EAT :: proc(l: ^Lexer) {
 	if l.pos >= len(l.input) - 1 {
 		l.ch = 0
-	}
-	 else {
+	} else {
 		l.ch = l.input[l.read_pos]
 	}
 	l.pos = l.read_pos
