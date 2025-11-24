@@ -337,11 +337,11 @@ DO :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 	return node, nil
 }
 @(private = "file", require_results)
-FUNCTION :: proc(p: ^Parser) -> (function_node: NODEID, err: OuauError) {
+FUNCTION :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 	p->EXPECT(.FUNCTION) or_return
-	function_name := p->CURRENT_TEXT()
-	function_node = p->NEW_NODE(.FUNCTION)
-	p->SET_NAME(function_node, function_name) or_return
+	fn_name := p->CURRENT_TEXT()
+	node = p->NEW_NODE(.FUNCTION)
+	p->SET_NAME(node, fn_name) or_return
 	p->ADVANCE() or_return // past 'function name'
 	#partial switch p->CURRENT_TOKEN() {
 	case .OPEN:
@@ -352,7 +352,7 @@ FUNCTION :: proc(p: ^Parser) -> (function_node: NODEID, err: OuauError) {
 				case .IDENTIFIER:
 					fn_param := p->NEW_NODE(.IDENTIFIER)
 					p->SET_NAME(fn_param, p->CURRENT_TEXT())
-					p->APPEND_CHILD(function_node, fn_param)
+					p->APPEND_CHILD(node, fn_param)
 					p->ADVANCE() or_return // past param
 					p->EXPECT(.COMMA) or_return
 				case .DOTS:
@@ -365,12 +365,12 @@ FUNCTION :: proc(p: ^Parser) -> (function_node: NODEID, err: OuauError) {
 		}
 		p->EXPECT(.CLOSE) or_return
 	case:
-		return function_node, GET_PARSE_ERROR(p, "Invalid Token in Function Declaration")
+		return node, GET_PARSE_ERROR(p, "Invalid Token in Function Declaration")
 	}
 	body := p->BLOCK() or_return
 	p->EXPECT(.END) or_return
-	p->APPEND_CHILD(function_node, body)
-	return function_node, nil
+	p->APPEND_CHILD(node, body)
+	return node, nil
 }
 @(private = "file", require_results)
 FOR :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
