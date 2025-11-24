@@ -245,7 +245,8 @@ PARSE_PRIMARY :: proc(p: ^Parser) -> (primary_node: NODEID, err: OuauError) {
 		return primary_node, nil
 	case .STRING:
 		primary_node = p->NEW_NODE(.STRING)
-		p.nodes.string_value[primary_node] = p->GET_CURRENT_TEXT()
+		p->SET_STRING_VALUE(primary_node, p->GET_CURRENT_TEXT())
+		// p.nodes.string_value[primary_node] = p->GET_CURRENT_TEXT()
 		p->ADVANCE() or_return
 		return primary_node, nil
 	case .IDENTIFIER:
@@ -255,7 +256,8 @@ PARSE_PRIMARY :: proc(p: ^Parser) -> (primary_node: NODEID, err: OuauError) {
 		return primary_node, nil
 	case .NIL, .TRUE, .FALSE:
 		primary_node = p->NEW_NODE(.LITERAL)
-		p.nodes.string_value[primary_node] = p->GET_CURRENT_TEXT()
+		p->SET_STRING_VALUE(primary_node, p->GET_CURRENT_TEXT())
+		// p.nodes.string_value[primary_node] = p->GET_CURRENT_TEXT()
 		p->ADVANCE() or_return
 		return primary_node, nil
 	case .OPEN:
@@ -606,6 +608,14 @@ SET_NODEID_NAME :: proc(p: ^Parser, node: NODEID, name: string) -> (err: OuauErr
 	}
 	return GET_PARSE_ERROR(p, "Name Already set for node.")
 }
+@(private = "file")
+SET_STRING_VALUE :: proc(p: ^Parser, node: NODEID, value: string) -> (err: OuauError) {
+	if p.nodes.string_value[node] == "" {
+		p.nodes.string_value[node] = value
+		return nil
+	}
+	return GET_PARSE_ERROR(p, "String Value Already set for node.")
+}
 @(private = "file", require_results)
 GET_CURRENT_KIND :: proc(p: ^Parser) -> (kind: Token) {
 	return p.current.kind
@@ -665,6 +675,7 @@ NEW_PARSER :: proc(
 		GET_CURRENT_KIND           = GET_CURRENT_KIND,
 		SET_NODEID_TOKEN           = SET_NODEID_TOKEN,
 		SET_NODEID_NAME            = SET_NODEID_NAME,
+		SET_STRING_VALUE           = SET_STRING_VALUE,
 		ADD_NODEID_CHILD           = ADD_NODEID_CHILD,
 	}
 	// Initalize current and peek
