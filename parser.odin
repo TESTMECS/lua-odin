@@ -131,13 +131,20 @@ PARSE_BLOCK :: proc(p: ^Parser) -> (block_node: NODEID, err: OuauError) {
 	block_node = p->NEW_NODE(.BLOCK)
 	log.info("PARSE_BLOCK::starting", p.current.kind)
 	// segfault here?
-	for !p->IS_TERMINAL() {
+	count := 0
+	loop: for {
+		count += 1
+		log.info("PARSE_BLOCK::count", count)
+		if count > 20 do break
+
 		#partial switch p.current.kind {
 		case .SEMI, .END, .ELSE, .ELSEIF:
 			p->ADVANCE() or_return
-			continue
-		case .EOF, .ILLEGAL:
+			continue loop
+		case .ILLEGAL:
 			return block_node, GET_PARSE_ERROR(p, "PARSE_BLOCK::Unexpected teriminal::()")
+		case .EOF:
+			break loop
 		case:
 			child := p->PARSE_STMT() or_return
 			p->ADD_NODEID_CHILD(block_node, child)

@@ -127,7 +127,6 @@ PRECEDENCES := #partial [Token]Precedence {
 	.BCLOSE = .LOWEST,
 }
 STACK_LIMIT :: 1024 * 1024
-
 GlobalState :: struct {
 	thread:      ^ThreadState, // Main Thread
 	globals:     ^Table, // Global Table
@@ -135,7 +134,6 @@ GlobalState :: struct {
 	builtins:    [dynamic]^Table, // builtin functions
 	panic:       proc(state: ^ThreadState, msg: string, level: int),
 }
-
 @(require_results)
 NEW_GLOBAL_STATE :: proc(allocator := context.allocator) -> ^GlobalState {
 	gs := new(GlobalState, allocator)
@@ -143,7 +141,6 @@ NEW_GLOBAL_STATE :: proc(allocator := context.allocator) -> ^GlobalState {
 	gs.globals = NEW_TABLE(allocator)
 	return gs
 }
-
 VMFrame :: struct {
 	func:        ^Closure,
 	return_addr: int,
@@ -152,13 +149,11 @@ VMFrame :: struct {
 	num_results: int,
 	tail_calls:  int,
 }
-
 CallInfo :: struct {
 	func:     ^Closure,
 	base:     int,
 	saved_pc: int,
 }
-
 VM :: struct {
 	global_state:    ^GlobalState,
 	current_thread:  ^ThreadState,
@@ -170,7 +165,6 @@ VM :: struct {
 	gc_running:      bool,
 	pause_threshold: int,
 }
-
 @(require_results)
 NEW_VM :: proc(config: ^VM_Config, allocator := context.allocator) -> ^VM {
 	vm := new(VM, allocator)
@@ -182,7 +176,6 @@ NEW_VM :: proc(config: ^VM_Config, allocator := context.allocator) -> ^VM {
 	append(&vm.all_threads, vm.current_thread)
 	return vm
 }
-
 VM_Config :: struct {
 	stack_size:   int,
 	call_depth:   int,
@@ -193,18 +186,15 @@ VM_Config :: struct {
 	trace_gc:     bool,
 	trace_stack:  bool,
 }
-
 Thread :: struct {
 	state: ^ThreadState,
 }
-
 ThreadStatus :: enum {
 	OK,
 	ERR,
 	YIELD,
 	SUSPENDED,
 }
-
 ThreadState :: struct {
 	globals:     ^GlobalState,
 	stack:       [dynamic]Value,
@@ -218,7 +208,6 @@ ThreadState :: struct {
 	base:        int,
 	call_stack:  [dynamic]VMFrame,
 }
-
 @(require_results)
 NEW_THREAD :: proc(
 	gs: ^GlobalState,
