@@ -272,26 +272,22 @@ test_list :: proc(t: ^testing.T) {
 	testing.expectf(t, errrr == nil, "Error parsing chunk::(%v)", err)
 	// DUMP_AST(&p)
 	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t)
-	// local a
-	EXPECT_NODE(p.nodes.kind[1], .IDENTIFIER, t)
-	EXPECT_NODE(p.nodes.kind[2], .TABLE, t)
-	// b = 1
-	EXPECT_NODE(p.nodes.kind[3], .BINARY, t)
+	EXPECT_NODE(p.nodes.kind[1], .LOCAL, t)
+	EXPECT_NODE(p.nodes.kind[2], .IDENTIFIER, t)
+	EXPECT_NODE(p.nodes.kind[3], .TABLE, t)
 	EXPECT_NODE(p.nodes.kind[4], .IDENTIFIER, t)
 	EXPECT_NODE(p.nodes.kind[5], .LITERAL, t)
-	// c = 2
 	EXPECT_NODE(p.nodes.kind[6], .BINARY, t)
 	EXPECT_NODE(p.nodes.kind[7], .IDENTIFIER, t)
 	EXPECT_NODE(p.nodes.kind[8], .LITERAL, t)
-	// d = 3
 	EXPECT_NODE(p.nodes.kind[9], .BINARY, t)
 	EXPECT_NODE(p.nodes.kind[10], .IDENTIFIER, t)
 	EXPECT_NODE(p.nodes.kind[11], .LITERAL, t)
-	// print(#a)
-	EXPECT_NODE(p.nodes.kind[12], .CALL, t)
+	EXPECT_NODE(p.nodes.kind[12], .BINARY, t)
 	EXPECT_NODE(p.nodes.kind[13], .IDENTIFIER, t)
-	EXPECT_NODE(p.nodes.kind[14], .UNARY, t)
-	EXPECT_NODE(p.nodes.kind[15], .IDENTIFIER, t)
+	EXPECT_NODE(p.nodes.kind[14], .UNARY, t) // #
+	EXPECT_NODE(p.nodes.kind[15], .IDENTIFIER, t) // a
+	EXPECT_NODE(p.nodes.kind[16], .CALL, t) // )
 }
 @(test)
 test_logic :: proc(t: ^testing.T) {
