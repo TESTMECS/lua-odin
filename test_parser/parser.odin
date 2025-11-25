@@ -75,44 +75,47 @@ test_conditionals :: proc(t: ^testing.T) {
 	nodeid, errrr := p->CHUNK()
 	testing.expectf(t, errrr == nil, "Error parsing chunk::(%v)", err)
 
-	// DUMP_AST(&p)
+	DUMP_AST(&p)
 	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t)
-	// a
+	// local a = 1
 	EXPECT_NODE(p.nodes.kind[1], .LOCAL, t)
 	EXPECT_NODE(p.nodes.kind[2], .IDENTIFIER, t)
 	EXPECT_NODE(p.nodes.kind[3], .LITERAL, t)
-	// b
+	// local b = 2
 	EXPECT_NODE(p.nodes.kind[4], .LOCAL, t)
 	EXPECT_NODE(p.nodes.kind[5], .IDENTIFIER, t)
 	EXPECT_NODE(p.nodes.kind[6], .LITERAL, t)
-	// c
+	// local c = 3
 	EXPECT_NODE(p.nodes.kind[7], .LOCAL, t)
 	EXPECT_NODE(p.nodes.kind[8], .IDENTIFIER, t)
 	EXPECT_NODE(p.nodes.kind[9], .LITERAL, t)
 	// if
 	EXPECT_NODE(p.nodes.kind[10], .IF, t)
 	// a == 1
-	EXPECT_NODE(p.nodes.kind[11], .BINARY, t)
-	EXPECT_NODE(p.nodes.kind[12], .IDENTIFIER, t)
-	EXPECT_NODE(p.nodes.kind[13], .LITERAL, t)
+	EXPECT_NODE(p.nodes.kind[11], .IDENTIFIER, t)
+	EXPECT_NODE(p.nodes.kind[12], .LITERAL, t)
+	EXPECT_NODE(p.nodes.kind[13], .BINARY, t)
 	// b = 1
 	EXPECT_NODE(p.nodes.kind[14], .BLOCK, t)
-	EXPECT_NODE(p.nodes.kind[15], .BINARY, t)
-	EXPECT_NODE(p.nodes.kind[16], .IDENTIFIER, t)
-	EXPECT_NODE(p.nodes.kind[17], .LITERAL, t)
-	// c > 2
-	EXPECT_NODE(p.nodes.kind[18], .BINARY, t)
-	EXPECT_NODE(p.nodes.kind[19], .IDENTIFIER, t)
-	EXPECT_NODE(p.nodes.kind[20], .LITERAL, t)
+	EXPECT_NODE(p.nodes.kind[15], .IDENTIFIER, t)
+	EXPECT_NODE(p.nodes.kind[16], .LITERAL, t)
+	EXPECT_NODE(p.nodes.kind[17], .BINARY, t)
+	// elseif c > 2
+	EXPECT_NODE(p.nodes.kind[18], .IDENTIFIER, t)
+	EXPECT_NODE(p.nodes.kind[19], .LITERAL, t)
+	EXPECT_NODE(p.nodes.kind[20], .BINARY, t)
 	// b = 200
-	EXPECT_NODE(p.nodes.kind[21], .BINARY, t)
+	EXPECT_NODE(p.nodes.kind[21], .BLOCK, t)
 	EXPECT_NODE(p.nodes.kind[22], .IDENTIFIER, t)
 	EXPECT_NODE(p.nodes.kind[23], .LITERAL, t)
+	EXPECT_NODE(p.nodes.kind[24], .BINARY, t)
 	// print(b)
-	EXPECT_NODE(p.nodes.kind[24], .BLOCK, t)
-	EXPECT_NODE(p.nodes.kind[25], .CALL, t)
+	EXPECT_NODE(p.nodes.kind[25], .BLOCK, t)
 	EXPECT_NODE(p.nodes.kind[26], .IDENTIFIER, t)
 	EXPECT_NODE(p.nodes.kind[27], .IDENTIFIER, t)
+	EXPECT_NODE(p.nodes.kind[28], .CALL, t)
+
+
 }
 @(test)
 test_functions :: proc(t: ^testing.T) {
