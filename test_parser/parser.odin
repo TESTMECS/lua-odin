@@ -213,6 +213,13 @@ test_while :: proc(t: ^testing.T) {
 	program, errrr := p->CHUNK()
 	testing.expectf(t, errrr == nil, "Error parsing chunk::(%v)", err)
 	// DUMP_AST(&p)
+	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t)
+	EXPECT_NODE(p.nodes.kind[1], .WHILE, t)
+	EXPECT_NODE(p.nodes.kind[2], .LITERAL, t) // true
+	EXPECT_NODE(p.nodes.kind[3], .BLOCK, t) // {
+	EXPECT_NODE(p.nodes.kind[4], .IDENTIFIER, t) // print
+	EXPECT_NODE(p.nodes.kind[5], .STRING, t) // "Hello"
+	EXPECT_NODE(p.nodes.kind[6], .CALL, t) // )
 }
 @(test)
 test_repeat :: proc(t: ^testing.T) {
