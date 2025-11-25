@@ -2,7 +2,6 @@ package parser_test
 import Ouau "../"
 import "core:fmt"
 import "core:log"
-import "core:mem/virtual"
 import "core:testing"
 /*
 * ./parser_test/common.odin
@@ -35,12 +34,11 @@ DUMP_AST :: proc(p: ^Ouau.Parser) {
 		fmt.println()
 	}
 }
-EXPECT_NODE :: proc(kind: Ouau.NODE_KIND, expect: Ouau.NODE_KIND, t: ^testing.T) -> bool {
+EXPECT_NODE :: proc(kind: Ouau.NODE_KIND, expect: Ouau.NODE_KIND, t: ^testing.T) {
 	if expect != kind {
-		log.debug("expect", expect, "got", kind)
-		return false
+		log.errorf("Error expected node::(%v), got::(%v)", expect, kind)
+		testing.fail(t)
 	}
-	return true
 }
 EXPECT_CHILD :: proc(p: ^Ouau.Parser, parent: Ouau.NODEID, child: Ouau.NODEID, t: ^testing.T) {
 	if p.nodes.first_child[parent] != child {
