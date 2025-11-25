@@ -1,5 +1,4 @@
 package ouau
-import "core:fmt"
 import "core:mem/virtual"
 import "core:strconv"
 /*
@@ -51,8 +50,6 @@ BLOCK :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 }
 @(private = "file", require_results)
 STMT :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
-	// Debug: print current token
-	fmt.printf("STMT: current token = %v, text = '%s'\n", p->GET_TOKEN(), p->GET_TEXT())
 	#partial switch p->GET_TOKEN() {
 	case .WHILE:
 		p->EXPECT(.WHILE) or_return
