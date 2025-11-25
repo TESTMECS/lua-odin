@@ -33,18 +33,17 @@ test_function :: proc(t: ^testing.T) {
 	err := virtual.arena_init_growing(&v)
 	ensure(err == nil, "Error initializing arena")
 	defer virtual.arena_destroy(&v)
-
 	input := `
-	local a = 1;
-	local b = 2;
+	local a = 1
+	local b = 1 
 	function add(a, b)
 		return a + b
 	end
-	return add(a, b);`
+	add(a, b)`
 	p, p_err := NEW_PARSER(input, &v)
 	testing.expectf(t, p_err == nil, "Error creating Parser::(%v)", p_err)
 	root, chunk_err := CHUNK(&p)
-	testing.expectf(t, chunk_err != nil, "Error parsing chunk::(%v)", chunk_err)
+	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
 	i := NEW_INTERPRETER(&p.nodes, &v)
 	val := INTERPRET(&i, root)
 	if val == nil || val.(f64) != 3 {

@@ -1,4 +1,5 @@
 package ouau
+import "core:log"
 import "core:math"
 import "core:mem/virtual"
 import "core:strings"
@@ -8,25 +9,36 @@ import "core:strings"
 *	 Defines the interpreter functions for Ouau.
 */
 @(require_results)
-INTERPRET :: proc(interpreter: ^Interpreter, root: NODEID) -> Value {
-	child := interpreter.nodes.first_child[root]
+INTERPRET :: proc(i: ^Interpreter, root: NODEID) -> Value {
+	child := i.nodes.first_child[root]
 	last_val: Value
 	for child != 0 {
-		v := EVAL(interpreter, child)
+		v := EVAL(i, child)
 		if ret, ok := v.(^ReturnValue); ok {
 			return ret.value
 		}
 		last_val = v
-		child = interpreter.nodes.next_sibling[child]
+		child = i.nodes.next_sibling[child]
 	}
 	return last_val
 }
 @(private = "file")
 EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	kind := i.nodes.kind[node]
+	log.infof("Evaling node::(%v)", kind)
 	#partial switch kind {
 	case .BLOCK:
-		return EVAL_BLOCK(i, node)
+		child := i.nodes.first_child[node]
+		last_result: Value
+		for child != 0 {
+			v := EVAL(i, child)
+			if _, ok := v.(^ReturnValue); ok {
+				return v
+			}
+			last_result = v
+			child = i.nodes.next_sibling[child]
+		}
+		return last_result
 	case .UBLOCK:
 		return EVAL_UBLOCK(i, node)
 	case .IF:
@@ -84,20 +96,6 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		return f64(i.nodes.int_value[node])
 	}
 	return nil
-}
-@(private = "file")
-EVAL_BLOCK :: proc(i: ^Interpreter, node: NODEID) -> Value {
-	child := i.nodes.first_child[node]
-	last_result: Value
-	for child != 0 {
-		v := EVAL(i, child)
-		if _, ok := v.(^ReturnValue); ok {
-			return v
-		}
-		last_result = v
-		child = i.nodes.next_sibling[child]
-	}
-	return last_result
 }
 @(private = "file")
 EVAL_UBLOCK :: proc(i: ^Interpreter, node: NODEID) -> Value {
@@ -168,8 +166,10 @@ EVAL_DO :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	return EVAL(i, child)
 }
 @(private = "file")
-EVAL_FUNCTION :: proc(i: ^Interpreter, node: NODEID, allocator := context.allocator) -> Value {
-	fn := new(Closure, allocator)
+EVAL_FUNCTION :: proc(i: ^Interpreter, node: NODEID) -> Value {
+	my_alloc := virtual.arena_allocator(i.arena)
+
+	fn := new(Closure, my_alloc)
 	fn.is_native = false
 	fn.params = EXTRACT_PARAMS(i, node)
 	fn.body = GET_FUNCTION_BODY(i, node)
@@ -261,12 +261,10 @@ EVAL_CALL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	if fn_val == nil {
 		return nil
 	}
-
 	fn_val_closure, ok := fn_val.(^Closure)
 	if !ok {
 		return nil
 	}
-
 	arg_child := GET_ARGUMENTS_CHILD(i, node)
 	args := EVAL_EXPRESSION_LIST(i, arg_child)
 	if fn_val_closure.is_native {
