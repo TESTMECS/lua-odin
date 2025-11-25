@@ -238,19 +238,19 @@ test_repeat :: proc(t: ^testing.T) {
 	program, errrr := p->CHUNK()
 	testing.expectf(t, errrr == nil, "Error parsing chunk::(%v)", err)
 	// DUMP_AST(&p)
-	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t)
-	EXPECT_NODE(p.nodes.kind[1], .REPEAT, t)
-	EXPECT_NODE(p.nodes.kind[2], .UBLOCK, t)
-	EXPECT_NODE(p.nodes.kind[3], .BLOCK, t)
-	EXPECT_NODE(p.nodes.kind[4], .CALL, t)
-	EXPECT_NODE(p.nodes.kind[5], .IDENTIFIER, t)
-	EXPECT_NODE(p.nodes.kind[6], .STRING, t)
-	EXPECT_NODE(p.nodes.kind[7], .BINARY, t)
-	EXPECT_NODE(p.nodes.kind[8], .IDENTIFIER, t)
+	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t) // repeat
+	EXPECT_NODE(p.nodes.kind[1], .REPEAT, t) // {
+	EXPECT_NODE(p.nodes.kind[2], .BLOCK, t) // until false
+	EXPECT_NODE(p.nodes.kind[3], .IDENTIFIER, t) // print
+	EXPECT_NODE(p.nodes.kind[4], .STRING, t) // "Hello"
+	EXPECT_NODE(p.nodes.kind[5], .CALL, t) // )
+	EXPECT_NODE(p.nodes.kind[6], .IDENTIFIER, t) // i
+	EXPECT_NODE(p.nodes.kind[7], .IDENTIFIER, t) // i
+	EXPECT_NODE(p.nodes.kind[8], .LITERAL, t)
 	EXPECT_NODE(p.nodes.kind[9], .BINARY, t)
-	EXPECT_NODE(p.nodes.kind[10], .IDENTIFIER, t)
+	EXPECT_NODE(p.nodes.kind[10], .BINARY, t)
 	EXPECT_NODE(p.nodes.kind[11], .LITERAL, t)
-	EXPECT_NODE(p.nodes.kind[12], .LITERAL, t)
+	EXPECT_NODE(p.nodes.kind[12], .UBLOCK, t) // 1
 }
 @(test)
 test_list :: proc(t: ^testing.T) {
