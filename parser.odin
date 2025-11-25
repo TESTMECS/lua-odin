@@ -473,21 +473,26 @@ TABLE :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 				p->APPEND_CHILD(pair, key)
 				p->APPEND_CHILD(pair, value)
 				p->APPEND_CHILD(table, pair)
-			} else if p->IS(.IDENTIFIER) && p->IS(.ASSIGN) {
-				key := p->NEW_NODE(.IDENTIFIER)
-				p->SET_NAME(key, p->GET_TEXT())
-				p->ADVANCE() or_return
+			} else if (p->IS(.IDENTIFIER) || p->IS(.STRING)) && p.peek.kind == .ASSIGN {
+				key := p->PRIMARY() or_return // Parse the key (identifier or string)
 				p->EXPECT(.ASSIGN) or_return
 				value := p->EXP() or_return
 				pair := p->NEW_NODE(.BINARY)
 				p->APPEND_CHILD(pair, key)
 				p->APPEND_CHILD(pair, value)
 				p->APPEND_CHILD(table, pair)
+			} else if p->IS(.TCLOSE) {
+				break tbl_loop
 			} else {
 				value := p->EXP() or_return
 				p->APPEND_CHILD(table, value)
 			}
-			if !(p->IS(.COMMA)) && !(p->IS(.SEMI)) { break tbl_loop }
+			if p->IS(.TCLOSE) {
+				break tbl_loop
+			}
+			if !(p->IS(.COMMA)) && !(p->IS(.SEMI)) {
+				break tbl_loop
+			}
 			p->ADVANCE() or_return
 		}
 	}

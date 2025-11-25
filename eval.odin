@@ -398,9 +398,9 @@ EVAL_STRING :: proc(i: ^Interpreter, node: NODEID) -> Value {
 }
 @(private = "file")
 EVAL_TABLE :: proc(i: ^Interpreter, node: NODEID) -> Value {
-	table := new(Table)
-	table.data = make(map[KeyTag]Value)
-
+	my_alloc := virtual.arena_allocator(i.arena)
+	table := new(Table, my_alloc)
+	table.data = make(map[KeyTag]Value, my_alloc)
 	child := i.nodes.first_child[node]
 	for child != 0 {
 		if i.nodes.kind[child] == .BINARY {
@@ -419,7 +419,6 @@ EVAL_TABLE :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		}
 		child = i.nodes.next_sibling[child]
 	}
-
 	return table
 }
 @(private = "file")

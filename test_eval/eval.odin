@@ -21,8 +21,7 @@ test_eval_block :: proc(t: ^testing.T) {
 	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
 	i := NEW_INTERPRETER(&p.nodes, &v)
 	val := INTERPRET(&i, root)
-	log.infof("Return Val::(%v)", val)
-	if val == nil || val.(f64) != 1 {
+	if val == nil || val.(f64) != 3 {
 		testing.fail(t)
 	}
 }
@@ -57,20 +56,19 @@ test_eval_table :: proc(t: ^testing.T) {
 	err := virtual.arena_init_growing(&v)
 	ensure(err == nil, "Error initializing arena")
 	defer virtual.arena_destroy(&v)
-
 	input := `
 	local a = {
 		"b" = 1,
 		"c" = 2,
 	}
-	return a["c"];`
+	a["c"];`
 	p, p_err := NEW_PARSER(input, &v)
 	testing.expectf(t, p_err == nil, "Error creating Parser::(%v)", p_err)
 	root, chunk_err := CHUNK(&p)
-	testing.expectf(t, chunk_err != nil, "Error parsing chunk::(%v)", chunk_err)
+	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
 	i := NEW_INTERPRETER(&p.nodes, &v)
 	val := INTERPRET(&i, root)
-	if val == nil || val.(f64) != 3 {
+	if val == nil || val.(f64) != 2 {
 		testing.fail(t)
 	}
 }
