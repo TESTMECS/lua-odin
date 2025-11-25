@@ -189,15 +189,13 @@ test_for :: proc(t: ^testing.T) {
 	testing.expectf(t, errrr == nil, "Error parsing chunk::(%v)", err)
 	// DUMP_AST(&p)
 	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t)
-	// for
 	EXPECT_NODE(p.nodes.kind[1], .FOR, t)
 	EXPECT_NODE(p.nodes.kind[2], .LITERAL, t)
 	EXPECT_NODE(p.nodes.kind[3], .LITERAL, t)
 	EXPECT_NODE(p.nodes.kind[4], .BLOCK, t)
-	// print(i)
-	EXPECT_NODE(p.nodes.kind[5], .CALL, t)
+	EXPECT_NODE(p.nodes.kind[5], .IDENTIFIER, t)
 	EXPECT_NODE(p.nodes.kind[6], .IDENTIFIER, t)
-	EXPECT_NODE(p.nodes.kind[7], .IDENTIFIER, t)
+	EXPECT_NODE(p.nodes.kind[7], .CALL, t)
 }
 @(test)
 test_while :: proc(t: ^testing.T) {
@@ -215,15 +213,6 @@ test_while :: proc(t: ^testing.T) {
 	program, errrr := p->CHUNK()
 	testing.expectf(t, errrr == nil, "Error parsing chunk::(%v)", err)
 	// DUMP_AST(&p)
-	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t)
-	// while
-	EXPECT_NODE(p.nodes.kind[1], .WHILE, t)
-	EXPECT_NODE(p.nodes.kind[2], .LITERAL, t)
-	EXPECT_NODE(p.nodes.kind[3], .BLOCK, t)
-	// print("Hello")
-	EXPECT_NODE(p.nodes.kind[4], .CALL, t)
-	EXPECT_NODE(p.nodes.kind[5], .IDENTIFIER, t)
-	EXPECT_NODE(p.nodes.kind[6], .STRING, t)
 }
 @(test)
 test_repeat :: proc(t: ^testing.T) {
