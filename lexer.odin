@@ -7,7 +7,7 @@ package ouau
 */
 @(require_results)
 NEXT :: proc(l: ^Lexer) -> (token: TokenDefinition, err: OuauError) {
-	SKIP_WHITESPACE(l)
+	l->SKIP_WHITESPACE()
 	switch l.ch {
 	case '=':
 		if l->PEEK() == '=' {
@@ -22,12 +22,13 @@ NEXT :: proc(l: ^Lexer) -> (token: TokenDefinition, err: OuauError) {
 		token = GET_TOKEN(.MUL, l.input, l.pos, 1)
 	case '.':
 		if l->PEEK() == '.' {
+			start := l.pos
 			l->EAT()
 			if l->PEEK() == '.' {
 				l->EAT()
-				token = GET_TOKEN(.DOTS, l.input, l.pos, 3)
+				token = GET_TOKEN(.DOTS, l.input, start, 3)
 			} else {
-				token = GET_TOKEN(.DOTDOT, l.input, l.pos, 2)
+				token = GET_TOKEN(.DOTDOT, l.input, start, 2)
 			}
 		} else {
 			token = GET_TOKEN(.DOT, l.input, l.pos, 1)
@@ -58,34 +59,41 @@ NEXT :: proc(l: ^Lexer) -> (token: TokenDefinition, err: OuauError) {
 		token = GET_TOKEN(.SEMI, l.input, l.pos, 1)
 	case '<':
 		if l->PEEK() == '=' {
+			start := l.pos
 			l->EAT()
-			token = GET_TOKEN(.LE, l.input, l.pos, 2)
+			token = GET_TOKEN(.LE, l.input, start, 2)
 		} else if l->PEEK() == '<' {
+			start := l.pos
 			l->EAT()
-			token = GET_TOKEN(.SHL, l.input, l.pos, 2)
+			token = GET_TOKEN(.SHL, l.input, start, 2)
 		} else { token = GET_TOKEN(.LT, l.input, l.pos, 1) }
 	case '>':
 		if l->PEEK() == '=' {
+			start := l.pos
 			l->EAT()
-			token = GET_TOKEN(.GE, l.input, l.pos, 2)
+			token = GET_TOKEN(.GE, l.input, start, 2)
 		} else if l->PEEK() == '>' {
+			start := l.pos
 			l->EAT()
-			token = GET_TOKEN(.SHR, l.input, l.pos, 2)
+			token = GET_TOKEN(.SHR, l.input, start, 2)
 		} else { token = GET_TOKEN(.GT, l.input, l.pos, 1) }
 	case '~':
 		if l->PEEK() == '=' {
+			start := l.pos
 			l->EAT()
-			token = GET_TOKEN(.NEQ, l.input, l.pos, 2)
+			token = GET_TOKEN(.NEQ, l.input, start, 2)
 		} else { token = GET_TOKEN(.TILDE, l.input, l.pos, 1) }
 	case '|':
 		if l->PEEK() == '|' {
+			start := l.pos
 			l->EAT()
-			token = GET_TOKEN(.OROR, l.input, l.pos, 2)
+			token = GET_TOKEN(.OROR, l.input, start, 2)
 		} else { token = GET_TOKEN(.OR, l.input, l.pos, 1) }
 	case '&':
 		if l->PEEK() == '&' {
+			start := l.pos
 			l->EAT()
-			token = GET_TOKEN(.ANDAND, l.input, l.pos, 2)
+			token = GET_TOKEN(.ANDAND, l.input, start, 2)
 		} else { token = GET_TOKEN(.AND, l.input, l.pos, 1) }
 	case '!':
 		token = GET_TOKEN(.BANG, l.input, l.pos, 1)
@@ -179,8 +187,9 @@ CREATE_STRING :: proc(l: ^Lexer) -> TokenDefinition {
 }
 @(rodata)
 LEXER_VTABLE := LexerVTable {
-	NEXT = NEXT,
-	EAT  = EAT,
-	PEEK = PEEK,
+	NEXT            = NEXT,
+	EAT             = EAT,
+	PEEK            = PEEK,
+	SKIP_WHITESPACE = SKIP_WHITESPACE,
 }
 
