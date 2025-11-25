@@ -1,53 +1,11 @@
 package ouau
 import "core:fmt"
 import "core:log"
-import "core:mem/virtual"
 /*
 *	 ./compiler.odin
 *	 Copyright(C) 2025 TESTMEE
 *	 Defines the compiler functions for Ouau.
 */
-Compiler :: struct {
-	instructions: [dynamic]u32,
-	constants:    [dynamic]Value, // pool for LoadK
-	const_index:  map[Value]int, // equality hashing
-	locals:       map[string]int, // name -> register
-	upvalues:     map[string]int, // name -> upval index
-	nodes:        ^NODES,
-	max_stack:    int,
-	nparams:      int,
-	local_count:  int, // next free register
-	free_regs:    [dynamic]int, // stack of freed reg indices
-	prototypes:   [dynamic]^Prototype, // nested function prototypes
-	parent:       ^Prototype, // upvalue resolution
-	arena:        ^virtual.Arena,
-}
-
-@(require_results)
-NEW_COMPILER :: proc(my_nodes: ^NODES, arena: ^virtual.Arena) -> ^Compiler {
-	context.allocator = virtual.arena_allocator(arena)
-
-	c := new(Compiler)
-	c.nodes = my_nodes
-	c.constants = make([dynamic]Value)
-	c.const_index = make(map[Value]int)
-	c.locals = make(map[string]int)
-	c.upvalues = make(map[string]int)
-	c.free_regs = make([dynamic]int)
-	c.prototypes = make([dynamic]^Prototype)
-	c.parent = nil
-	return c
-}
-
-Prototype :: struct {
-	instructions: []u32,
-	constants:    []Value,
-	proto:        []^Prototype,
-	upvalues:     [dynamic]^UpValueDesc,
-	max_stack:    int,
-	num_params:   int,
-}
-
 COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	kind := c.nodes.kind[nodeid]
 	log.infof("Compiling node %v", kind)
@@ -371,8 +329,8 @@ COMPILE_FUNCTION :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	body_result := COMPILE_NODE(function_compiler, body)
 
 	// For functions, body_result < 0 is normal (due to RETURN), so don't return early
-	prototype.instructions = function_compiler.instructions[:]
-	prototype.constants = function_compiler.constants[:]
+	// prototype.instructions = function_compiler.instructions[:]
+	// prototype.constants = function_compiler.constants[:]
 	prototype.max_stack = function_compiler.max_stack
 	prototype.num_params = 0
 

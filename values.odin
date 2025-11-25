@@ -26,12 +26,12 @@ ReturnValue :: struct {
 	value: Value,
 }
 Closure :: struct {
-	is_native:   bool,
 	params:      []string,
 	body:        NODEID,
 	closure:     ^Environment,
 	proto:       ^Prototype,
 	upvalues:    [dynamic]^Upvalue,
+	is_native:   bool,
 	native_proc: proc(args: []Value) -> Value,
 }
 Table :: struct {
@@ -51,13 +51,11 @@ NEW_TABLE :: proc(allocator := context.allocator) -> ^Table {
 	return table
 }
 Upvalue :: struct {
-	value:  ^Value,
+	open:   ^Value,
 	closed: ^Value,
-	next:   ^Upvalue,
 }
 UpValueDesc :: struct {
-	name:     string,
-	in_stack: bool,
+	is_local: bool,
 	index:    int,
 }
 VALUE_TO_KEY_TAG :: proc(v: Value) -> KeyTag {

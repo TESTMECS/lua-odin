@@ -386,6 +386,43 @@ ENV_RESORT :: proc(env: ^Environment) {
 	})
 	env.dirty = false
 }
+Compiler :: struct {
+	instructions: [dynamic]u32,
+	constants:    [dynamic]Value, // pool for LoadK
+	const_index:  map[Value]int, // equality hashing
+	locals:       map[string]int, // name -> register
+	upvalues:     map[string]int, // name -> upval index
+	nodes:        ^NODES,
+	max_stack:    int,
+	nparams:      int,
+	local_count:  int, // next free register
+	free_regs:    [dynamic]int, // stack of freed reg indices
+	prototypes:   [dynamic]^Prototype, // nested function prototypes
+	parent:       ^Prototype, // upvalue resolution
+	arena:        ^virtual.Arena,
+}
+@(require_results)
+NEW_COMPILER :: proc(my_nodes: ^NODES, arena: ^virtual.Arena) -> ^Compiler {
+	my_alloc := virtual.arena_allocator(arena)
+	c := new(Compiler)
+	c.nodes = my_nodes
+	c.constants = make([dynamic]Value, my_alloc)
+	c.const_index = make(map[Value]int, my_alloc)
+	c.locals = make(map[string]int, my_alloc)
+	c.upvalues = make(map[string]int, my_alloc)
+	c.free_regs = make([dynamic]int, my_alloc)
+	c.prototypes = make([dynamic]^Prototype, my_alloc)
+	c.parent = nil
+	return c
+}
+Prototype :: struct {
+	instructions: [dynamic]u32,
+	constants:    [dynamic]Value,
+	proto:        [dynamic]^Prototype,
+	upvalues:     [dynamic]^UpValueDesc,
+	max_stack:    int,
+	num_params:   int,
+}
 STACK_LIMIT :: 1024 * 1024
 GlobalState :: struct {
 	thread:      ^ThreadState, // Main Thread
