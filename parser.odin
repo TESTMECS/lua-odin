@@ -1,4 +1,5 @@
 package ouau
+import "core:fmt"
 import "core:mem/virtual"
 import "core:strconv"
 /*
@@ -50,6 +51,8 @@ BLOCK :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 }
 @(private = "file", require_results)
 STMT :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
+	// Debug: print current token
+	fmt.printf("STMT: current token = %v, text = '%s'\n", p->GET_TOKEN(), p->GET_TEXT())
 	#partial switch p->GET_TOKEN() {
 	case .WHILE:
 		p->EXPECT(.WHILE) or_return
@@ -306,7 +309,7 @@ GET_PRECEDENCE :: proc(tok: Token) -> Precedence {
 	#partial switch tok {
 	case .ASSIGN:
 		return .ASSIGN
-	case .EQ, .NEQ, .LT, .LE, .GT, .GE, .TILDE, .BOR, .BXOR, .BAND, .OR, .OROR:
+	case .EQ, .NEQ, .LT, .LE, .GT, .GE, .TILDE, .BOR, .BXOR, .BAND, .OR, .OROR, .AND:
 		return .EQUALS
 	case .PLUS, .MINUS, .SHR, .SHL:
 		return .SUM
@@ -314,7 +317,7 @@ GET_PRECEDENCE :: proc(tok: Token) -> Precedence {
 		return .PRODUCT
 	case .POW, .OPEN, .DOT:
 		return .CALL
-	case .BANG, .POUND:
+	case .BANG, .POUND, .NOT:
 		return .PREFIX
 	case .BOPEN:
 		return .INDEX

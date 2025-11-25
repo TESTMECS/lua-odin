@@ -271,8 +271,8 @@ NEW_PARSER :: proc(
 		vtable  = PARSER_VTABLE,
 	}
 	// Initalize current and peek
-	first_token := new_parser.lexer->NEXT() or_return
-	new_parser.peek = first_token
+	// first_token := new_parser.lexer->NEXT() or_return
+	// new_parser.peek = first_token
 	// Initalize Nodes
 	varena := virtual.arena_allocator(param_arena)
 	new_parser.nodes.kind = make([dynamic]NODE_KIND, varena)
