@@ -141,6 +141,7 @@ test_while :: proc(t: ^testing.T) {
 	testing.expectf(t, p_err == nil, "Error creating Parser::(%v)", p_err)
 	root, chunk_err := CHUNK(&p)
 	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
+	DUMP_AST(&p)
 	i := NEW_INTERPRETER(&p.nodes, &v)
 	val := INTERPRET(&i, root)
 	if val == nil || val.(f64) != 10 {
