@@ -10,6 +10,7 @@ import "core:mem/virtual"
 OuauError :: union {
 	SyntaxError,
 	ParseError,
+	EvalError,
 	virtual.Allocator_Error,
 	io.Error,
 }
@@ -26,25 +27,26 @@ SYNTAX_ERROR :: proc(l: ^Lexer, tok: TokenDefinition) -> OuauError {
 		kind = tok.kind,
 		text = tok.text,
 	}
-	fmt.eprintfln(
-		"[Syntax Error]::at position::(%d) of kind::(%v) with text::('%s'/%d)",
-		s.pos,
-		s.kind,
-		s.msg,
-		s.text,
-	)
+	fmt.eprintfln("Syntax Error::Msg::(%s)|", s.msg)
+	fmt.eprintfln("Pos::(%d)|", s.pos)
+	fmt.eprintfln("Kind::(%v)|", tok.kind)
+	fmt.eprintfln("Text::(%s)|", tok.text)
 	return s
 }
 ParseError :: struct {
 	msg: string,
 }
 PARSE_ERROR :: proc(p: ^Parser, msg: string) -> OuauError {
-	fmt.eprintf("[Parse Error]Msg::(%s)|", msg)
-	fmt.eprintf("Pos::(%d)|", p.pos)
-	fmt.eprintf("Current Token Text::(%s)|", p.current.text)
-	fmt.eprintf("Current Token Kind::(%v)|", p.current.kind)
-	fmt.eprintf("Peek Token Kind::(%s)|", p.peek.kind)
-	fmt.eprintf("Peek Token Text::(%s)|", p.peek.text)
+	fmt.eprintfln("Parse Error::Msg::(%s)|", msg)
+	fmt.eprintfln("Pos::(%d)|", p.pos)
+	fmt.eprintfln("Current Token Text::(%s)|", p.current.text)
+	fmt.eprintfln("Current Token Kind::(%v)|", p.current.kind)
+	fmt.eprintfln("Peek Token Kind::(%s)|", p.peek.kind)
+	fmt.eprintfln("Peek Token Text::(%s)|", p.peek.text)
 	return ParseError{msg}
+}
+EvalError :: struct {
+	msg:       string,
+	evaluator: ^Interpreter,
 }
 
