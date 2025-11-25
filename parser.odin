@@ -364,10 +364,10 @@ INFIX :: proc(p: ^Parser, lhs: NODEID) -> (infix: NODEID, err: OuauError) {
 		}
 	case .BOPEN:
 		p->ADVANCE() or_return
+		rhs := p->EXP() or_return
 		p->EXPECT(.BCLOSE) or_return
-		rhs := p->PRECEDENCE(.LOWEST) or_return
 		infix := p->NEW_NODE(.BINARY)
-		p->SET_TOKEN(infix, p->GET_TOKEN())
+		p->SET_TOKEN(infix, .BOPEN)
 		p->APPEND_CHILD(infix, lhs)
 		p->APPEND_CHILD(infix, rhs)
 		return infix, nil
