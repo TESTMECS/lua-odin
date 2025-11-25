@@ -129,13 +129,25 @@ test_functions :: proc(t: ^testing.T) {
 	end
 	add(1,2)
 	`
-
-
 	p, errr := NEW_PARSER(input, v)
 	testing.expectf(t, errr == nil, "Error parsing chunk %v", err)
 	nodeid, errrr := p->CHUNK()
 	testing.expectf(t, errrr == nil, "Error parsing chunk %v", err)
-	DUMP_AST(&p)
+	// DUMP_AST(&p)
+	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t)
+	EXPECT_NODE(p.nodes.kind[1], .LOCAL, t)
+	EXPECT_NODE(p.nodes.kind[2], .FUNCTION, t)
+	EXPECT_NODE(p.nodes.kind[3], .IDENTIFIER, t)
+	EXPECT_NODE(p.nodes.kind[4], .IDENTIFIER, t)
+	EXPECT_NODE(p.nodes.kind[5], .BLOCK, t)
+	EXPECT_NODE(p.nodes.kind[6], .RETURN, t)
+	EXPECT_NODE(p.nodes.kind[7], .BINARY, t)
+	EXPECT_NODE(p.nodes.kind[8], .IDENTIFIER, t)
+	EXPECT_NODE(p.nodes.kind[9], .IDENTIFIER, t)
+	EXPECT_NODE(p.nodes.kind[10], .CALL, t)
+	EXPECT_NODE(p.nodes.kind[11], .IDENTIFIER, t)
+	EXPECT_NODE(p.nodes.kind[12], .LITERAL, t)
+	EXPECT_NODE(p.nodes.kind[13], .LITERAL, t)
 }
 @(test)
 test_tables :: proc(t: ^testing.T) {
