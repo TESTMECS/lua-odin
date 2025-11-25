@@ -121,7 +121,6 @@ KEYWORDS := [?]struct {
 	{"while", .WHILE},
 }
 LOOKUP_KEYWORD :: proc(name: string) -> (ok: bool, kind: Token) {
-	// binary search
 	lo := 0
 	hi := len(KEYWORDS) - 1
 	for lo <= hi {
@@ -142,8 +141,10 @@ TokenDefinition :: struct {
 	text: []u8,
 }
 LexerVTable :: struct {
-	NEXT: proc(l: ^Lexer) -> (TokenDefinition, OuauError),
-	EAT:  proc(l: ^Lexer),
+	EAT:       proc(l: ^Lexer),
+	PEEK:      proc(l: ^Lexer) -> u8,
+	NEXT:      proc(l: ^Lexer) -> (TokenDefinition, OuauError),
+	GET_TOKEN: proc(l: ^Lexer, type: Token, length: int) -> TokenDefinition,
 }
 Lexer :: struct {
 	input:        []u8,

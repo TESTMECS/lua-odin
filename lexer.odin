@@ -6,118 +6,111 @@ package ouau
 *	 @Lexer
 */
 @(require_results)
-NEXT :: proc(l: ^Lexer) -> (tok: TokenDefinition, err: OuauError) {
+NEXT :: proc(l: ^Lexer) -> (token: TokenDefinition, err: OuauError) {
 	SKIP_WHITESPACE(l)
 	switch l.ch {
 	case '=':
-		if PEEK(l) == '=' {
-			start := l.pos
+		if l->PEEK() == '=' {
 			l->EAT()
-			tok = GET_TOKEN(.EQ, l.input, start, 2)
-		} else { tok = GET_TOKEN(.ASSIGN, l.input, l.pos, 1) }
+			token = GET_TOKEN(.EQ, l.input, l.pos, 2)
+		} else { token = GET_TOKEN(.ASSIGN, l.input, l.pos, 1) }
 	case '+':
-		tok = GET_TOKEN(.PLUS, l.input, l.pos, 1)
+		token = GET_TOKEN(.PLUS, l.input, l.pos, 1)
 	case '-':
-		tok = GET_TOKEN(.MINUS, l.input, l.pos, 1)
+		token = GET_TOKEN(.MINUS, l.input, l.pos, 1)
 	case '*':
-		tok = GET_TOKEN(.MUL, l.input, l.pos, 1)
+		token = GET_TOKEN(.MUL, l.input, l.pos, 1)
 	case '.':
-		if PEEK(l) == '.' {
-			start := l.pos
+		if l->PEEK() == '.' {
 			l->EAT()
-			if PEEK(l) == '.' {
+			if l->PEEK() == '.' {
 				l->EAT()
-				tok = GET_TOKEN(.DOTS, l.input, start, 3)
+				token = GET_TOKEN(.DOTS, l.input, l.pos, 3)
 			} else {
-				tok = GET_TOKEN(.DOTDOT, l.input, start, 2)
+				token = GET_TOKEN(.DOTDOT, l.input, l.pos, 2)
 			}
 		} else {
-			tok = GET_TOKEN(.DOT, l.input, l.pos, 1)
+			token = GET_TOKEN(.DOT, l.input, l.pos, 1)
 		}
 	case '/':
-		tok = GET_TOKEN(.DIV, l.input, l.pos, 1)
+		token = GET_TOKEN(.DIV, l.input, l.pos, 1)
 	case '%':
-		tok = GET_TOKEN(.MOD, l.input, l.pos, 1)
+		token = GET_TOKEN(.MOD, l.input, l.pos, 1)
 	case '^':
-		tok = GET_TOKEN(.POW, l.input, l.pos, 1)
+		token = GET_TOKEN(.POW, l.input, l.pos, 1)
 	case '(':
-		tok = GET_TOKEN(.OPEN, l.input, l.pos, 1)
+		token = GET_TOKEN(.OPEN, l.input, l.pos, 1)
 	case ')':
-		tok = GET_TOKEN(.CLOSE, l.input, l.pos, 1)
+		token = GET_TOKEN(.CLOSE, l.input, l.pos, 1)
 	case '[':
-		tok = GET_TOKEN(.BOPEN, l.input, l.pos, 1)
+		token = GET_TOKEN(.BOPEN, l.input, l.pos, 1)
 	case ']':
-		tok = GET_TOKEN(.BCLOSE, l.input, l.pos, 1)
+		token = GET_TOKEN(.BCLOSE, l.input, l.pos, 1)
 	case '{':
-		tok = GET_TOKEN(.TOPEN, l.input, l.pos, 1)
+		token = GET_TOKEN(.TOPEN, l.input, l.pos, 1)
 	case '}':
-		tok = GET_TOKEN(.TCLOSE, l.input, l.pos, 1)
+		token = GET_TOKEN(.TCLOSE, l.input, l.pos, 1)
 	case ',':
-		tok = GET_TOKEN(.COMMA, l.input, l.pos, 1)
+		token = GET_TOKEN(.COMMA, l.input, l.pos, 1)
 	case ':':
-		tok = GET_TOKEN(.COLON, l.input, l.pos, 1)
+		token = GET_TOKEN(.COLON, l.input, l.pos, 1)
 	case ';':
-		tok = GET_TOKEN(.SEMI, l.input, l.pos, 1)
+		token = GET_TOKEN(.SEMI, l.input, l.pos, 1)
 	case '<':
-		if PEEK(l) == '=' {
-			start := l.pos
+		if l->PEEK() == '=' {
 			l->EAT()
-			tok = GET_TOKEN(.LE, l.input, start, 2)
-		} else if PEEK(l) == '<' {
-			start := l.pos
+			token = GET_TOKEN(.LE, l.input, l.pos, 2)
+		} else if l->PEEK() == '<' {
 			l->EAT()
-			tok = GET_TOKEN(.SHL, l.input, start, 2)
-		} else { tok = GET_TOKEN(.LT, l.input, l.pos, 1) }
+			token = GET_TOKEN(.SHL, l.input, l.pos, 2)
+		} else { token = GET_TOKEN(.LT, l.input, l.pos, 1) }
 	case '>':
-		if PEEK(l) == '=' {
-			start := l.pos
+		if l->PEEK() == '=' {
 			l->EAT()
-			tok = GET_TOKEN(.GE, l.input, start, 2)
-		} else if PEEK(l) == '>' {
-			start := l.pos
+			token = GET_TOKEN(.GE, l.input, l.pos, 2)
+		} else if l->PEEK() == '>' {
 			l->EAT()
-			tok = GET_TOKEN(.SHR, l.input, start, 2)
-		} else { tok = GET_TOKEN(.GT, l.input, l.pos, 1) }
+			token = GET_TOKEN(.SHR, l.input, l.pos, 2)
+		} else { token = GET_TOKEN(.GT, l.input, l.pos, 1) }
 	case '~':
-		if PEEK(l) == '=' {
-			start := l.pos
+		if l->PEEK() == '=' {
 			l->EAT()
-			tok = GET_TOKEN(.NEQ, l.input, start, 2)
-		} else { tok = GET_TOKEN(.TILDE, l.input, l.pos, 1) }
+			token = GET_TOKEN(.NEQ, l.input, l.pos, 2)
+		} else { token = GET_TOKEN(.TILDE, l.input, l.pos, 1) }
 	case '|':
-		if PEEK(l) == '|' {
-			start := l.pos
+		if l->PEEK() == '|' {
 			l->EAT()
-			tok = GET_TOKEN(.OROR, l.input, start, 2)
-		} else { tok = GET_TOKEN(.OR, l.input, l.pos, 1) }
+			token = GET_TOKEN(.OROR, l.input, l.pos, 2)
+		} else { token = GET_TOKEN(.OR, l.input, l.pos, 1) }
 	case '&':
-		if PEEK(l) == '&' {
-			start := l.pos
+		if l->PEEK() == '&' {
 			l->EAT()
-			tok = GET_TOKEN(.ANDAND, l.input, start, 2)
-		} else { tok = GET_TOKEN(.AND, l.input, l.pos, 1) }
+			token = GET_TOKEN(.ANDAND, l.input, l.pos, 2)
+		} else { token = GET_TOKEN(.AND, l.input, l.pos, 1) }
 	case '!':
-		tok = GET_TOKEN(.BANG, l.input, l.pos, 1)
+		token = GET_TOKEN(.BANG, l.input, l.pos, 1)
 	case '#':
-		tok = GET_TOKEN(.POUND, l.input, l.pos, 1)
+		token = GET_TOKEN(.POUND, l.input, l.pos, 1)
 	case '"':
-		tok = CREATE_STRING(l)
+		token = CREATE_STRING(l)
 	case 0:
-		tok.text = {}
-		tok.kind = .EOF
+		token.text = {}
+		token.kind = .EOF
 	case:
 		if IS_LETTER(l.ch) {
-			tok = CREATE_IDENTIFIER_OR_KEYWORD(l)
-			return tok, nil
+			token = CREATE_IDENTIFIER_OR_KEYWORD(l)
+			return token, nil
 		} else if IS_DIGIT(l.ch) { return CREATE_NUMBER(l), nil }
-		tok = GET_TOKEN(.ILLEGAL, l.input, l.pos, 1)
+		token = GET_TOKEN(.ILLEGAL, l.input, l.pos, 1)
 	}
 	l->EAT()
-	if tok.kind == .ILLEGAL { return tok, SYNTAX_ERROR(l, tok) }
-	return tok, nil
+	if token.kind == .ILLEGAL { return token, SYNTAX_ERROR(l, token) }
+	return token, nil
 }
 @(private = "file")
 GET_TOKEN :: proc(type: Token, input: []u8, start: int, length: int) -> TokenDefinition {
+	// input := l.input
+	// start := l.pos
 	return TokenDefinition{kind = type, text = input[start:start + length]}
 }
 @(private = "file")
@@ -178,9 +171,9 @@ CREATE_NUMBER :: proc(l: ^Lexer) -> TokenDefinition {
 @(private = "file")
 CREATE_STRING :: proc(l: ^Lexer) -> TokenDefinition {
 	start := l.pos + 1
-	for {
+	read_string: for {
 		l->EAT()
-		if l.ch == '"' || l.ch == 0 { break }
+		if l.ch == '"' || l.ch == 0 { break read_string }
 	}
 	return GET_TOKEN(.STRING, l.input, start, l.pos - start)
 }
@@ -188,5 +181,6 @@ CREATE_STRING :: proc(l: ^Lexer) -> TokenDefinition {
 LEXER_VTABLE := LexerVTable {
 	NEXT = NEXT,
 	EAT  = EAT,
+	PEEK = PEEK,
 }
 
