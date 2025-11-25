@@ -114,8 +114,6 @@ test_conditionals :: proc(t: ^testing.T) {
 	EXPECT_NODE(p.nodes.kind[26], .IDENTIFIER, t)
 	EXPECT_NODE(p.nodes.kind[27], .IDENTIFIER, t)
 	EXPECT_NODE(p.nodes.kind[28], .CALL, t)
-
-
 }
 @(test)
 test_functions :: proc(t: ^testing.T) {

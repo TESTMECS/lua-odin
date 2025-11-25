@@ -4,6 +4,7 @@
 |bnot: '~21->22' | bnot: '!21->22' |
 # Status
 - Refactoring Parser.
+- Binary Expressions not storing operator.
 # Bugs
 - `local function` not compiling correctly. 
 
