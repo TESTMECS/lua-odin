@@ -16,11 +16,8 @@ CHUNK :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 }
 @(private = "file", require_results)
 ADVANCE :: proc(p: ^Parser) -> (err: OuauError) {
-	log.infof("ADVANCE CURRENT::(%v)", p.current)
 	p.current = p.peek
-	log.infof("ADVANCE PEEK::(%v)", p.peek)
 	next_token := p.lexer->NEXT() or_return
-	log.infof("ADVANCE NEXT TOKEN::(%v)", next_token)
 	p.peek = next_token
 	return nil
 }
