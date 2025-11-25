@@ -25,7 +25,6 @@ INTERPRET :: proc(i: ^Interpreter, root: NODEID) -> Value {
 @(private = "file")
 EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	kind := i.nodes.kind[node]
-	log.infof("Evaling node::(%v)", kind)
 	#partial switch kind {
 	case .BLOCK:
 		child := i.nodes.first_child[node]
@@ -177,7 +176,7 @@ EVAL_FUNCTION :: proc(i: ^Interpreter, node: NODEID) -> Value {
 
 	name := i.nodes.name[node]
 	if name != "" {
-		ENV_SET(i.current, name, fn) // fail here
+		ENV_SET(i.current, name, fn)
 		return nil
 	}
 	return fn
@@ -266,6 +265,10 @@ EVAL_CALL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	}
 	arg_child := GET_ARGUMENTS_CHILD(i, node)
 	args := EVAL_EXPRESSION_LIST(i, arg_child)
+	log.infof("Function call with %d arguments", len(args))
+	for arg, idx in args {
+		log.infof("Arg %d: %v", idx, arg)
+	}
 	if fn_val_closure.is_native {
 		return fn_val_closure.native_proc(args)
 	} else {
@@ -513,8 +516,12 @@ EVAL_EXPRESSION_LIST :: proc(i: ^Interpreter, node: NODEID) -> []Value {
 			child = i.nodes.next_sibling[child]
 		}
 	} else {
-		// This node is the actual argument
-		append(&values, EVAL(i, node))
+		// This node is the first argument, iterate through all siblings
+		child := node
+		for child != 0 {
+			append(&values, EVAL(i, child))
+			child = i.nodes.next_sibling[child]
+		}
 	}
 
 	return values[:]

@@ -38,7 +38,7 @@ test_function :: proc(t: ^testing.T) {
 	local b = 1 
 	function add(a, b)
 		return a + b
-	end
+	end;
 	add(a, b)`
 	p, p_err := NEW_PARSER(input, &v)
 	testing.expectf(t, p_err == nil, "Error creating Parser::(%v)", p_err)
@@ -46,7 +46,7 @@ test_function :: proc(t: ^testing.T) {
 	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
 	i := NEW_INTERPRETER(&p.nodes, &v)
 	val := INTERPRET(&i, root)
-	if val == nil || val.(f64) != 3 {
+	if val == nil || val.(f64) != 2 {
 		testing.fail(t)
 	}
 }
@@ -70,7 +70,7 @@ test_eval_table :: proc(t: ^testing.T) {
 	testing.expectf(t, chunk_err != nil, "Error parsing chunk::(%v)", chunk_err)
 	i := NEW_INTERPRETER(&p.nodes, &v)
 	val := INTERPRET(&i, root)
-	if val == nil || val.(f64) != 2 {
+	if val == nil || val.(f64) != 3 {
 		testing.fail(t)
 	}
 }

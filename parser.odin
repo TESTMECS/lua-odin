@@ -32,9 +32,12 @@ BLOCK :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 	node = p->NEW_NODE(.BLOCK)
 	block_loop: for {
 		#partial switch p->GET_TOKEN() {
-		case .SEMI, .END:
+		case .SEMI:
 			p->ADVANCE() or_return
 			continue block_loop
+		case .END:
+			p->ADVANCE() or_return
+			break block_loop
 		case .ELSE, .ELSEIF:
 			break block_loop
 		case:
