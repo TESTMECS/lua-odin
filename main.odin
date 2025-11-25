@@ -110,18 +110,11 @@ OUAU_EVAL_STRING :: proc(
 	return_value = INTERPRET(i, root)
 	return return_value, nil
 }
-
 dump_node :: proc(p: ^Parser, id: u32, indent: int) {
-	// Print each AST node.
 	for _ in 0 ..< indent {
 		fmt.print("  ")
 	}
 	fmt.printf("%s", p.nodes.kind[id])
-	#partial switch p.nodes.kind[id] {
-	case .BINARY:
-		fmt.printf(" <.%s.>", p.nodes.token[id])
-	case:
-	}
 	if p.nodes.name[id] != "" {
 		fmt.printf(" name='%s'", p.nodes.name[id])
 	}
