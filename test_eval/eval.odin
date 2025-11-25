@@ -88,7 +88,7 @@ test_eval_array :: proc(t: ^testing.T) {
 	p, p_err := NEW_PARSER(input, &v)
 	testing.expectf(t, p_err == nil, "Error creating Parser::(%v)", p_err)
 	root, chunk_err := CHUNK(&p)
-	testing.expectf(t, chunk_err != nil, "Error parsing chunk::(%v)", chunk_err)
+	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
 	i := NEW_INTERPRETER(&p.nodes, &v)
 	val := INTERPRET(&i, root)
 	if val == nil || val.(f64) != 1 {
@@ -113,7 +113,7 @@ test_ifelse :: proc(t: ^testing.T) {
 	p, p_err := NEW_PARSER(input, &v)
 	testing.expectf(t, p_err == nil, "Error creating Parser::(%v)", p_err)
 	root, chunk_err := CHUNK(&p)
-	testing.expectf(t, chunk_err != nil, "Error parsing chunk::(%v)", chunk_err)
+	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
 	i := NEW_INTERPRETER(&p.nodes, &v)
 	val := INTERPRET(&i, root)
 	if val == nil || val.(f64) != 3 {
@@ -130,14 +130,17 @@ test_while :: proc(t: ^testing.T) {
 
 	input := `
 	local a = 0;
-	while a < 10 do
+	while true do
 		a = a + 1;
+		if a > 5 then
+			break
+		end
 	end
-	return a;`
+	a;`
 	p, p_err := NEW_PARSER(input, &v)
 	testing.expectf(t, p_err == nil, "Error creating Parser::(%v)", p_err)
 	root, chunk_err := CHUNK(&p)
-	testing.expectf(t, chunk_err != nil, "Error parsing chunk::(%v)", chunk_err)
+	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
 	i := NEW_INTERPRETER(&p.nodes, &v)
 	val := INTERPRET(&i, root)
 	if val == nil || val.(f64) != 10 {
