@@ -380,18 +380,14 @@ test_array_assignment :: proc(t: ^testing.T) {
 	using parser
 	v := new(virtual.Arena, context.allocator)
 	err := virtual.arena_init_growing(v)
-	ensure(err == nil)
+	ensure(err == nil, "Error initializing arena::(%v)")
 	defer virtual.arena_destroy(v)
 	defer free_all(context.allocator)
-
 	input := `
 	local a = {1,2,3};
-	a[1] = 5;
-	`
-
-
+	a[1] = 5;`
 	p, errr := NEW_PARSER(input, v)
-	testing.expectf(t, errr == nil, "Error parsing chunk::(%v)", err)
+	testing.expectf(t, errr == nil, "Error creating parser::(%v)", err)
 	nodeid, errrr := CHUNK(&p)
 	testing.expectf(t, errrr == nil, "Error parsing chunk::(%v)", err)
 	DUMP_AST(&p)
@@ -419,12 +415,7 @@ test_string :: proc(t: ^testing.T) {
 	ensure(err == nil, "Error initializing arena::(%v)")
 	defer virtual.arena_destroy(v)
 	defer free_all(context.allocator)
-
-	input := `
-	local a = "Hello World";
-	`
-
-
+	input := `local a = "Hello World";`
 	p, errr := NEW_PARSER(input, v)
 	testing.expectf(t, errr == nil, "Error creating parser::(%v)", err)
 	nodeid, errrr := p->CHUNK()
@@ -439,7 +430,6 @@ test_global :: proc(t: ^testing.T) {
 	ensure(err == nil, "Error initializing arena::(%v)")
 	defer virtual.arena_destroy(v)
 	defer free_all(context.allocator)
-
 	input := `
 	do
 		global a = 1;
