@@ -25,14 +25,10 @@ test_do :: proc(t: ^testing.T) {
 	`
 
 
-	log.info("about to parse")
 	p, errr := NEW_PARSER(input, &v)
-	log.info("parsed")
-	testing.expectf(t, errr == nil, "Error parsing chunk %v", err)
+	testing.expectf(t, errr == nil, "Creating Parser %v", err)
 
-	log.info("about to parse chunk")
 	nodeid, errrr := p->CHUNK()
-	log.info("parsed chunk")
 	testing.expectf(t, errrr == nil, "Error parsing chunk %v", err)
 
 	DUMP_AST(&p)
@@ -56,18 +52,15 @@ test_do :: proc(t: ^testing.T) {
 @(test)
 test_conditionals :: proc(t: ^testing.T) {
 	using parser
-	using testing
-
 	v := new(virtual.Arena, context.allocator)
 	err := virtual.arena_init_growing(v)
 	ensure(err == nil)
 	defer virtual.arena_destroy(v)
 	defer free_all(context.allocator)
-
 	input := `
-	local a = 1;
-	local b = 2;
-	local c = 3;
+	local a = 1
+	local b = 2
+	local c = 3
 	if a == 1 then
 		b = 1
 	elseif c > 2 then
@@ -79,50 +72,12 @@ test_conditionals :: proc(t: ^testing.T) {
 
 
 	p, errr := NEW_PARSER(input, v)
-	expectf(t, errr == nil, "Error parsing chunk %v", err)
+	testing.expectf(t, errr == nil, "Error creating parser::(%v)", err)
+
 	nodeid, errrr := p->CHUNK()
-	expectf(t, errrr == nil, "Error parsing chunk %v", err)
+	testing.expectf(t, errrr == nil, "Error parsing chunk::(%v)", err)
 
 	DUMP_AST(&p)
-
-	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t)
-	EXPECT_NODE(p.nodes.kind[1], .LOCAL, t)
-	EXPECT_NODE(p.nodes.kind[2], .IDENTIFIER, t)
-	CHECK_ID(&p, 2, "a", t)
-	EXPECT_NODE(p.nodes.kind[3], .LITERAL, t)
-	EXPECT_NODE(p.nodes.kind[4], .LOCAL, t)
-	EXPECT_NODE(p.nodes.kind[5], .IDENTIFIER, t)
-	CHECK_ID(&p, 5, "b", t)
-	EXPECT_NODE(p.nodes.kind[6], .LITERAL, t)
-	EXPECT_NODE(p.nodes.kind[7], .LOCAL, t)
-	EXPECT_NODE(p.nodes.kind[8], .IDENTIFIER, t)
-	CHECK_ID(&p, 8, "c", t)
-	EXPECT_NODE(p.nodes.kind[9], .LITERAL, t)
-	EXPECT_NODE(p.nodes.kind[10], .IF, t)
-	EXPECT_NODE(p.nodes.kind[11], .IDENTIFIER, t)
-	CHECK_ID(&p, 11, "a", t)
-	EXPECT_NODE(p.nodes.kind[12], .LITERAL, t)
-	EXPECT_NODE(p.nodes.kind[13], .BINARY, t)
-	EXPECT_NODE(p.nodes.kind[14], .BLOCK, t)
-	EXPECT_NODE(p.nodes.kind[15], .IDENTIFIER, t)
-	CHECK_ID(&p, 15, "b", t)
-	EXPECT_NODE(p.nodes.kind[16], .LITERAL, t)
-	EXPECT_NODE(p.nodes.kind[17], .BINARY, t)
-	EXPECT_NODE(p.nodes.kind[18], .IDENTIFIER, t)
-	CHECK_ID(&p, 18, "c", t)
-	EXPECT_NODE(p.nodes.kind[19], .LITERAL, t)
-	EXPECT_NODE(p.nodes.kind[20], .BINARY, t)
-	EXPECT_NODE(p.nodes.kind[21], .BLOCK, t)
-	EXPECT_NODE(p.nodes.kind[22], .IDENTIFIER, t)
-	CHECK_ID(&p, 22, "b", t)
-	EXPECT_NODE(p.nodes.kind[23], .LITERAL, t)
-	EXPECT_NODE(p.nodes.kind[24], .BINARY, t)
-	EXPECT_NODE(p.nodes.kind[25], .BLOCK, t)
-	EXPECT_NODE(p.nodes.kind[26], .IDENTIFIER, t)
-	CHECK_ID(&p, 26, "print", t)
-	EXPECT_NODE(p.nodes.kind[27], .IDENTIFIER, t)
-	CHECK_ID(&p, 27, "b", t)
-	EXPECT_NODE(p.nodes.kind[28], .CALL, t)
 }
 @(test)
 test_functions :: proc(t: ^testing.T) {

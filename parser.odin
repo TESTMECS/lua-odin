@@ -1,4 +1,5 @@
 package ouau
+import "core:log"
 import "core:mem/virtual"
 import "core:strconv"
 /*
@@ -15,14 +16,19 @@ CHUNK :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 }
 @(private = "file", require_results)
 ADVANCE :: proc(p: ^Parser) -> (err: OuauError) {
+	log.infof("ADVANCE CURRENT::(%v)", p.current)
 	p.current = p.peek
+	log.infof("ADVANCE PEEK::(%v)", p.peek)
 	next_token := p.lexer->NEXT() or_return
+	log.infof("ADVANCE NEXT TOKEN::(%v)", next_token)
 	p.peek = next_token
 	return nil
 }
 @(private = "file", require_results)
 EXPECT :: proc(p: ^Parser, kind: Token) -> (err: OuauError) {
-	if p->IS(kind) { return p->ADVANCE() }
+	if p->IS(kind) {
+		p->ADVANCE() or_return
+	}
 	return nil
 }
 @(private = "file", require_results)
@@ -410,9 +416,8 @@ PRIMARY :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 		node = p->TABLE() or_return
 		return node, nil
 	case:
-		return p->NEW_NODE(.INVALID), PARSE_ERROR(p, "Invalid Token in Primary Expression")
 	}
-	unreachable()
+	return p->NEW_NODE(.INVALID), PARSE_ERROR(p, "Invalid Token in Primary Expression")
 }
 @(private = "file", require_results)
 PREFIX :: proc(p: ^Parser) -> (prefix_node: NODEID, err: OuauError) {
