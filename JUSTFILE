@@ -1,18 +1,18 @@
 default:
 	@just --list
-
+# commit and push
 alias cp := commit-push
 commit-push MSG:
 	git add . && git commit -m "{{MSG}}" && git push
-
+# just build the binary
 alias b := build
 build:
 	odin build . -out:lua-odin.build
-	
+# clean the builds	
 alias c := clean
 clean:
 	rm *.build && rm *.bin
-
+# start the repl
 alias re := repl
 repl:
 	odin run . -- repl 
