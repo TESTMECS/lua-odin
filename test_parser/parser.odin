@@ -16,10 +16,10 @@ test_do :: proc(t: ^testing.T) {
 		function add(a,b) return a + b end
 		add(1,2)
 	end`
-	p, errr := NEW_PARSER(input, &v)
-	testing.expectf(t, errr == nil, "Error creating Parser::(%v)", err)
-	nodeid, errrr := p->CHUNK()
-	testing.expectf(t, errrr == nil, "Error parsing chunk::(%v)", err)
+	p, p_err := NEW_PARSER(input, &v)
+	testing.expectf(t, p_err == nil, "Error creating Parser::(%v)", p_err)
+	nodeid, chunk_err := p->CHUNK()
+	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
 	// DUMP_AST(&p)
 	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t)
 	EXPECT_NODE(p.nodes.kind[1], .BLOCK, t)
@@ -61,10 +61,10 @@ test_conditionals :: proc(t: ^testing.T) {
 	else
 		print(b)
 	end`
-	p, errr := NEW_PARSER(input, &v)
-	testing.expectf(t, errr == nil, "Error creating parser::(%v)", err)
-	nodeid, errrr := p->CHUNK()
-	testing.expectf(t, errrr == nil, "Error parsing chunk::(%v)", err)
+	p, p_err := NEW_PARSER(input, &v)
+	testing.expectf(t, p_err == nil, "Error creating parser::(%v)", p_err)
+	nodeid, chunk_err := p->CHUNK()
+	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
 	// DUMP_AST(&p)
 	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t)
 	// local a = 1
@@ -117,11 +117,11 @@ test_functions :: proc(t: ^testing.T) {
 		return a + b
 	end
 	add(1,2)`
-	p, errr := NEW_PARSER(input, &v)
-	testing.expectf(t, errr == nil, "Error creating parser::(%v)", err)
-	nodeid, errrr := p->CHUNK()
-	testing.expectf(t, errrr == nil, "Error parsing chunk::(%v)", err)
-	DUMP_AST(&p)
+	p, p_err := NEW_PARSER(input, &v)
+	testing.expectf(t, p_err == nil, "Error creating parser::(%v)", p_err)
+	nodeid, chunk_err := p->CHUNK()
+	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
+	// DUMP_AST(&p)
 	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t)
 	// local function
 	EXPECT_NODE(p.nodes.kind[1], .LOCAL, t)
@@ -152,10 +152,10 @@ test_tables :: proc(t: ^testing.T) {
 		c = 2,
 		d = 3
 	};`
-	p, errr := NEW_PARSER(input, &v)
-	testing.expectf(t, errr == nil, "Error parsing chunk::(%v)", err)
-	nodeid, errrr := p->CHUNK()
-	testing.expectf(t, errrr == nil, "Error parsing chunk::(%v)", err)
+	p, p_err := NEW_PARSER(input, &v)
+	testing.expectf(t, p_err == nil, "Error parsing chunk::(%v)", p_err)
+	nodeid, chunk_err := p->CHUNK()
+	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
 	// DUMP_AST(&p)
 	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t)
 	EXPECT_NODE(p.nodes.kind[1], .LOCAL, t)
@@ -183,10 +183,10 @@ test_for :: proc(t: ^testing.T) {
 		print(i)
 	end
 	`
-	p, errr := NEW_PARSER(input, &v)
-	testing.expectf(t, errr == nil, "Error parsing chunk::(%v)", err)
-	program, errrr := p->CHUNK()
-	testing.expectf(t, errrr == nil, "Error parsing chunk::(%v)", err)
+	p, p_err := NEW_PARSER(input, &v)
+	testing.expectf(t, p_err == nil, "Error parsing chunk::(%v)", p_err)
+	program, chunk_err := p->CHUNK()
+	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
 	// DUMP_AST(&p)
 	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t)
 	EXPECT_NODE(p.nodes.kind[1], .FOR, t)
@@ -208,10 +208,10 @@ test_while :: proc(t: ^testing.T) {
 	while true do
 		print("Hello")
 	end`
-	p, errr := NEW_PARSER(input, &v)
-	testing.expectf(t, errr == nil, "Error parsing chunk::(%v)", err)
-	program, errrr := p->CHUNK()
-	testing.expectf(t, errrr == nil, "Error parsing chunk::(%v)", err)
+	p, p_err := NEW_PARSER(input, &v)
+	testing.expectf(t, p_err == nil, "Error parsing chunk::(%v)", p_err)
+	program, chunk_err := p->CHUNK()
+	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
 	// DUMP_AST(&p)
 	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t)
 	EXPECT_NODE(p.nodes.kind[1], .WHILE, t)
@@ -233,10 +233,10 @@ test_repeat :: proc(t: ^testing.T) {
 		print("Hello");
 		i = i + 1;
 	until false;`
-	p, errr := NEW_PARSER(input, &v)
-	testing.expectf(t, errr == nil, "Error creating parser::(%v)", err)
-	program, errrr := p->CHUNK()
-	testing.expectf(t, errrr == nil, "Error parsing chunk::(%v)", err)
+	p, p_err := NEW_PARSER(input, &v)
+	testing.expectf(t, p_err == nil, "Error creating parser::(%v)", p_err)
+	program, chunk_err := p->CHUNK()
+	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
 	// DUMP_AST(&p)
 	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t) // repeat
 	EXPECT_NODE(p.nodes.kind[1], .REPEAT, t) // {
@@ -266,10 +266,10 @@ test_list :: proc(t: ^testing.T) {
 		d = 3
 	}
 	print(#a)`
-	p, errr := NEW_PARSER(input, &v)
-	testing.expectf(t, errr == nil, "Error parsing chunk::(%v)", err)
-	nodeid, errrr := p->CHUNK()
-	testing.expectf(t, errrr == nil, "Error parsing chunk::(%v)", err)
+	p, p_err := NEW_PARSER(input, &v)
+	testing.expectf(t, p_err == nil, "Error parsing chunk::(%v)", p_err)
+	nodeid, chunk_err := p->CHUNK()
+	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
 	// DUMP_AST(&p)
 	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t)
 	EXPECT_NODE(p.nodes.kind[1], .LOCAL, t)
@@ -310,10 +310,10 @@ test_logic :: proc(t: ^testing.T) {
 	local j = 1 / 2
 	local k = 1 % 2
 	local l = 1 ^ 2`
-	p, errr := NEW_PARSER(input, &v)
-	testing.expectf(t, errr == nil, "Error parsing chunk::(%v)", err)
-	nodeid, errrr := p->CHUNK()
-	testing.expectf(t, errrr == nil, "Error parsing chunk::(%v)", err)
+	p, p_err := NEW_PARSER(input, &v)
+	testing.expectf(t, p_err == nil, "Error parsing chunk::(%v)", p_err)
+	nodeid, chunk_err := p->CHUNK()
+	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
 	DUMP_AST(&p)
 }
 @(test)
@@ -330,10 +330,10 @@ test_bitwise :: proc(t: ^testing.T) {
 	local d = 1 | 2
 	local e = 1 ~ 2
 	local g = !1`
-	p, errr := NEW_PARSER(input, &v)
-	testing.expectf(t, errr == nil, "Error creating parser::(%v)", err)
-	nodeid, errrr := p->CHUNK()
-	testing.expectf(t, errrr == nil, "Error parsing chunk::(%v)", err)
+	p, p_err := NEW_PARSER(input, &v)
+	testing.expectf(t, p_err == nil, "Error creating parser::(%v)", p_err)
+	nodeid, chunk_err := p->CHUNK()
+	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
 	DUMP_AST(&p)
 }
 @(test)
@@ -346,10 +346,10 @@ test_array_assignment :: proc(t: ^testing.T) {
 	input := `
 	local a = {1,2,3};
 	a[1] = 5;`
-	p, errr := NEW_PARSER(input, &v)
-	testing.expectf(t, errr == nil, "Error creating parser::(%v)", err)
-	nodeid, errrr := CHUNK(&p)
-	testing.expectf(t, errrr == nil, "Error parsing chunk::(%v)", err)
+	p, p_err := NEW_PARSER(input, &v)
+	testing.expectf(t, p_err == nil, "Error creating parser::(%v)", p_err)
+	nodeid, chunk_err := CHUNK(&p)
+	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
 	DUMP_AST(&p)
 }
 @(test)
@@ -360,10 +360,10 @@ test_array_access :: proc(t: ^testing.T) {
 	ensure(err == nil, "Error initializing arena")
 	defer virtual.arena_destroy(&v)
 	input := `a[1];`
-	p, errr := NEW_PARSER(input, &v)
-	testing.expectf(t, errr == nil, "Error creating parser::(%v)", err)
-	nodeid, errrr := CHUNK(&p)
-	testing.expectf(t, errrr == nil, "Error parsing chunk::(%v)", err)
+	p, p_err := NEW_PARSER(input, &v)
+	testing.expectf(t, p_err == nil, "Error creating parser::(%v)", p_err)
+	nodeid, chunk_err := CHUNK(&p)
+	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
 	DUMP_AST(&p)
 }
 @(test)
@@ -374,10 +374,10 @@ test_string :: proc(t: ^testing.T) {
 	ensure(err == nil, "Error initializing arena")
 	defer virtual.arena_destroy(&v)
 	input := `local a = "Hello World";`
-	p, errr := NEW_PARSER(input, &v)
-	testing.expectf(t, errr == nil, "Error creating parser::(%v)", err)
-	nodeid, errrr := p->CHUNK()
-	testing.expectf(t, errrr == nil, "Error parsing chunk::(%v)", err)
+	p, p_err := NEW_PARSER(input, &v)
+	testing.expectf(t, p_err == nil, "Error creating parser::(%v)", p_err)
+	nodeid, chunk_err := p->CHUNK()
+	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
 	DUMP_AST(&p)
 }
 @(test)
@@ -392,10 +392,10 @@ test_global :: proc(t: ^testing.T) {
 		global a = 1;
 		return a;
 	end`
-	p, errr := NEW_PARSER(input, &v)
-	testing.expectf(t, errr == nil, "Error creating parser::(%v)", err)
-	nodeid, errrr := p->CHUNK()
-	testing.expectf(t, errrr == nil, "Error parsing chunk::(%v)", err)
+	p, p_err := NEW_PARSER(input, &v)
+	testing.expectf(t, p_err == nil, "Error creating parser::(%v)", p_err)
+	nodeid, chunk_err := p->CHUNK()
+	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
 	DUMP_AST(&p)
 }
 
