@@ -10,43 +10,6 @@ import "core:strings"
 *	 Defines the interpreter functions for Ouau.
 *	 <@Frame, @Environment, @Interpreter| Frame manages the call stack for the current environment in the Interpreter.>
 */
-Frame :: struct {
-	env:         ^Environment,
-	return_addr: NODEID,
-	result:      Value,
-}
-Interpreter :: struct {
-	globals:    map[string]Value,
-	current:    ^Environment,
-	nodes:      ^NODES,
-	call_stack: [dynamic]^Frame,
-}
-@(require_results)
-NEW_INTERPRETER :: proc(nodes: ^NODES, areana: ^virtual.Arena) -> ^Interpreter {
-	context.allocator = virtual.arena_allocator(areana)
-	i := new(Interpreter)
-	i.nodes = nodes
-	i.globals = make(map[string]Value)
-	i.current = NEW_ENVIRONMENT(nil)
-	i.call_stack = make([dynamic]^Frame)
-	INIT_BUILTINS(i)
-	return i
-}
-@(private = "file")
-INIT_BUILTINS :: proc(interpreter: ^Interpreter) {
-	print_fn := new(Closure)
-	print_fn.is_native = true
-	print_fn.native_proc = BUILTIN_PRINT
-	interpreter.globals["print"] = print_fn
-}
-@(private = "file")
-BUILTIN_PRINT :: proc(args: []Value) -> Value {
-	for arg in args {
-		fmt.print(arg)
-	}
-	fmt.println()
-	return nil
-}
 @(require_results)
 INTERPRET :: proc(interpreter: ^Interpreter, root: NODEID) -> Value {
 	child := interpreter.nodes.first_child[root]
@@ -60,19 +23,6 @@ INTERPRET :: proc(interpreter: ^Interpreter, root: NODEID) -> Value {
 		child = interpreter.nodes.next_sibling[child]
 	}
 	return last_val
-}
-Environment :: struct {
-	values: map[string]Value,
-	sorted: [dynamic]string,
-	dirty:  bool,
-	outer:  ^Environment,
-}
-@(private = "file")
-NEW_ENVIRONMENT :: proc(outer: ^Environment, allocator := context.allocator) -> ^Environment {
-	env := new(Environment, allocator)
-	env.outer = outer
-	env.values = make(map[string]Value, allocator)
-	return env
 }
 @(private = "file")
 ENV_GET :: proc(env: ^Environment, name: string) -> (Value, bool) {
@@ -214,8 +164,7 @@ EVAL_IF :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	child = i.nodes.next_sibling[child]
 	if IS_TRUTHY(cond) {
 		return EVAL(i, child)
-	}
-	 else {
+	} else {
 		child = i.nodes.next_sibling[child]
 		for child != 0 {
 			// child is the condition, next sibling is the body
@@ -331,8 +280,7 @@ EVAL_LOCAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		if idx < len(values) {
 			ENV_SET(i.current, name, values[idx])
 			last_value = values[idx]
-		}
-		 else {
+		} else {
 			ENV_SET(i.current, name, nil)
 		}
 	}
@@ -344,8 +292,7 @@ EVAL_RETURN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	val: Value
 	if child != 0 {
 		val = EVAL(i, child)
-	}
-	 else {
+	} else {
 		val = nil
 	}
 
@@ -370,8 +317,7 @@ EVAL_CALL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	args := EVAL_EXPRESSION_LIST(i, arg_child)
 	if fn_val_closure.is_native {
 		return fn_val_closure.native_proc(args)
-	}
-	 else {
+	} else {
 		return CALL_USER_FUNCTION(i, fn_val_closure, args)
 	}
 }
@@ -401,8 +347,7 @@ EVAL_UNARY :: proc(i: ^Interpreter, node: NODEID) -> Value {
 				}
 				if _, exists := val.data[key_tag]; exists {
 					length += 1
-				}
-				 else {
+				} else {
 					break
 				}
 			}
@@ -509,8 +454,7 @@ EVAL_TABLE :: proc(i: ^Interpreter, node: NODEID) -> Value {
 			value := EVAL(i, GET_RIGHT_CHILD(i, child))
 			key_tag := VALUE_TO_KEY_TAG(key)
 			table.data[key_tag] = value
-		}
-		 else {
+		} else {
 			// Array-style value (implicit integer key)
 			key_tag := KeyTag {
 				kind = 1,
@@ -620,8 +564,7 @@ EVAL_EXPRESSION_LIST :: proc(i: ^Interpreter, node: NODEID) -> []Value {
 			append(&values, EVAL(i, child))
 			child = i.nodes.next_sibling[child]
 		}
-	}
-	 else {
+	} else {
 		// This node is the actual argument
 		append(&values, EVAL(i, node))
 	}
@@ -757,8 +700,7 @@ COMPARE_TABLE :: proc(left, right: ^Table) -> bool {
 	for key, left_val in left.data {
 		if right_val, ok := right.data[key]; !ok {
 			return false
-		}
-		 else if !EVAL_COMPARE(left_val, right_val, .EQ) {
+		} else if !EVAL_COMPARE(left_val, right_val, .EQ) {
 			return false
 		}
 	}
@@ -810,8 +752,7 @@ EVAL_ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 			table.data[key_tag] = value_to_assign
 			return value_to_assign
 
-		}
-		 else if op == .BOPEN {
+		} else if op == .BOPEN {
 			table_expr_node := GET_LEFT_CHILD(i, lvalue)
 			table_val := EVAL(i, table_expr_node)
 			table, ok := table_val.(^Table)
@@ -849,8 +790,7 @@ EVAL_GLOBAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		if idx < len(values) {
 			i.globals[name] = values[idx]
 			last_value = values[idx]
-		}
-		 else {
+		} else {
 			i.globals[name] = nil
 		}
 	}

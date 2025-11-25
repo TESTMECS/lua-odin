@@ -1,6 +1,8 @@
 package ouau
+import "core:fmt"
 import "core:mem"
 import "core:mem/virtual"
+import "core:slice"
 /*
 	 ./state.odin
 	 Copyright(C) 2025 TESTMEE
@@ -305,6 +307,93 @@ PRECEDENCES := #partial [Token]Precedence {
 	.DOT    = .CALL,
 	.BOPEN  = .INDEX,
 	.BCLOSE = .LOWEST,
+}
+Frame :: struct {
+	env:         ^Environment,
+	return_addr: NODEID,
+	result:      Value,
+}
+Interpreter :: struct {
+	globals:    map[string]Value,
+	current:    ^Environment,
+	nodes:      ^NODES,
+	call_stack: [dynamic]^Frame,
+}
+@(require_results)
+NEW_INTERPRETER :: proc(nodes: ^NODES, areana: ^virtual.Arena) -> ^Interpreter {
+	context.allocator = virtual.arena_allocator(areana)
+	i := new(Interpreter)
+	i.nodes = nodes
+	i.globals = make(map[string]Value)
+	i.current = NEW_ENVIRONMENT(nil)
+	i.call_stack = make([dynamic]^Frame)
+	INIT_BUILTINS(i)
+	return i
+}
+INIT_BUILTINS :: proc(interpreter: ^Interpreter) {
+	print_fn := new(Closure)
+	print_fn.is_native = true
+	print_fn.native_proc = BUILTIN_PRINT
+	interpreter.globals["print"] = print_fn
+}
+BUILTIN_PRINT :: proc(args: []Value) -> Value {
+	for arg in args {
+		fmt.print(arg)
+	}
+	fmt.println()
+	return nil
+}
+Environment :: struct {
+	values: map[string]Value,
+	sorted: [dynamic]string,
+	dirty:  bool,
+	outer:  ^Environment,
+}
+NEW_ENVIRONMENT :: proc(outer: ^Environment, allocator := context.allocator) -> ^Environment {
+	env := new(Environment, allocator)
+	env.outer = outer
+	env.values = make(map[string]Value, allocator)
+	return env
+}
+ENV_GET :: proc(env: ^Environment, name: string) -> (Value, bool) {
+	my_env := env // assign to local to avoid shadowing.
+	for my_env != nil {
+		if v, ok := my_env.values[name]; ok {
+			return v, true
+		}
+		my_env = my_env.outer
+	}
+	return nil, false
+}
+ENV_SET :: proc(env: ^Environment, name: string, v: Value) {
+	env.values[name] = v
+	env.dirty = true
+}
+ENV_SET_UPWARD :: proc(env: ^Environment, name: string, v: Value) {
+	my_env := env // assign to local to avoid shadowing.
+	for my_env != nil {
+		if _, ok := my_env.values[name]; ok {
+			my_env.values[name] = v
+			my_env.dirty = true
+			return
+		}
+		my_env = my_env.outer
+	}
+	env.values[name] = v
+	env.dirty = true
+}
+ENV_RESORT :: proc(env: ^Environment) {
+	if !env.dirty do return
+	env_len := len(env.sorted)
+	clear(&env.sorted)
+	resize(&env.sorted, env_len)
+	for k in env.values {
+		append(&env.sorted, k)
+	}
+	slice.sort_by(env.sorted[:], proc(a, b: string) -> bool {
+		return a < b
+	})
+	env.dirty = false
 }
 STACK_LIMIT :: 1024 * 1024
 GlobalState :: struct {
