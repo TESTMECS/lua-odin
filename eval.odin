@@ -1,14 +1,10 @@
 package ouau
-import "core:fmt"
 import "core:math"
-import "core:mem/virtual"
-import "core:slice"
 import "core:strings"
 /*
 *	 ./eval.odin
 *	 Copyright(C) 2025 TESTMEE
 *	 Defines the interpreter functions for Ouau.
-*	 <@Frame, @Environment, @Interpreter| Frame manages the call stack for the current environment in the Interpreter.>
 */
 @(require_results)
 INTERPRET :: proc(interpreter: ^Interpreter, root: NODEID) -> Value {
@@ -23,50 +19,6 @@ INTERPRET :: proc(interpreter: ^Interpreter, root: NODEID) -> Value {
 		child = interpreter.nodes.next_sibling[child]
 	}
 	return last_val
-}
-@(private = "file")
-ENV_GET :: proc(env: ^Environment, name: string) -> (Value, bool) {
-	my_env := env // assign to local to avoid shadowing.
-	for my_env != nil {
-		if v, ok := my_env.values[name]; ok {
-			return v, true
-		}
-		my_env = my_env.outer
-	}
-	return nil, false
-}
-@(private = "file")
-ENV_SET :: proc(env: ^Environment, name: string, v: Value) {
-	env.values[name] = v
-	env.dirty = true
-}
-@(private = "file")
-ENV_SET_UPWARD :: proc(env: ^Environment, name: string, v: Value) {
-	my_env := env // assign to local to avoid shadowing.
-	for my_env != nil {
-		if _, ok := my_env.values[name]; ok {
-			my_env.values[name] = v
-			my_env.dirty = true
-			return
-		}
-		my_env = my_env.outer
-	}
-	env.values[name] = v
-	env.dirty = true
-}
-@(private = "file")
-ENV_RESORT :: proc(env: ^Environment) {
-	if !env.dirty do return
-	env_len := len(env.sorted)
-	clear(&env.sorted)
-	resize(&env.sorted, env_len)
-	for k in env.values {
-		append(&env.sorted, k)
-	}
-	slice.sort_by(env.sorted[:], proc(a, b: string) -> bool {
-		return a < b
-	})
-	env.dirty = false
 }
 @(private = "file")
 EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
