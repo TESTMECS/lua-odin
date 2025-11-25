@@ -24,7 +24,7 @@ test_do :: proc(t: ^testing.T) {
 	testing.expectf(t, errr == nil, "Error creating Parser::(%v)", err)
 	nodeid, errrr := p->CHUNK()
 	testing.expectf(t, errrr == nil, "Error parsing chunk::(%v)", err)
-	DUMP_AST(&p)
+	// DUMP_AST(&p)
 	EXPECT_NODE(p.nodes.kind[0], .BLOCK, t)
 	EXPECT_NODE(p.nodes.kind[1], .BLOCK, t)
 	// local a = 1

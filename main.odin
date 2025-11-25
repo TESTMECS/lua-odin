@@ -116,7 +116,7 @@ dump_node :: proc(p: ^Parser, id: u32, indent: int) {
 	}
 	fmt.printf("%s", p.nodes.kind[id])
 	if p.nodes.kind[id] == .BINARY {
-		defer fmt.printf(" %s", p.nodes.kind[id])
+		fmt.printf(" %s", p.nodes.token[id])
 	}
 	if p.nodes.name[id] != "" {
 		fmt.printf(" name='%s'", p.nodes.name[id])

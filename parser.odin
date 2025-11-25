@@ -372,10 +372,11 @@ INFIX :: proc(p: ^Parser, lhs: NODEID) -> (infix: NODEID, err: OuauError) {
 		p->APPEND_CHILD(infix, rhs)
 		return infix, nil
 	}
+	op_token := p->GET_TOKEN()
 	p->ADVANCE() or_return
 	rhs := p->PRECEDENCE(GET_PRECEDENCE(p->GET_TOKEN())) or_return
 	infix = p->NEW_NODE(.BINARY)
-	p->SET_TOKEN(infix, p->GET_TOKEN())
+	p->SET_TOKEN(infix, op_token)
 	p->APPEND_CHILD(infix, lhs)
 	p->APPEND_CHILD(infix, rhs)
 	return infix, nil
