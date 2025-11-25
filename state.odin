@@ -11,7 +11,6 @@ import "core:slice"
 Token :: enum u8 {
 	EOF,
 	ILLEGAL,
-	// keywords
 	DO,
 	END,
 	IN,
@@ -34,7 +33,6 @@ Token :: enum u8 {
 	OR,
 	AND,
 	NOT,
-	// operators
 	ASSIGN,
 	PLUS,
 	MINUS,
@@ -67,10 +65,8 @@ Token :: enum u8 {
 	BAND,
 	BOR,
 	BANG,
-	// punctuation
 	OPEN,
 	CLOSE,
-	// other
 	IDENTIFIER,
 	NUMBER,
 	STRING,

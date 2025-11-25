@@ -177,10 +177,9 @@ EVAL_FUNCTION :: proc(i: ^Interpreter, node: NODEID) -> Value {
 
 	name := i.nodes.name[node]
 	if name != "" {
-		ENV_SET(i.current, name, fn)
+		ENV_SET(i.current, name, fn) // fail here
 		return nil
 	}
-
 	return fn
 }
 @(private = "file")
@@ -443,25 +442,20 @@ GET_RIGHT_CHILD :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
 EXTRACT_PARAMS :: proc(i: ^Interpreter, node: NODEID) -> []string {
 	my_alloc := virtual.arena_allocator(i.arena)
 	params := make([dynamic]string, my_alloc)
-
 	child := i.nodes.first_child[node]
-
 	// Collect all consecutive IDENTIFIER nodes as parameters
 	for child != 0 && i.nodes.kind[child] == .IDENTIFIER {
 		append(&params, i.nodes.name[child])
 		child = i.nodes.next_sibling[child]
 	}
-
 	return params[:]
 }
 @(private = "file")
 GET_FUNCTION_BODY :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
 	child := i.nodes.first_child[node]
-	// Skip parameters
 	for child != 0 && i.nodes.kind[child] == .IDENTIFIER {
 		child = i.nodes.next_sibling[child]
 	}
-	// The next child should be the block
 	return child
 }
 @(private = "file")
