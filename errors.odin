@@ -34,7 +34,8 @@ SYNTAX_ERROR :: proc(l: ^Lexer, tok: TokenDefinition) -> OuauError {
 	return s
 }
 ParseError :: struct {
-	msg: string,
+	msg:           string,
+	parser_object: ^Parser,
 }
 PARSE_ERROR :: proc(p: ^Parser, msg: string) -> OuauError {
 	fmt.eprintfln("Parse Error::Msg::(%s)|", msg)
@@ -43,10 +44,16 @@ PARSE_ERROR :: proc(p: ^Parser, msg: string) -> OuauError {
 	fmt.eprintfln("Current Token Kind::(%v)|", p.current.kind)
 	fmt.eprintfln("Peek Token Kind::(%s)|", p.peek.kind)
 	fmt.eprintfln("Peek Token Text::(%s)|", p.peek.text)
-	return ParseError{msg}
+	return ParseError{msg, p}
 }
 EvalError :: struct {
 	msg:       string,
 	evaluator: ^Interpreter,
+}
+EVAL_ERROR :: proc(i: ^Interpreter, msg: string) -> OuauError {
+	fmt.eprintfln("Eval Error::Msg::(%s)|", msg)
+	fmt.eprintfln("Call Stack::(%v)|", i.call_stack)
+	fmt.eprintfln("Globals::(%v)|", i.globals)
+	return EvalError{msg, i}
 }
 
