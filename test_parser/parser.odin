@@ -1,7 +1,6 @@
 package parser_test
 
 import "base:runtime"
-import "core:log"
 import "core:mem/virtual"
 import "core:testing"
 
@@ -373,7 +372,7 @@ test_bitwise :: proc(t: ^testing.T) {
 	p, errr := NEW_PARSER(input, v)
 	testing.expectf(t, errr == nil, "Error creating parser::(%v)", err)
 	nodeid, errrr := p->CHUNK()
-	testing.expectf(t, errrr == nil, "Error parsing chunk %v", err)
+	testing.expectf(t, errrr == nil, "Error parsing chunk::(%v)", err)
 	DUMP_AST(&p)
 }
 @(test)
@@ -392,9 +391,9 @@ test_array_assignment :: proc(t: ^testing.T) {
 
 
 	p, errr := NEW_PARSER(input, v)
-	testing.expectf(t, errr == nil, "Error parsing chunk %v", err)
+	testing.expectf(t, errr == nil, "Error parsing chunk::(%v)", err)
 	nodeid, errrr := CHUNK(&p)
-	testing.expectf(t, errrr == nil, "Error parsing chunk %v", err)
+	testing.expectf(t, errrr == nil, "Error parsing chunk::(%v)", err)
 	DUMP_AST(&p)
 }
 @(test)
@@ -402,14 +401,14 @@ test_array_access :: proc(t: ^testing.T) {
 	using parser
 	v := new(virtual.Arena, context.allocator)
 	err := virtual.arena_init_growing(v)
-	ensure(err == nil)
+	ensure(err == nil, "Error initializing arena::(%v)")
 	defer virtual.arena_destroy(v)
 	defer free_all(context.allocator)
 	input := `a[1];`
 	p, errr := NEW_PARSER(input, v)
-	testing.expectf(t, errr == nil, "Error parsing chunk %v", err)
+	testing.expectf(t, errr == nil, "Error creating parser::(%v)", err)
 	nodeid, errrr := CHUNK(&p)
-	testing.expectf(t, errrr == nil, "Error parsing chunk %v", err)
+	testing.expectf(t, errrr == nil, "Error parsing chunk::(%v)", err)
 	DUMP_AST(&p)
 }
 @(test)
@@ -417,7 +416,7 @@ test_string :: proc(t: ^testing.T) {
 	using parser
 	v := new(virtual.Arena, context.allocator)
 	err := virtual.arena_init_growing(v)
-	ensure(err == nil)
+	ensure(err == nil, "Error initializing arena::(%v)")
 	defer virtual.arena_destroy(v)
 	defer free_all(context.allocator)
 
@@ -427,9 +426,9 @@ test_string :: proc(t: ^testing.T) {
 
 
 	p, errr := NEW_PARSER(input, v)
-	testing.expectf(t, errr == nil, "Error parsing chunk %v", err)
+	testing.expectf(t, errr == nil, "Error creating parser::(%v)", err)
 	nodeid, errrr := p->CHUNK()
-	testing.expectf(t, errrr == nil, "Error parsing chunk %v", err)
+	testing.expectf(t, errrr == nil, "Error parsing chunk::(%v)", err)
 	DUMP_AST(&p)
 }
 @(test)
@@ -437,7 +436,7 @@ test_global :: proc(t: ^testing.T) {
 	using parser
 	v := new(virtual.Arena, context.allocator)
 	err := virtual.arena_init_growing(v)
-	ensure(err == nil)
+	ensure(err == nil, "Error initializing arena::(%v)")
 	defer virtual.arena_destroy(v)
 	defer free_all(context.allocator)
 
@@ -447,9 +446,9 @@ test_global :: proc(t: ^testing.T) {
 		return a;
 	end`
 	p, errr := NEW_PARSER(input, v)
-	testing.expectf(t, errr == nil, "Error parsing chunk %v", err)
+	testing.expectf(t, errr == nil, "Error creating parser::(%v)", err)
 	nodeid, errrr := p->CHUNK()
-	testing.expectf(t, errrr == nil, "Error parsing chunk %v", err)
+	testing.expectf(t, errrr == nil, "Error parsing chunk::(%v)", err)
 	DUMP_AST(&p)
 }
 
