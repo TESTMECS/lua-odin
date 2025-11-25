@@ -6,24 +6,21 @@ import "core:testing"
 @(test)
 test_eval_block :: proc(t: ^testing.T) {
 	using i
-	v := new(virtual.Arena, context.allocator)
-	err := virtual.arena_init_growing(v)
-	ensure(err == nil)
-	defer virtual.arena_destroy(v)
-	defer free_all(context.allocator)
-	varena := virtual.arena_allocator(v)
-
+	v: virtual.Arena
+	err := virtual.arena_init_growing(&v)
+	ensure(err == nil, "Error initializing arena")
+	defer virtual.arena_destroy(&v)
 	input := `
 	do 
 	 local a = 1;
 		return a;
-	end
-	`
+	end`
+	p, p_err := NEW_PARSER(input, &v)
+	testing.expectf(t, p_err == nil, "Error creating Parser::(%v)", p_err)
+	root, chunk_err := CHUNK(&p)
+	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
 
-
-	p := NEW_PARSER(input, varena)
-	root := PARSE_CHUNK(&p)
-	i := NEW_INTERPRETER(&p.nodes, varena)
+	i := NEW_INTERPRETER(&p.nodes, &v)
 	val := INTERPRET(i, root)
 	if val == nil || val.(f64) != 1 {
 		testing.fail(t)

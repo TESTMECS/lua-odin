@@ -16,19 +16,23 @@ clean:
 alias re := repl
 repl:
 	odin run . -- repl 
+# test parser functions
+test_parser_name := "test_do"
+test_parser:
+	odin test ./test_parser -define:ODIN_TEST_NAMES={{test_parser_name}}
+# test eval functions
+test_eval_name := "test_eval_block"
+test_eval:
+	odin test ./test_eval -define:ODIN_TEST_NAMES={{test_eval_name}}
+
+# test compiler functions
+test_compiler_name := "test_local"
+test_compiler:
+	odin test ./test_compiler -define:ODIN_TEST_NAMES={{test_compiler_name}}
+
 # test a .ouau file
 test_file_dir := "./examples"
 test_file_name := "test.ouau"
 alias tf := test-file
 test-file:
 	odin run . -- file {{test_file_dir}}/{{test_file_name}}
-# test compiler functions
-test_compiler_name := "test_local"
-test_compiler:
-	odin test ./test_compiler -define:ODIN_TEST_NAMES={{test_compiler_name}}
-# test parser functions
-test_parser_name := "test_do"
-test_parser:
-	odin test ./test_parser -define:ODIN_TEST_NAMES={{test_parser_name}}
-
-
