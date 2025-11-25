@@ -141,11 +141,18 @@ TokenDefinition :: struct {
 	text: []u8,
 }
 LexerVTable :: struct {
-	EAT:             proc(l: ^Lexer),
-	PEEK:            proc(l: ^Lexer) -> u8,
-	NEXT:            proc(l: ^Lexer) -> (TokenDefinition, OuauError),
-	GET_TOKEN:       proc(l: ^Lexer, type: Token, length: int) -> TokenDefinition,
-	SKIP_WHITESPACE: proc(l: ^Lexer),
+	EAT:                          proc(l: ^Lexer),
+	PEEK:                         proc(l: ^Lexer) -> u8,
+	NEXT:                         proc(l: ^Lexer) -> (TokenDefinition, OuauError),
+	GET_TOKEN:                    proc(
+		l: ^Lexer,
+		type: Token,
+		start: int,
+		length: int,
+	) -> TokenDefinition,
+	SKIP_WHITESPACE:              proc(l: ^Lexer),
+	CREATE_NUMBER:                proc(l: ^Lexer) -> TokenDefinition,
+	CREATE_IDENTIFIER_OR_KEYWORD: proc(l: ^Lexer) -> TokenDefinition,
 }
 Lexer :: struct {
 	input:        []u8,
