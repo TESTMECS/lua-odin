@@ -1,5 +1,6 @@
 package ouau
 import "core:math"
+import "core:mem/virtual"
 import "core:strings"
 /*
 *	 ./eval.odin
@@ -215,13 +216,14 @@ EVAL_FOR :: proc(i: ^Interpreter, node: NODEID) -> Value {
 }
 @(private = "file")
 EVAL_LOCAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
+	my_alloc := virtual.arena_allocator(i.arena)
 	child := i.nodes.first_child[node]
-	vars: [dynamic]string
+	vars := make([dynamic]string, my_alloc)
 	for child != 0 && i.nodes.kind[child] == .IDENTIFIER {
 		append(&vars, i.nodes.name[child])
 		child = i.nodes.next_sibling[child]
 	}
-	values: [dynamic]Value
+	values := make([dynamic]Value, my_alloc)
 	for child != 0 {
 		val := EVAL(i, child)
 		append(&values, val)
@@ -240,6 +242,7 @@ EVAL_LOCAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 }
 @(private = "file")
 EVAL_RETURN :: proc(i: ^Interpreter, node: NODEID) -> Value {
+	my_alloc := virtual.arena_allocator(i.arena)
 	child := i.nodes.first_child[node]
 	val: Value
 	if child != 0 {
@@ -247,8 +250,7 @@ EVAL_RETURN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	} else {
 		val = nil
 	}
-
-	ret_val := new(ReturnValue)
+	ret_val := new(ReturnValue, my_alloc)
 	ret_val.value = val
 	return ret_val
 }
@@ -440,8 +442,9 @@ GET_RIGHT_CHILD :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
 	return i.nodes.next_sibling[left]
 }
 @(private = "file")
-EXTRACT_PARAMS :: proc(i: ^Interpreter, node: NODEID, allocator := context.allocator) -> []string {
-	params := make([dynamic]string, allocator)
+EXTRACT_PARAMS :: proc(i: ^Interpreter, node: NODEID) -> []string {
+	my_alloc := virtual.arena_allocator(i.arena)
+	params := make([dynamic]string, my_alloc)
 
 	child := i.nodes.first_child[node]
 
@@ -503,7 +506,8 @@ CALL_USER_FUNCTION :: proc(i: ^Interpreter, fn: ^Closure, args: []Value) -> Valu
 }
 @(private = "file")
 EVAL_EXPRESSION_LIST :: proc(i: ^Interpreter, node: NODEID) -> []Value {
-	values: [dynamic]Value
+	my_alloc := virtual.arena_allocator(i.arena)
+	values := make([dynamic]Value, my_alloc)
 
 	if node == 0 {
 		return values[:]
@@ -725,13 +729,14 @@ EVAL_ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 }
 @(private = "file")
 EVAL_GLOBAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
+	my_alloc := virtual.arena_allocator(i.arena)
 	child := i.nodes.first_child[node]
-	vars: [dynamic]string
+	vars := make([dynamic]string, my_alloc)
 	for child != 0 && i.nodes.kind[child] == .IDENTIFIER {
 		append(&vars, i.nodes.name[child])
 		child = i.nodes.next_sibling[child]
 	}
-	values: [dynamic]Value
+	values := make([dynamic]Value, my_alloc)
 	for child != 0 {
 		val := EVAL(i, child)
 		append(&values, val)
