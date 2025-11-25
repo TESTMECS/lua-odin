@@ -6,21 +6,7 @@ import "core:slice"
 /*
 	 ./state.odin
 	 Copyright(C) 2025 TESTMEE
-	 Defines the global state shared across compilation/threads for Ouau.
-		
-	 <@Token, @TokenDefinition, @Lexer>
-
-	<@NODEID, @NODE_KIND, @NODES, @Precedence, @Parser, @ParserVTable>
-
-	 <@GlobalState, @String | >
-
-	 <@Compiler, @Prototype, @UpValueDesc, @UpValue| Closure Resolutions.>
-
-	 <@GCObject, @GCHeap, @GCState, @GC_HEADER|GC Heaps State.>
-
-	 <@VMFrame, @CallInfo, @VM, @VM_Config|VM Configuration.>
-
-	 <@Thread, @ThreadState, @ThreadStatus|Threads State.>
+	 Defines all the state across lexing, parsing, evaluation, compilation, and VM for Ouau. 
 */
 Token :: enum u8 {
 	EOF,
