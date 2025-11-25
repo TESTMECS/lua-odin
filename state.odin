@@ -304,23 +304,27 @@ Interpreter :: struct {
 	current:    ^Environment,
 	nodes:      ^NODES,
 	call_stack: [dynamic]^Frame,
+	arena:      ^virtual.Arena,
 }
 @(require_results)
-NEW_INTERPRETER :: proc(nodes: ^NODES, areana: ^virtual.Arena) -> ^Interpreter {
-	context.allocator = virtual.arena_allocator(areana)
-	i := new(Interpreter)
-	i.nodes = nodes
-	i.globals = make(map[string]Value)
-	i.current = NEW_ENVIRONMENT(nil)
-	i.call_stack = make([dynamic]^Frame)
-	INIT_BUILTINS(i)
+NEW_INTERPRETER :: proc(nodes: ^NODES, varena: ^virtual.Arena) -> Interpreter {
+	my_alloc := virtual.arena_allocator(varena)
+	i := Interpreter {
+		globals    = make(map[string]Value, my_alloc),
+		current    = NEW_ENVIRONMENT(nil, varena),
+		call_stack = make([dynamic]^Frame, my_alloc),
+		arena      = varena,
+		nodes      = nodes,
+	}
+	INIT_BUILTINS(&i, varena)
 	return i
 }
-INIT_BUILTINS :: proc(interpreter: ^Interpreter) {
-	print_fn := new(Closure)
+INIT_BUILTINS :: proc(i: ^Interpreter, varena: ^virtual.Arena) {
+	my_alloc := virtual.arena_allocator(varena)
+	print_fn := new(Closure, my_alloc)
 	print_fn.is_native = true
 	print_fn.native_proc = BUILTIN_PRINT
-	interpreter.globals["print"] = print_fn
+	i.globals["print"] = print_fn
 }
 BUILTIN_PRINT :: proc(args: []Value) -> Value {
 	for arg in args {
@@ -335,10 +339,11 @@ Environment :: struct {
 	dirty:  bool,
 	outer:  ^Environment,
 }
-NEW_ENVIRONMENT :: proc(outer: ^Environment, allocator := context.allocator) -> ^Environment {
-	env := new(Environment, allocator)
+NEW_ENVIRONMENT :: proc(outer: ^Environment, varena: ^virtual.Arena) -> ^Environment {
+	my_alloc := virtual.arena_allocator(varena)
+	env := new(Environment, my_alloc)
 	env.outer = outer
-	env.values = make(map[string]Value, allocator)
+	env.values = make(map[string]Value, my_alloc)
 	return env
 }
 ENV_GET :: proc(env: ^Environment, name: string) -> (Value, bool) {

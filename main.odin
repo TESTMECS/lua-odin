@@ -67,7 +67,7 @@ Ouau :: proc() -> (main_err: Maybe(OuauError)) {
 			}
 			complete_input := strings.to_string(input_builder)
 			if complete_input == "exit" do return nil
-			return_value := OUAU_EVAL_STRING(complete_input, v, i) or_return
+			return_value := OUAU_EVAL_STRING(complete_input, v, &i) or_return
 			fmt.println("==> ", return_value)
 		}
 	case "file":
@@ -75,7 +75,7 @@ Ouau :: proc() -> (main_err: Maybe(OuauError)) {
 		assert(user_args[1] != "")
 		file_path := user_args[1]
 		if file, ok := os.read_entire_file_from_filename(file_path); ok {
-			return_value := OUAU_EVAL_STRING(string(file), v, i) or_return
+			return_value := OUAU_EVAL_STRING(string(file), v, &i) or_return
 			fmt.println("==> ", return_value)
 		} else {
 			return io.Error.Unexpected_EOF

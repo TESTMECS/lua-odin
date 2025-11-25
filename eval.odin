@@ -485,7 +485,7 @@ IS_TRUTHY :: proc(PValue: Value) -> bool {
 }
 @(private = "file")
 CALL_USER_FUNCTION :: proc(i: ^Interpreter, fn: ^Closure, args: []Value) -> Value {
-	env := NEW_ENVIRONMENT(fn.closure)
+	env := NEW_ENVIRONMENT(fn.closure, i.arena)
 	for param, i in fn.params {
 		if i < len(args) {
 			ENV_SET(env, param, args[i])
