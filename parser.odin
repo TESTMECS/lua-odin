@@ -1,5 +1,4 @@
 package ouau
-import "core:log"
 import "core:mem/virtual"
 import "core:strconv"
 /*
