@@ -25,13 +25,11 @@ main :: proc() {
 }
 @(private = "file")
 Ouau :: proc() -> (main_err: Maybe(OuauError)) {
-	v := new(virtual.Arena, context.allocator)
-	virtual.arena_init_growing(v) or_return
-	defer virtual.arena_destroy(v)
-	defer free_all(context.allocator)
-	old_allocator := context.allocator
-	context.allocator = virtual.arena_allocator(v)
-	defer context.allocator = old_allocator
+	v: virtual.Arena
+	err := virtual.arena_init_growing(&v)
+	ensure(err == nil, "Error initializing arena")
+	defer virtual.arena_destroy(&v)
+	my_alloc := virtual.arena_allocator(&v)
 	if len(os.args) < 2 || os.args[1] == "-h" || os.args[1] == "--help" {
 		fmt.println(HELP_MSG)
 		os.exit(1)
@@ -44,15 +42,20 @@ Ouau :: proc() -> (main_err: Maybe(OuauError)) {
 	switch user_args[0] {
 	case "repl":
 		reader: bufio.Reader
-		bufio.reader_init(&reader, os.stream_from_handle(os.stdin), bufio.DEFAULT_BUF_SIZE)
+		bufio.reader_init(
+			&reader,
+			os.stream_from_handle(os.stdin),
+			bufio.DEFAULT_BUF_SIZE,
+			my_alloc,
+		)
 		xtra_args := user_args[1:]
-		i := NEW_INTERPRETER(nil, v)
+		i := NEW_INTERPRETER(nil, &v)
 		for {
 			fmt.println(PROMPT)
-			input_builder := strings.builder_make()
+			input_builder := strings.builder_make(my_alloc)
 			defer strings.builder_destroy(&input_builder)
 			for {
-				line := bufio.reader_read_string(&reader, '\n') or_return
+				line := bufio.reader_read_string(&reader, '\n', my_alloc) or_return
 				line = strings.trim_space(line)
 				if strings.has_suffix(line, "\\") {
 					line = strings.trim_suffix(line, "\\")
@@ -67,15 +70,15 @@ Ouau :: proc() -> (main_err: Maybe(OuauError)) {
 			}
 			complete_input := strings.to_string(input_builder)
 			if complete_input == "exit" do return nil
-			return_value := OUAU_EVAL_STRING(complete_input, v, &i) or_return
+			return_value := OUAU_EVAL_STRING(complete_input, &v, &i) or_return
 			fmt.println("==> ", return_value)
 		}
 	case "file":
-		i := NEW_INTERPRETER(nil, v)
+		i := NEW_INTERPRETER(nil, &v)
 		assert(user_args[1] != "")
 		file_path := user_args[1]
-		if file, ok := os.read_entire_file_from_filename(file_path); ok {
-			return_value := OUAU_EVAL_STRING(string(file), v, &i) or_return
+		if file, ok := os.read_entire_file_from_filename(file_path, my_alloc); ok {
+			return_value := OUAU_EVAL_STRING(string(file), &v, &i) or_return
 			fmt.println("==> ", return_value)
 		} else {
 			return io.Error.Unexpected_EOF
@@ -83,9 +86,9 @@ Ouau :: proc() -> (main_err: Maybe(OuauError)) {
 	case "ast":
 		assert(user_args[1] != "")
 		file_path := user_args[1]
-		if file, ok := os.read_entire_file_from_filename(file_path); ok {
-			p := NEW_PARSER(string(file), v) or_return
-			_, main_err = p->CHUNK()
+		if file, ok := os.read_entire_file_from_filename(file_path, my_alloc); ok {
+			p := NEW_PARSER(string(file), &v) or_return
+			p->CHUNK() or_return
 			DUMP_AST(&p)
 		} else {
 			return io.Error.Unexpected_EOF
