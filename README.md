@@ -3,6 +3,8 @@
 |---| --- |
 |bnot: '~21->22' | bnot: '!21->22' |
 # Status
-- Working on refactoring evaluator.
+- Evaluator is ok for now. Make it look nice.
+# Bugs
+- Repl segfaults on function call.
 
 
