@@ -21,7 +21,9 @@ Value :: union {
 	^Table,
 	^Closure,
 	^ReturnValue,
+	^BreakValue,
 }
+BreakValue :: struct {}
 ReturnValue :: struct {
 	value: Value,
 }
@@ -74,6 +76,8 @@ VALUE_TO_KEY_TAG :: proc(v: Value) -> KeyTag {
 		return KeyTag{kind = 6, p = val}
 	case ^ReturnValue:
 		panic("Cannot use a return value as a table key")
+	case ^BreakValue:
+		panic("Cannot use a break value as a table key")
 	case:
 		return KeyTag{kind = 0}
 	}

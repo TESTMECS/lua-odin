@@ -24,6 +24,7 @@ INTERPRET :: proc(i: ^Interpreter, root: NODEID) -> Value {
 }
 @(private = "file")
 EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
+	my_alloc := virtual.arena_allocator(i.arena)
 	kind := i.nodes.kind[node]
 	#partial switch kind {
 	case .BLOCK:
@@ -57,7 +58,8 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	case .GLOBAL:
 		return EVAL_GLOBAL(i, node)
 	case .BREAK:
-		return nil
+		break_val := new(BreakValue, my_alloc)
+		return break_val
 	case .RETURN:
 		return EVAL_RETURN(i, node)
 	case .CALL:
@@ -140,7 +142,9 @@ EVAL_WHILE :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	for IS_TRUTHY(EVAL(i, cond_node)) {
 		result := EVAL(i, body_node)
 		log.infof("EVAL_WHILE: result::(%v)", result)
-		if result != nil do return result
+		if res, ok := result.(^BreakValue); ok {
+			return result
+		}
 	}
 	return nil
 }
@@ -307,7 +311,7 @@ EVAL_UNARY :: proc(i: ^Interpreter, node: NODEID) -> Value {
 				}
 			}
 			return f64(length)
-		case bool, f64, rawptr, ^Closure, ^ReturnValue:
+		case bool, f64, rawptr, ^Closure, ^ReturnValue, ^BreakValue:
 			return nil
 		case:
 			return nil
@@ -478,6 +482,8 @@ IS_TRUTHY :: proc(PValue: Value) -> bool {
 		return v.body != 0
 	case ^ReturnValue:
 		return true
+	case ^BreakValue:
+		return false
 	}
 	return false
 }
@@ -544,6 +550,8 @@ EVAL_COMPARE :: proc(left, right: Value, op: Token) -> bool {
 		case (^Closure):
 			return COMPARE_CLOSURE(left.(^Closure), right.(^Closure))
 		case ^ReturnValue:
+			return false
+		case ^BreakValue:
 			return false
 		}
 	case .NE:

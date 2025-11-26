@@ -1,6 +1,5 @@
 package test_eval
 import i "../"
-import "core:log"
 import "core:mem/virtual"
 import "core:testing"
 @(test)
