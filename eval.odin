@@ -28,42 +28,40 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	// TODO: Finish partial
 	#partial switch kind {
 	case .BLOCK:
-		child := i->GET_LEFT_CHILD(node)
 		last_result: Value
-		for child != 0 {
+		for child := i->GET_CHILD(node); child != 0; child = i->GET_SIBLING(child) {
 			v := i->EVAL(child)
 			if _, ok := v.(^ReturnValue); ok { return v }
 			last_result = v
-			child = i->GET_NEXT_SIBLING(child)
 		}
 		return last_result
 	case .UBLOCK:
-		child := i->GET_LEFT_CHILD(node)
+		child := i->GET_CHILD(node)
 		block_result := i->EVAL(child)
 		if block_result != nil { return block_result }
-		child = i->GET_NEXT_SIBLING(child)
+		child = i->GET_SIBLING(child)
 		condition := i->EVAL(child)
 		return condition
 	case .IF:
-		child := i->GET_LEFT_CHILD(node)
+		child := i->GET_CHILD(node)
 		cond := i->EVAL(child)
-		child = i->GET_NEXT_SIBLING(child)
+		child = i->GET_SIBLING(child)
 		if IS_TRUTHY(cond) {
 			return i->EVAL(child)
 		} else {
-			child = i->GET_NEXT_SIBLING(child)
+			child = i->GET_SIBLING(child)
 			for child != 0 {
 				cond := i->EVAL(child)
-				body_child := i->GET_NEXT_SIBLING(child)
+				body_child := i->GET_SIBLING(child)
 				if IS_TRUTHY(cond) { return i->EVAL(body_child) }
-				child = i->GET_NEXT_SIBLING(body_child)
+				child = i->GET_SIBLING(body_child)
 			}
 		}
 		return nil
 	case .WHILE:
-		child := i->GET_LEFT_CHILD(node)
+		child := i->GET_CHILD(node)
 		cond_node := child
-		body_node := i->GET_NEXT_SIBLING(child)
+		body_node := i->GET_SIBLING(child)
 		for IS_TRUTHY(i->EVAL(cond_node)) {
 			result := i->EVAL(body_node)
 			if _, ok := result.(^BreakValue); ok {
@@ -72,7 +70,7 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		}
 		return nil
 	case .REPEAT:
-		child := i->GET_LEFT_CHILD(node)
+		child := i->GET_CHILD(node)
 		for {
 			block_result := i->EVAL(child)
 			if block_result != nil { return block_result }
@@ -81,19 +79,19 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		}
 		return nil
 	case .DO:
-		child := i->GET_LEFT_CHILD(node)
+		child := i->GET_CHILD(node)
 		return i->EVAL(child)
 	case .FOR:
 		var_name := i.nodes.name[node]
-		child := i->GET_LEFT_CHILD(node)
+		child := i->GET_CHILD(node)
 		init := i->EVAL(child)
-		child = i->GET_NEXT_SIBLING(child)
+		child = i->GET_SIBLING(child)
 		limit := i->EVAL(child)
-		child = i->GET_NEXT_SIBLING(child)
+		child = i->GET_SIBLING(child)
 		step: Value = 1.0
 		if child != 0 && i.nodes.kind[child] != .BLOCK {
 			step = i->EVAL(child)
-			child = i->GET_NEXT_SIBLING(child)
+			child = i->GET_SIBLING(child)
 		}
 		ENV_SET(i.current, var_name, init)
 		for {
@@ -111,17 +109,17 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		}
 		return nil
 	case .LOCAL:
-		child := i->GET_LEFT_CHILD(node)
+		child := i->GET_CHILD(node)
 		vars := make([dynamic]string, my_alloc)
 		for child != 0 && i.nodes.kind[child] == .IDENTIFIER {
 			append(&vars, i.nodes.name[child])
-			child = i->GET_NEXT_SIBLING(child)
+			child = i->GET_SIBLING(child)
 		}
 		values := make([dynamic]Value, my_alloc)
 		for child != 0 {
 			val := i->EVAL(child)
 			append(&values, val)
-			child = i->GET_NEXT_SIBLING(child)
+			child = i->GET_SIBLING(child)
 		}
 		last_value: Value
 		for name, idx in vars {
@@ -137,7 +135,7 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		break_val := new(BreakValue, my_alloc)
 		return break_val
 	case .RETURN:
-		child := i->GET_LEFT_CHILD(node)
+		child := i->GET_CHILD(node)
 		val: Value
 		if child != 0 {
 			val = i->EVAL(child)
@@ -148,7 +146,7 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		ret_val.value = val
 		return ret_val
 	case .CALL:
-		fn_child := i->GET_LEFT_CHILD(node)
+		fn_child := i->GET_CHILD(node)
 		fn_val := i->EVAL(fn_child)
 		if fn_val == nil { return nil }
 		fn_val_closure, ok := fn_val.(^Closure)
@@ -161,7 +159,7 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 			return CALL_USER_FUNCTION(i, fn_val_closure, args)
 		}
 	case .UNARY:
-		child := i->GET_LEFT_CHILD(node)
+		child := i->GET_CHILD(node)
 		operand := i->EVAL(child)
 		op := i.nodes.token[node]
 		#partial switch op {
@@ -196,7 +194,7 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 			return nil
 		}
 	case .BINARY:
-		left := i->EVAL(i->GET_LEFT_CHILD(node))
+		left := i->EVAL(i->GET_CHILD(node))
 		right := i->EVAL(i->GET_RIGHT_CHILD(node))
 		op := i.nodes.token[node]
 		#partial switch op {
@@ -281,10 +279,10 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	case .TABLE:
 		table := new(Table, my_alloc)
 		table.data = make(map[KeyTag]Value, my_alloc)
-		child := i->GET_LEFT_CHILD(node)
+		child := i->GET_CHILD(node)
 		for child != 0 {
 			if i.nodes.kind[child] == .BINARY {
-				key := i->EVAL(i->GET_LEFT_CHILD(child))
+				key := i->EVAL(i->GET_CHILD(child))
 				value := i->EVAL(i->GET_RIGHT_CHILD(child))
 				key_tag := VALUE_TO_KEY_TAG(key)
 				table.data[key_tag] = value
@@ -296,21 +294,21 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 				value := i->EVAL(child)
 				table.data[key_tag] = value
 			}
-			child = i->GET_NEXT_SIBLING(child)
+			child = i->GET_SIBLING(child)
 		}
 		return table
 	case .GLOBAL:
-		child := i->GET_LEFT_CHILD(node)
+		child := i->GET_CHILD(node)
 		vars := make([dynamic]string, my_alloc)
 		for child != 0 && i.nodes.kind[child] == .IDENTIFIER {
 			append(&vars, i.nodes.name[child])
-			child = i->GET_NEXT_SIBLING(child)
+			child = i->GET_SIBLING(child)
 		}
 		values := make([dynamic]Value, my_alloc)
 		for child != 0 {
 			val := i->EVAL(child)
 			append(&values, val)
-			child = i->GET_NEXT_SIBLING(child)
+			child = i->GET_SIBLING(child)
 		}
 		last_value: Value
 		for name, idx in vars {
@@ -368,7 +366,7 @@ EVAL_FUNCTION :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	return fn
 }
 @(private = "file")
-GET_LEFT_CHILD :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
+GET_CHILD :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
 	return i.nodes.first_child[node]
 }
 @(private = "file")
@@ -378,7 +376,7 @@ GET_ARGUMENTS_CHILD :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
 	return arg_child
 }
 @(private = "file")
-GET_NEXT_SIBLING :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
+GET_SIBLING :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
 	return i.nodes.next_sibling[node]
 }
 @(private = "file")
@@ -399,9 +397,9 @@ EXTRACT_PARAMS :: proc(i: ^Interpreter, node: NODEID) -> []string {
 }
 @(private = "file")
 GET_FUNCTION_BODY :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
-	child := i->GET_LEFT_CHILD(node)
+	child := i->GET_CHILD(node)
 	for child != 0 && i.nodes.kind[child] == .IDENTIFIER {
-		child = i->GET_NEXT_SIBLING(child)
+		child = i->GET_SIBLING(child)
 	}
 	return child
 }
@@ -544,7 +542,7 @@ COMPARE_TABLE :: proc(left, right: ^Table) -> bool {
 }
 @(private = "file")
 ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
-	lvalue := i->GET_LEFT_CHILD(node)
+	lvalue := i->GET_CHILD(node)
 	rvalue := i->GET_RIGHT_CHILD(node)
 
 	lvalue_kind := i.nodes.kind[lvalue]
@@ -565,7 +563,7 @@ ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	case .BINARY:
 		op := i.nodes.token[lvalue]
 		if op == .DOT {
-			table_expr_node := i->GET_LEFT_CHILD(lvalue)
+			table_expr_node := i->GET_CHILD(lvalue)
 			table_val := i->EVAL(table_expr_node)
 			table, ok := table_val.(^Table)
 			if !ok || table == nil {
@@ -581,7 +579,7 @@ ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 			return value_to_assign
 
 		} else if op == .BOPEN {
-			table_expr_node := i->GET_LEFT_CHILD(lvalue)
+			table_expr_node := i->GET_CHILD(lvalue)
 			table_val := i->EVAL(table_expr_node)
 			table, ok := table_val.(^Table)
 			if !ok || table == nil {
@@ -601,10 +599,10 @@ ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 }
 @(rodata)
 INTERPRETER_VTABLE := InterpreterVTable {
-	EVAL             = EVAL,
-	ASSIGN           = ASSIGN,
-	GET_LEFT_CHILD   = GET_LEFT_CHILD,
-	GET_RIGHT_CHILD  = GET_RIGHT_CHILD,
-	GET_NEXT_SIBLING = GET_NEXT_SIBLING,
+	EVAL            = EVAL,
+	ASSIGN          = ASSIGN,
+	GET_CHILD       = GET_CHILD,
+	GET_RIGHT_CHILD = GET_RIGHT_CHILD,
+	GET_SIBLING     = GET_SIBLING,
 }
 
