@@ -1,4 +1,6 @@
 package ouau
+import "core:fmt"
+import "core:mem/virtual"
 /*
 *	 ./lexer.odin
 *	 Copyright(C) 2025 TESTMEE
@@ -6,7 +8,7 @@ package ouau
 *	 @Lexer
 */
 @(require_results)
-NEXT :: proc(l: ^Lexer) -> (token: TokenDefinition, err: OuauError) {
+NEXT :: proc(l: ^Lexer) -> (token: TokenDefinition, err: ^OuauError) {
 	l->SKIP_WHITESPACE()
 	switch l.ch {
 	case '=':
@@ -115,7 +117,7 @@ NEXT :: proc(l: ^Lexer) -> (token: TokenDefinition, err: OuauError) {
 		}
 	}
 	l->EAT()
-	if token.kind == .ILLEGAL { return token, SYNTAX_ERROR(l, token) }
+	if token.kind == .ILLEGAL { return token, l->SYNTAX_ERROR("Illegal Token", token) }
 	return token, nil
 }
 @(private = "file")
@@ -186,6 +188,23 @@ CREATE_STRING :: proc(l: ^Lexer) -> TokenDefinition {
 	}
 	return l->GET_TOKEN(.STRING, start, (l.pos - start))
 }
+@(private = "file")
+SYNTAX_ERROR :: proc(l: ^Lexer, my_msg: string, token: TokenDefinition) -> ^OuauError {
+	my_alloc := virtual.arena_allocator(l.arena)
+	e := new(OuauError, my_alloc)
+	e.kind = .SyntaxErr
+	e.msg = my_msg
+	e.payload = SyntaxErr {
+		pos  = l.pos,
+		kind = token.kind,
+		text = string(token.text),
+	}
+	fmt.eprintfln("Syntax Error::Msg::(%s)|", e.msg)
+	fmt.eprintfln("Payload::(%v)|", e.payload)
+	fmt.eprintfln("Kind::(%v)|", token.kind)
+	fmt.eprintfln("Text::(%s)|", token.text)
+	return e
+}
 @(rodata)
 LEXER_VTABLE := LexerVTable {
 	NEXT                         = NEXT,
@@ -195,5 +214,6 @@ LEXER_VTABLE := LexerVTable {
 	SKIP_WHITESPACE              = SKIP_WHITESPACE,
 	CREATE_NUMBER                = CREATE_NUMBER,
 	CREATE_IDENTIFIER_OR_KEYWORD = CREATE_IDENTIFIER_OR_KEYWORD,
+	SYNTAX_ERROR                 = SYNTAX_ERROR,
 }
 

@@ -1,10 +1,13 @@
 package ouau
+import "core:fmt"
 import "core:hash"
+import "core:io"
+import "core:mem/virtual"
 import "core:strings"
 /*
 	 ./values.odin
 	 Copyright(C) 2025 TESTMEE
-	 <@KeyTag, @Value, @ReturnValue, @Closure, @Table, @Upvalue, @UpValueDesc> 
+	 Values and Types for Ouau, now with errors as values.
  */
 KeyTag :: struct {
 	kind: u8,
@@ -22,6 +25,7 @@ Value :: union {
 	^Closure,
 	^ReturnValue,
 	^BreakValue,
+	^OuauError,
 }
 BreakValue :: struct {}
 ReturnValue :: struct {
@@ -62,18 +66,20 @@ UpValueDesc :: struct {
 }
 VALUE_TO_KEY_TAG :: proc(v: Value) -> KeyTag {
 	switch val in v {
-	case bool:
-		return KeyTag{kind = 3, i = cast(i64)val}
 	case f64:
 		return KeyTag{kind = 1, i = cast(i64)val}
 	case string:
 		return KeyTag{kind = 2, s = val}
+	case bool:
+		return KeyTag{kind = 3, i = cast(i64)val}
 	case rawptr:
 		return KeyTag{kind = 4, p = val}
 	case ^Table:
 		return KeyTag{kind = 5, p = val}
 	case ^Closure:
 		return KeyTag{kind = 6, p = val}
+	case ^OuauError:
+		return KeyTag{kind = 7, p = val}
 	case ^ReturnValue:
 		panic("Cannot use a return value as a table key")
 	case ^BreakValue:
@@ -109,6 +115,56 @@ VALUE_TO_STRING :: proc(v: Value, allocator := context.allocator) -> string {
 		return "nil"
 	}
 }
+// Error Values.
+OuauError :: struct {
+	kind:    ErrorKind,
+	msg:     string,
+	payload: union {
+		SyntaxErr,
+		ParseErr,
+		EvalErr,
+		AllocatorErr,
+		IOErr,
+	},
+	cause:   ^OuauError, // for chained errors
+}
+ErrorKind :: enum {
+	SyntaxErr,
+	ParseErr,
+	EvalErr,
+	AllocatorErr,
+	IOErr,
+}
+AllocatorErr :: struct {
+	err: virtual.Allocator_Error,
+}
+IOErr :: struct {
+	err: io.Error,
+}
+IO_ERROR :: proc(err: io.Error, my_msg: string, v: ^virtual.Arena) -> ^OuauError {
+	my_alloc := virtual.arena_allocator(v)
+	e := new(OuauError, my_alloc)
+	e.kind = .IOErr
+	e.msg = my_msg
+	e.payload = IOErr {
+		err = err,
+	}
+	return e
+}
+SyntaxErr :: struct {
+	pos:  int,
+	kind: Token,
+	text: string,
+}
+ParseErr :: struct {
+	msg:           string,
+	parser_object: ^Parser,
+}
+EvalErr :: struct {
+	msg:       string,
+	evaluator: ^Interpreter,
+}
+
 @(cold)
 compare_keytag :: proc(a, b: KeyTag) -> bool {
 	if a.kind != b.kind {

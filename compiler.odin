@@ -16,8 +16,6 @@ COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 		unimplemented("TODO")
 	case .VARARGS:
 		unimplemented("TODO")
-	case .UPVALUE:
-		unimplemented("TODO")
 	case .BLOCK:
 		return COMPILE_BLOCK(c, nodeid)
 	case .LITERAL:

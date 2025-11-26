@@ -1,4 +1,5 @@
 package ouau
+import "core:fmt"
 import "core:math"
 import "core:mem/virtual"
 import "core:strings"
@@ -22,8 +23,13 @@ INTERPRET :: proc(i: ^Interpreter, root: NODEID) -> (result: Value) {
 EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	my_alloc := virtual.arena_allocator(i.arena)
 	kind := i.nodes.kind[node]
-	// TODO: Finish partial
-	#partial switch kind {
+	switch kind {
+	case .INVALID:
+		err := new(OuauError, my_alloc)
+		return err
+	case .VARARGS:
+		err := new(OuauError, my_alloc)
+		return err
 	case .BLOCK:
 		last_result: Value
 		for c := i->GET_CHILD(node); c != 0; c = i->GET_SIBLING(c) {
@@ -179,7 +185,7 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 					}
 				}
 				return f64(length)
-			case bool, f64, rawptr, ^Closure, ^ReturnValue, ^BreakValue:
+			case bool, f64, rawptr, ^Closure, ^ReturnValue, ^BreakValue, ^OuauError:
 				return nil
 			case:
 				return nil
@@ -414,6 +420,8 @@ IS_TRUTHY :: proc(PValue: Value) -> bool {
 		return true
 	case ^BreakValue:
 		return false
+	case ^OuauError:
+		return false
 	}
 	return false
 }
@@ -473,6 +481,8 @@ EVAL_COMPARE :: proc(left, right: Value, op: Token) -> bool {
 			return false
 		case ^BreakValue:
 			return false
+		case ^OuauError:
+			return left.(^OuauError) == right.(^OuauError)
 		}
 	case .NE:
 		return !EVAL_COMPARE(left, right, .EQ)
@@ -589,6 +599,21 @@ ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	}
 	return nil
 }
+@(private = "file")
+EVAL_ERROR :: proc(i: ^Interpreter, msg: string) -> ^OuauError {
+	my_alloc := virtual.arena_allocator(i.arena)
+	e := new(OuauError, my_alloc)
+	e.kind = .EvalErr
+	e.msg = msg
+	e.payload = EvalErr {
+		msg       = msg,
+		evaluator = i,
+	}
+	fmt.eprintfln("Eval Error::Msg::(%s)|", msg)
+	fmt.eprintfln("Call Stack::(%v)|", i.call_stack)
+	fmt.eprintfln("Globals::(%v)|", i.globals)
+	return e
+}
 @(rodata)
 INTERPRETER_VTABLE := InterpreterVTable {
 	EVAL        = EVAL,
@@ -596,5 +621,6 @@ INTERPRETER_VTABLE := InterpreterVTable {
 	GET_CHILD   = GET_CHILD,
 	GET_GCHILD  = GET_GCHILD,
 	GET_SIBLING = GET_SIBLING,
+	EVAL_ERROR  = EVAL_ERROR,
 }
 

@@ -1,4 +1,5 @@
 package ouau
+import "core:fmt"
 import "core:mem/virtual"
 import "core:strconv"
 /*
@@ -7,28 +8,28 @@ import "core:strconv"
 	 This file defines the parser functions for Ouau.
 */
 @(require_results)
-CHUNK :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
+CHUNK :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 	p->ADVANCE() or_return // Init p.peek
 	p->ADVANCE() or_return // Init p.current to p.peek
 	node = p->BLOCK() or_return
 	return node, nil
 }
 @(private = "file", require_results)
-ADVANCE :: proc(p: ^Parser) -> (err: OuauError) {
+ADVANCE :: proc(p: ^Parser) -> (err: ^OuauError) {
 	p.current = p.peek
 	next_token := p.lexer->NEXT() or_return
 	p.peek = next_token
 	return nil
 }
 @(private = "file", require_results)
-EXPECT :: proc(p: ^Parser, kind: Token) -> (err: OuauError) {
+EXPECT :: proc(p: ^Parser, kind: Token) -> (err: ^OuauError) {
 	if p->IS(kind) {
 		p->ADVANCE() or_return
 	}
 	return nil
 }
 @(private = "file", require_results)
-BLOCK :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
+BLOCK :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 	node = p->NEW_NODE(.BLOCK)
 	block_loop: for {
 		#partial switch p->GET_TOKEN() {
@@ -46,13 +47,13 @@ BLOCK :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 		case .EOF:
 			break block_loop
 		case .ILLEGAL:
-			return node, PARSE_ERROR(p, "PARSE_BLOCK::Unexpected teriminal::()")
+			return node, p->PARSE_ERROR("PARSE_BLOCK::Unexpected teriminal::()")
 		}
 	}
 	return node, nil
 }
 @(private = "file", require_results)
-STMT :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
+STMT :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 	#partial switch p->GET_TOKEN() {
 	case .WHILE:
 		p->EXPECT(.WHILE) or_return
@@ -135,7 +136,7 @@ STMT :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 			p->EXPECT(.END) or_return
 			p->APPEND_CHILD(node, body)
 		case:
-			return node, PARSE_ERROR(p, "Invalid Token in For Loop")
+			return node, p->PARSE_ERROR("Invalid Token in For Loop")
 		}
 	case .LOCAL:
 		my_alloc := virtual.arena_allocator(p.arena)
@@ -175,7 +176,7 @@ STMT :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 			}
 			return node, nil
 		case:
-			return node, PARSE_ERROR(p, "Invalid Token in Local Declaration")
+			return node, p->PARSE_ERROR("Invalid Token in Local Declaration")
 		}
 	case .GLOBAL:
 		my_alloc := virtual.arena_allocator(p.arena)
@@ -237,7 +238,7 @@ STMT :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 	return node, nil
 }
 @(private = "file", require_results)
-UBLOCK :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
+UBLOCK :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 	block := p->NEW_NODE(.BLOCK)
 	ublock: for {
 		#partial switch p->GET_TOKEN() {
@@ -259,7 +260,7 @@ UBLOCK :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 	return node, nil
 }
 @(private = "file", require_results)
-FUNCTION :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
+FUNCTION :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 	p->EXPECT(.FUNCTION) or_return
 	fn_name := p->GET_TEXT()
 	node = p->NEW_NODE(.FUNCTION)
@@ -287,7 +288,7 @@ FUNCTION :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 		}
 		p->EXPECT(.CLOSE) or_return
 	case:
-		return node, PARSE_ERROR(p, "Invalid Token in Function Declaration")
+		return node, p->PARSE_ERROR("Invalid Token in Function Declaration")
 	}
 	body := p->BLOCK() or_return
 	p->EXPECT(.END) or_return
@@ -295,18 +296,18 @@ FUNCTION :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 	return node, nil
 }
 @(private = "file", require_results)
-PRECEDENCE :: proc(p: ^Parser, precedence: Precedence) -> (lhs: NODEID, err: OuauError) {
+PRECEDENCE :: proc(p: ^Parser, prec: Precedence) -> (lhs: NODEID, err: ^OuauError) {
 	lhs = p->PREFIX() or_return
 	loop: for {
 		current_prec := GET_PRECEDENCE(p->GET_TOKEN())
-		if precedence >= current_prec { break loop }
+		if prec >= current_prec { break loop }
 		lhs = p->INFIX(lhs) or_return
 	}
 	return lhs, nil
 }
 @(private = "file", require_results)
-GET_PRECEDENCE :: proc(tok: Token) -> Precedence {
-	#partial switch tok {
+GET_PRECEDENCE :: proc(t: Token) -> Precedence {
+	#partial switch t {
 	case .ASSIGN:
 		return .ASSIGN
 	case .EQ, .NEQ, .LT, .LE, .GT, .GE, .TILDE, .BOR, .BXOR, .BAND, .OR, .OROR, .AND:
@@ -326,12 +327,12 @@ GET_PRECEDENCE :: proc(tok: Token) -> Precedence {
 	}
 }
 @(private = "file", require_results)
-EXP :: proc(p: ^Parser) -> (exp: NODEID, err: OuauError) {
+EXP :: proc(p: ^Parser) -> (exp: NODEID, err: ^OuauError) {
 	exp = p->PRECEDENCE(.LOWEST) or_return
 	return exp, nil
 }
 @(private = "file", require_results)
-INFIX :: proc(p: ^Parser, lhs: NODEID) -> (infix: NODEID, err: OuauError) {
+INFIX :: proc(p: ^Parser, lhs: NODEID) -> (infix: NODEID, err: ^OuauError) {
 	my_alloc := virtual.arena_allocator(p.arena)
 	#partial switch p->GET_TOKEN() {
 	case .OPEN:
@@ -363,7 +364,7 @@ INFIX :: proc(p: ^Parser, lhs: NODEID) -> (infix: NODEID, err: OuauError) {
 			p->APPEND_CHILD(infix, rhs)
 			return infix, nil
 		} else {
-			return 0, PARSE_ERROR(p, "Invalid Identifier in Dot Expression")
+			return 0, p->PARSE_ERROR("Invalid Identifier in Dot Expression")
 		}
 	case .BOPEN:
 		p->ADVANCE() or_return
@@ -385,12 +386,12 @@ INFIX :: proc(p: ^Parser, lhs: NODEID) -> (infix: NODEID, err: OuauError) {
 	return infix, nil
 }
 @(private = "file", require_results)
-PRIMARY :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
+PRIMARY :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 	#partial switch p->GET_TOKEN() {
 	case .NUMBER:
 		node = p->NEW_NODE(.LITERAL)
 		val, ok := strconv.parse_i64(p->GET_TEXT())
-		if !ok { return 0, PARSE_ERROR(p, "InvalidNumber::i64") }
+		if !ok { return 0, p->PARSE_ERROR("InvalidNumber::i64") }
 		p->SET_INT(node, val)
 		p->ADVANCE() or_return
 		return node, nil
@@ -419,10 +420,10 @@ PRIMARY :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 		return node, nil
 	case:
 	}
-	return p->NEW_NODE(.INVALID), PARSE_ERROR(p, "Invalid Token in Primary Expression")
+	return p->NEW_NODE(.INVALID), p->PARSE_ERROR("Invalid Token in Primary Expression")
 }
 @(private = "file", require_results)
-PREFIX :: proc(p: ^Parser) -> (prefix_node: NODEID, err: OuauError) {
+PREFIX :: proc(p: ^Parser) -> (prefix_node: NODEID, err: ^OuauError) {
 	#partial switch p->GET_TOKEN() {
 	case .NOT, .MINUS, .POUND, .BANG:
 		prefix_node = p->NEW_NODE(.UNARY)
@@ -437,7 +438,7 @@ PREFIX :: proc(p: ^Parser) -> (prefix_node: NODEID, err: OuauError) {
 	return prefix_node, nil
 }
 @(private = "file", require_results)
-EXPLIST :: proc(p: ^Parser) -> (parsed_expressions: []NODEID, err: OuauError) {
+EXPLIST :: proc(p: ^Parser) -> (parsed_expressions: []NODEID, err: ^OuauError) {
 	my_alloc := virtual.arena_allocator(p.arena)
 	list_of_expr := make([dynamic]NODEID, 0, my_alloc)
 	expression_node := p->EXP() or_return
@@ -455,10 +456,10 @@ EXPLIST :: proc(p: ^Parser) -> (parsed_expressions: []NODEID, err: OuauError) {
 		parsed_expressions = list_of_expr[:]
 		return parsed_expressions, nil
 	}
-	return parsed_expressions, PARSE_ERROR(p, "PARSE_EXPLIST::Unexpected Token in Expression List")
+	return parsed_expressions, p->PARSE_ERROR("PARSE_EXPLIST::Unexpected Token in Expression List")
 }
 @(private = "file", require_results)
-TABLE :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
+TABLE :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 	p->EXPECT(.TOPEN) or_return
 	table := p->NEW_NODE(.TABLE)
 	if !(p->IS(.TCLOSE)) {
@@ -500,28 +501,28 @@ TABLE :: proc(p: ^Parser) -> (node: NODEID, err: OuauError) {
 	return table, nil
 }
 @(private = "file", require_results)
-SET_NAME :: proc(p: ^Parser, node: NODEID, name: string) -> (err: OuauError) {
+SET_NAME :: proc(p: ^Parser, node: NODEID, name: string) -> (err: ^OuauError) {
 	if p.nodes.name[node] == "" {
 		p.nodes.name[node] = name
 		return nil
 	}
-	return PARSE_ERROR(p, "Name Already set for node.")
+	return p->PARSE_ERROR("Name Already set for node.")
 }
 @(private = "file", require_results)
-SET_STRING :: proc(p: ^Parser, node: NODEID, value: string) -> (err: OuauError) {
+SET_STRING :: proc(p: ^Parser, node: NODEID, value: string) -> (err: ^OuauError) {
 	if p.nodes.string_value[node] == "" {
 		p.nodes.string_value[node] = value
 		return nil
 	}
-	return PARSE_ERROR(p, "String Value Already set for node.")
+	return p->PARSE_ERROR("String Value Already set for node.")
 }
 @(private = "file", require_results)
-SET_INT :: proc(p: ^Parser, node: NODEID, value: i64) -> (err: OuauError) {
+SET_INT :: proc(p: ^Parser, node: NODEID, value: i64) -> (err: ^OuauError) {
 	if p.nodes.int_value[node] == 0 {
 		p.nodes.int_value[node] = value
 		return nil
 	}
-	return PARSE_ERROR(p, "Int Value Already set for node.")
+	return p->PARSE_ERROR("Int Value Already set for node.")
 }
 @(private = "file")
 SET_TOKEN :: proc(p: ^Parser, node: NODEID, token: Token) {
@@ -566,6 +567,24 @@ APPEND_CHILD :: proc(p: ^Parser, parent, child: NODEID) {
 		p.nodes.next_sibling[n] = child
 	}
 }
+@(private = "file")
+PARSE_ERROR :: proc(p: ^Parser, msg: string) -> ^OuauError {
+	my_alloc := virtual.arena_allocator(p.arena)
+	e := new(OuauError, my_alloc)
+	e.kind = .ParseErr
+	e.msg = msg
+	e.payload = ParseErr {
+		msg           = msg,
+		parser_object = p,
+	}
+	fmt.eprintfln("|Parse Error::Msg::(%s)|", msg)
+	fmt.eprintfln("|Pos::(%d)|", p.pos)
+	fmt.eprintfln("|Current Token Text::(%s)|", p.current.text)
+	fmt.eprintfln("|Current Token Kind::(%v)|", p.current.kind)
+	fmt.eprintfln("|Peek Token Kind::(%s)|", p.peek.kind)
+	fmt.eprintfln("|Peek Token Text::(%s)|", p.peek.text)
+	return e
+}
 @(rodata)
 PARSER_VTABLE := ParserVTable {
 	ADVANCE      = ADVANCE,
@@ -591,5 +610,6 @@ PARSER_VTABLE := ParserVTable {
 	SET_STRING   = SET_STRING,
 	SET_INT      = SET_INT,
 	SET_TOKEN    = SET_TOKEN,
+	PARSE_ERROR  = PARSE_ERROR,
 }
 

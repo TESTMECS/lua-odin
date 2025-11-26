@@ -24,7 +24,7 @@ main :: proc() {
 	}
 }
 @(private = "file")
-Ouau :: proc() -> (main_err: Maybe(OuauError)) {
+Ouau :: proc() -> (main_err: Maybe(^OuauError)) {
 	v: virtual.Arena
 	err := virtual.arena_init_growing(&v)
 	ensure(err == nil, "Error initializing arena")
@@ -55,7 +55,8 @@ Ouau :: proc() -> (main_err: Maybe(OuauError)) {
 			input_builder := strings.builder_make(my_alloc)
 			defer strings.builder_destroy(&input_builder)
 			expr: for {
-				line := bufio.reader_read_string(&reader, '\n', my_alloc) or_return
+				line, err := bufio.reader_read_string(&reader, '\n', my_alloc)
+				if err != nil do return IO_ERROR(err, "Error reading from stdin in repl", &v)
 				line = strings.trim_space(line)
 				if strings.has_suffix(line, "\\") {
 					line = strings.trim_suffix(line, "\\")
@@ -81,7 +82,7 @@ Ouau :: proc() -> (main_err: Maybe(OuauError)) {
 			return_value := OUAU_EVAL_STRING(string(file), &v, &i) or_return
 			fmt.println("==> ", return_value)
 		} else {
-			return io.Error.Unexpected_EOF
+			return IO_ERROR(io.Error.Unexpected_EOF, "Error reading file", &v)
 		}
 	case "ast":
 		assert(user_args[1] != "")
@@ -91,7 +92,7 @@ Ouau :: proc() -> (main_err: Maybe(OuauError)) {
 			p->CHUNK() or_return
 			DUMP_AST(&p)
 		} else {
-			return io.Error.Unexpected_EOF
+			return IO_ERROR(io.Error.Unexpected_EOF, "Error reading file", &v)
 		}
 	case "regs":
 		unimplemented("TODO")
@@ -105,7 +106,7 @@ OUAU_EVAL_STRING :: proc(
 	i: ^Interpreter,
 ) -> (
 	return_value: Value,
-	err: OuauError,
+	err: ^OuauError,
 ) {
 	p := NEW_PARSER(input, v) or_return
 	root := p->CHUNK() or_return

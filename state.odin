@@ -127,7 +127,7 @@ TokenDefinition :: struct {
 LexerVTable :: struct {
 	EAT:                          proc(l: ^Lexer),
 	PEEK:                         proc(l: ^Lexer) -> u8,
-	NEXT:                         proc(l: ^Lexer) -> (TokenDefinition, OuauError),
+	NEXT:                         proc(l: ^Lexer) -> (TokenDefinition, ^OuauError),
 	GET_TOKEN:                    proc(
 		l: ^Lexer,
 		type: Token,
@@ -137,21 +137,28 @@ LexerVTable :: struct {
 	SKIP_WHITESPACE:              proc(l: ^Lexer),
 	CREATE_NUMBER:                proc(l: ^Lexer) -> TokenDefinition,
 	CREATE_IDENTIFIER_OR_KEYWORD: proc(l: ^Lexer) -> TokenDefinition,
+	SYNTAX_ERROR:                 proc(
+		l: ^Lexer,
+		my_msg: string,
+		token: TokenDefinition,
+	) -> ^OuauError,
 }
 Lexer :: struct {
 	input:        []u8,
 	ch:           u8, //current character
 	pos:          int,
 	read_pos:     int,
+	arena:        ^virtual.Arena,
 	using vtable: LexerVTable,
 }
 @(require_results)
-NEW_LEXER :: proc(input: string) -> Lexer {
+NEW_LEXER :: proc(input: string, varena: ^virtual.Arena) -> Lexer {
 	l := Lexer {
 		ch       = 0,
 		input    = transmute([]u8)input,
 		pos      = 0,
 		read_pos = 0,
+		arena    = varena,
 		vtable   = LEXER_VTABLE,
 	}
 	l->EAT()
@@ -181,7 +188,6 @@ NODE_KIND :: enum {
 	RETURN,
 	BREAK,
 	VARARGS,
-	UPVALUE,
 }
 NODES :: struct {
 	kind:         [dynamic]NODE_KIND,
@@ -204,29 +210,30 @@ Precedence :: enum u8 {
 	INDEX,
 }
 ParserVTable :: struct {
-	ADVANCE:      proc(p: ^Parser) -> (err: OuauError),
+	ADVANCE:      proc(p: ^Parser) -> (err: ^OuauError),
 	APPEND_CHILD: proc(p: ^Parser, parent, child: NODEID),
 	IS:           proc(p: ^Parser, kind: Token) -> bool,
-	EXPECT:       proc(p: ^Parser, kind: Token) -> (err: OuauError),
+	EXPECT:       proc(p: ^Parser, kind: Token) -> (err: ^OuauError),
 	GET_TEXT:     proc(p: ^Parser) -> (text: string),
 	GET_TOKEN:    proc(p: ^Parser) -> (kind: Token),
-	CHUNK:        proc(p: ^Parser) -> (NODEID, OuauError),
-	BLOCK:        proc(p: ^Parser) -> (NODEID, OuauError),
-	EXP:          proc(p: ^Parser) -> (expression: NODEID, err: OuauError),
-	EXPLIST:      proc(p: ^Parser) -> (parsed_expressions: []NODEID, err: OuauError),
-	STMT:         proc(p: ^Parser) -> (NODEID, OuauError),
-	FUNCTION:     proc(p: ^Parser) -> (NODEID, OuauError),
-	PREFIX:       proc(p: ^Parser) -> (NODEID, OuauError),
-	TABLE:        proc(p: ^Parser) -> (NODEID, OuauError),
-	UBLOCK:       proc(p: ^Parser) -> (NODEID, OuauError),
-	PRIMARY:      proc(p: ^Parser) -> (NODEID, OuauError),
-	INFIX:        proc(p: ^Parser, left_expression: NODEID) -> (NODEID, OuauError),
-	PRECEDENCE:   proc(p: ^Parser, precedence: Precedence) -> (NODEID, OuauError),
-	SET_NAME:     proc(p: ^Parser, node: NODEID, name: string) -> (err: OuauError),
-	SET_STRING:   proc(p: ^Parser, node: NODEID, value: string) -> (err: OuauError),
-	SET_INT:      proc(p: ^Parser, node: NODEID, value: i64) -> (err: OuauError),
+	CHUNK:        proc(p: ^Parser) -> (NODEID, ^OuauError),
+	BLOCK:        proc(p: ^Parser) -> (NODEID, ^OuauError),
+	EXP:          proc(p: ^Parser) -> (expression: NODEID, err: ^OuauError),
+	EXPLIST:      proc(p: ^Parser) -> (parsed_expressions: []NODEID, err: ^OuauError),
+	STMT:         proc(p: ^Parser) -> (NODEID, ^OuauError),
+	FUNCTION:     proc(p: ^Parser) -> (NODEID, ^OuauError),
+	PREFIX:       proc(p: ^Parser) -> (NODEID, ^OuauError),
+	TABLE:        proc(p: ^Parser) -> (NODEID, ^OuauError),
+	UBLOCK:       proc(p: ^Parser) -> (NODEID, ^OuauError),
+	PRIMARY:      proc(p: ^Parser) -> (NODEID, ^OuauError),
+	INFIX:        proc(p: ^Parser, left_expression: NODEID) -> (NODEID, ^OuauError),
+	PRECEDENCE:   proc(p: ^Parser, precedence: Precedence) -> (NODEID, ^OuauError),
+	SET_NAME:     proc(p: ^Parser, node: NODEID, name: string) -> (err: ^OuauError),
+	SET_STRING:   proc(p: ^Parser, node: NODEID, value: string) -> (err: ^OuauError),
+	SET_INT:      proc(p: ^Parser, node: NODEID, value: i64) -> (err: ^OuauError),
 	NEW_NODE:     proc(p: ^Parser, k: NODE_KIND) -> (new_nodeid: NODEID),
 	SET_TOKEN:    proc(p: ^Parser, node: NODEID, token: Token),
+	PARSE_ERROR:  proc(p: ^Parser, msg: string) -> ^OuauError,
 }
 Parser :: struct {
 	pos:          int,
@@ -243,7 +250,7 @@ NEW_PARSER :: proc(
 	param_arena: ^virtual.Arena,
 ) -> (
 	new_parser: Parser,
-	err: OuauError,
+	err: ^OuauError,
 ) {
 	new_parser = Parser {
 		pos     = 0,
@@ -251,21 +258,18 @@ NEW_PARSER :: proc(
 		nodes   = NODES{},
 		current = TokenDefinition{},
 		peek    = TokenDefinition{},
-		lexer   = NEW_LEXER(input),
+		lexer   = NEW_LEXER(input, param_arena),
 		vtable  = PARSER_VTABLE,
 	}
-	// Initalize current and peek
-	// first_token := new_parser.lexer->NEXT() or_return
-	// new_parser.peek = first_token
-	// Initalize Nodes
-	varena := virtual.arena_allocator(param_arena)
-	new_parser.nodes.kind = make([dynamic]NODE_KIND, varena)
-	new_parser.nodes.first_child = make([dynamic]NODEID, varena)
-	new_parser.nodes.next_sibling = make([dynamic]NODEID, varena)
-	new_parser.nodes.token = make([dynamic]Token, varena)
-	new_parser.nodes.int_value = make([dynamic]i64, varena)
-	new_parser.nodes.string_value = make([dynamic]string, varena)
-	new_parser.nodes.name = make([dynamic]string, varena)
+	// Initalize nodes
+	my_alloc := virtual.arena_allocator(param_arena)
+	new_parser.nodes.kind = make([dynamic]NODE_KIND, my_alloc)
+	new_parser.nodes.first_child = make([dynamic]NODEID, my_alloc)
+	new_parser.nodes.next_sibling = make([dynamic]NODEID, my_alloc)
+	new_parser.nodes.token = make([dynamic]Token, my_alloc)
+	new_parser.nodes.int_value = make([dynamic]i64, my_alloc)
+	new_parser.nodes.string_value = make([dynamic]string, my_alloc)
+	new_parser.nodes.name = make([dynamic]string, my_alloc)
 	return new_parser, nil
 }
 @(rodata)
@@ -301,6 +305,7 @@ InterpreterVTable :: struct {
 	GET_CHILD:   proc(i: ^Interpreter, node: NODEID) -> NODEID,
 	GET_GCHILD:  proc(i: ^Interpreter, node: NODEID) -> NODEID,
 	GET_SIBLING: proc(i: ^Interpreter, node: NODEID) -> NODEID,
+	EVAL_ERROR:  proc(i: ^Interpreter, msg: string) -> ^OuauError,
 }
 Interpreter :: struct {
 	globals:      map[string]Value,
