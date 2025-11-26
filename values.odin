@@ -103,6 +103,8 @@ VALUE_TO_STRING :: proc(v: Value, allocator := context.allocator) -> string {
 		return "closure"
 	case ^ReturnValue:
 		return VALUE_TO_STRING(val.value)
+	case ^BreakValue:
+		return "break"
 	case:
 		return "nil"
 	}

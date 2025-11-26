@@ -132,18 +132,13 @@ EVAL_IF :: proc(i: ^Interpreter, node: NODEID) -> Value {
 }
 @(private = "file")
 EVAL_WHILE :: proc(i: ^Interpreter, node: NODEID) -> Value {
-	log.infof("EVAL_WHILE: Starting while loop")
 	child := i.nodes.first_child[node]
 	cond_node := child
-	log.infof("EVAL_WHILE: cond node::(%v)", cond_node)
 	body_node := i.nodes.next_sibling[child]
-	log.infof("EVAL_WHILE: body node::(%v)", body_node)
-	log.infof("EVAL_WHILE: IS_TRUTHY::(%v)", IS_TRUTHY(EVAL(i, cond_node)))
 	for IS_TRUTHY(EVAL(i, cond_node)) {
 		result := EVAL(i, body_node)
-		log.infof("EVAL_WHILE: result::(%v)", result)
-		if res, ok := result.(^BreakValue); ok {
-			return result
+		if _, ok := result.(^BreakValue); ok {
+			return nil
 		}
 	}
 	return nil
