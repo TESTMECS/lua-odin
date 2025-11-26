@@ -77,7 +77,7 @@ Ouau :: proc() -> (main_err: Maybe(^OuauError)) {
 			strings.write_string(&accumulated_input, complete_input)
 			strings.write_byte(&accumulated_input, '\n')
 			return_value := OUAU_EVAL_STRING(strings.to_string(accumulated_input), &v, &i)
-			fmt.println("==> ", VALUE_TO_STRING(return_value))
+			fmt.println("==> ", VALUE_TO_STRING(return_value, &v))
 		}
 	case "file":
 		i := NEW_INTERPRETER(nil, &v)

@@ -194,7 +194,7 @@ NODES :: struct {
 	first_child:  [dynamic]NODEID,
 	next_sibling: [dynamic]NODEID,
 	token:        [dynamic]Token,
-	int_value:    [dynamic]i64,
+	int_value:    [dynamic]f64,
 	string_value: [dynamic]string,
 	name:         [dynamic]string,
 }
@@ -230,7 +230,7 @@ ParserVTable :: struct {
 	PRECEDENCE:   proc(p: ^Parser, precedence: Precedence) -> (NODEID, ^OuauError),
 	SET_NAME:     proc(p: ^Parser, node: NODEID, name: string) -> (err: ^OuauError),
 	SET_STRING:   proc(p: ^Parser, node: NODEID, value: string) -> (err: ^OuauError),
-	SET_INT:      proc(p: ^Parser, node: NODEID, value: i64) -> (err: ^OuauError),
+	SET_INT:      proc(p: ^Parser, node: NODEID, value: f64) -> (err: ^OuauError),
 	NEW_NODE:     proc(p: ^Parser, k: NODE_KIND) -> (new_nodeid: NODEID),
 	SET_TOKEN:    proc(p: ^Parser, node: NODEID, token: Token),
 	PARSE_ERROR:  proc(p: ^Parser, msg: string) -> ^OuauError,
@@ -267,7 +267,7 @@ NEW_PARSER :: proc(
 	new_parser.nodes.first_child = make([dynamic]NODEID, my_alloc)
 	new_parser.nodes.next_sibling = make([dynamic]NODEID, my_alloc)
 	new_parser.nodes.token = make([dynamic]Token, my_alloc)
-	new_parser.nodes.int_value = make([dynamic]i64, my_alloc)
+	new_parser.nodes.int_value = make([dynamic]f64, my_alloc)
 	new_parser.nodes.string_value = make([dynamic]string, my_alloc)
 	new_parser.nodes.name = make([dynamic]string, my_alloc)
 	return new_parser, nil

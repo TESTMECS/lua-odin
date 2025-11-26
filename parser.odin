@@ -389,8 +389,8 @@ PRIMARY :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 	#partial switch p->GET_TOKEN() {
 	case .NUMBER:
 		node = p->NEW_NODE(.LITERAL)
-		val, ok := strconv.parse_i64(p->GET_TEXT())
-		if !ok { return 0, p->PARSE_ERROR("InvalidNumber::i64") }
+		val, ok := strconv.parse_f64(p->GET_TEXT())
+		if !ok { return 0, p->PARSE_ERROR("Couldn't Parse f64") }
 		p->SET_INT(node, val)
 		p->ADVANCE() or_return
 		return node, nil
@@ -516,7 +516,7 @@ SET_STRING :: proc(p: ^Parser, node: NODEID, value: string) -> (err: ^OuauError)
 	return p->PARSE_ERROR("String Value Already set for node.")
 }
 @(private = "file", require_results)
-SET_INT :: proc(p: ^Parser, node: NODEID, value: i64) -> (err: ^OuauError) {
+SET_INT :: proc(p: ^Parser, node: NODEID, value: f64) -> (err: ^OuauError) {
 	if p.nodes.int_value[node] == 0 {
 		p.nodes.int_value[node] = value
 		return nil

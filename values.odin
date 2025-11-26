@@ -89,14 +89,14 @@ VALUE_TO_KEY_TAG :: proc(v: Value) -> KeyTag {
 	}
 }
 @(private)
-VALUE_TO_STRING :: proc(v: Value, allocator := context.allocator) -> string {
-	sb := strings.builder_make(allocator)
-	defer strings.builder_destroy(&sb)
+VALUE_TO_STRING :: proc(v: Value, varena: ^virtual.Arena) -> string {
+	my_alloc := virtual.arena_allocator(varena)
+	sb := strings.builder_make(my_alloc)
 	#partial switch val in v {
 	case bool:
 		return val ? "true" : "false"
 	case f64:
-		strings.write_f64(&sb, val, 'f')
+		strings.write_f64(&sb, val, 'g')
 		ret_val := strings.to_string(sb)
 		return ret_val
 	case string:
@@ -108,7 +108,7 @@ VALUE_TO_STRING :: proc(v: Value, allocator := context.allocator) -> string {
 	case ^Closure:
 		return "closure"
 	case ^ReturnValue:
-		return VALUE_TO_STRING(val.value)
+		return "return value"
 	case ^BreakValue:
 		return "break"
 	case ^OuauError:
