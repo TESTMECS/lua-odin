@@ -161,7 +161,7 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		ret_val.value = val
 		return ret_val
 	case .CALL:
-		fn_child := GET_LEFT_CHILD(i, node)
+		fn_child := i->GET_LEFT_CHILD(node)
 		fn_val := i->EVAL(fn_child)
 		if fn_val == nil {
 			return nil
@@ -216,7 +216,7 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 			return nil
 		}
 	case .BINARY:
-		left := i->EVAL(GET_LEFT_CHILD(i, node))
+		left := i->EVAL(i->GET_LEFT_CHILD(node))
 		right := i->EVAL(GET_RIGHT_CHILD(i, node))
 		op := i.nodes.token[node]
 		#partial switch op {
@@ -307,7 +307,7 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		child := i.nodes.first_child[node]
 		for child != 0 {
 			if i.nodes.kind[child] == .BINARY {
-				key := i->EVAL(GET_LEFT_CHILD(i, child))
+				key := i->EVAL(i->GET_LEFT_CHILD(child))
 				value := i->EVAL(GET_RIGHT_CHILD(i, child))
 				key_tag := VALUE_TO_KEY_TAG(key)
 				table.data[key_tag] = value
@@ -379,13 +379,11 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 @(private = "file")
 EVAL_FUNCTION :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	my_alloc := virtual.arena_allocator(i.arena)
-
 	fn := new(Closure, my_alloc)
 	fn.is_native = false
 	fn.params = EXTRACT_PARAMS(i, node)
 	fn.body = GET_FUNCTION_BODY(i, node)
 	fn.closure = i.current
-
 	name := i.nodes.name[node]
 	if name != "" {
 		ENV_SET(i.current, name, fn)
@@ -413,7 +411,6 @@ EXTRACT_PARAMS :: proc(i: ^Interpreter, node: NODEID) -> []string {
 	my_alloc := virtual.arena_allocator(i.arena)
 	params := make([dynamic]string, my_alloc)
 	child := i.nodes.first_child[node]
-	// Collect all consecutive IDENTIFIER nodes as parameters
 	for child != 0 && i.nodes.kind[child] == .IDENTIFIER {
 		append(&params, i.nodes.name[child])
 		child = i.nodes.next_sibling[child]
@@ -472,11 +469,9 @@ CALL_USER_FUNCTION :: proc(i: ^Interpreter, fn: ^Closure, args: []Value) -> Valu
 EVAL_EXPRESSION_LIST :: proc(i: ^Interpreter, node: NODEID) -> []Value {
 	my_alloc := virtual.arena_allocator(i.arena)
 	values := make([dynamic]Value, my_alloc)
-
 	if node == 0 {
 		return values[:]
 	}
-
 	// Check if this node is a container (like a block) or an actual argument
 	if i.nodes.kind[node] == .BLOCK {
 		child := i.nodes.first_child[node]
@@ -492,7 +487,6 @@ EVAL_EXPRESSION_LIST :: proc(i: ^Interpreter, node: NODEID) -> []Value {
 			child = i.nodes.next_sibling[child]
 		}
 	}
-
 	return values[:]
 }
 @(private = "file")
@@ -583,7 +577,7 @@ COMPARE_TABLE :: proc(left, right: ^Table) -> bool {
 }
 @(private = "file")
 ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
-	lvalue := GET_LEFT_CHILD(i, node)
+	lvalue := i->GET_LEFT_CHILD(node)
 	rvalue := GET_RIGHT_CHILD(i, node)
 
 	lvalue_kind := i.nodes.kind[lvalue]
@@ -601,13 +595,10 @@ ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		}
 		ENV_SET(env, name, value_to_assign)
 		return value_to_assign
-
 	case .BINARY:
 		op := i.nodes.token[lvalue]
-
 		if op == .DOT {
-			// For dot access, evaluate table and key first, then RHS
-			table_expr_node := GET_LEFT_CHILD(i, lvalue)
+			table_expr_node := i->GET_LEFT_CHILD(lvalue)
 			table_val := i->EVAL(table_expr_node)
 			table, ok := table_val.(^Table)
 			if !ok || table == nil {
@@ -623,7 +614,7 @@ ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 			return value_to_assign
 
 		} else if op == .BOPEN {
-			table_expr_node := GET_LEFT_CHILD(i, lvalue)
+			table_expr_node := i->GET_LEFT_CHILD(lvalue)
 			table_val := i->EVAL(table_expr_node)
 			table, ok := table_val.(^Table)
 			if !ok || table == nil {
@@ -643,7 +634,8 @@ ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 }
 @(rodata)
 INTERPRETER_VTABLE := InterpreterVTable {
-	EVAL   = EVAL,
-	ASSIGN = ASSIGN,
+	EVAL           = EVAL,
+	ASSIGN         = ASSIGN,
+	GET_LEFT_CHILD = GET_LEFT_CHILD,
 }
 

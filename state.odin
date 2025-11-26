@@ -296,8 +296,9 @@ Frame :: struct {
 	result:      Value,
 }
 InterpreterVTable :: struct {
-	EVAL:   proc(i: ^Interpreter, node: NODEID) -> Value,
-	ASSIGN: proc(i: ^Interpreter, node: NODEID) -> Value,
+	EVAL:           proc(i: ^Interpreter, node: NODEID) -> Value,
+	ASSIGN:         proc(i: ^Interpreter, node: NODEID) -> Value,
+	GET_LEFT_CHILD: proc(i: ^Interpreter, node: NODEID) -> NODEID,
 }
 Interpreter :: struct {
 	globals:      map[string]Value,
