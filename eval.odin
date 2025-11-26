@@ -243,25 +243,35 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		case .PLUS:
 			return EVAL_PLUS(left, right)
 		case .MINUS:
-			return EVAL_MINUS(left, right)
+			return left.(f64) - right.(f64)
 		case .MUL:
-			return EVAL_MUL(left, right)
+			return left.(f64) * right.(f64)
 		case .DIV:
-			return EVAL_DIV(left, right)
+			return left.(f64) / right.(f64)
 		case .MOD:
-			return EVAL_MOD(left, right)
+			return math.mod_f64(left.(f64), right.(f64))
 		case .POW:
 			return math.pow_f64(left.(f64), right.(f64))
 		case .BXOR:
-			return EVAL_BITWISE(left, right, .BXOR)
+			left_int := cast(i64)left.(f64)
+			right_int := cast(i64)right.(f64)
+			return cast(f64)(left_int ~ right_int)
 		case .BAND:
-			return EVAL_BITWISE(left, right, .BAND)
+			left_int := cast(i64)left.(f64)
+			right_int := cast(i64)right.(f64)
+			return cast(f64)(left_int & right_int)
 		case .BOR:
-			return EVAL_BITWISE(left, right, .BOR)
+			left_int := cast(i64)left.(f64)
+			right_int := cast(i64)right.(f64)
+			return cast(f64)(left_int | right_int)
 		case .SHL:
-			return EVAL_BITWISE(left, right, .SHL)
+			left_int := cast(i64)left.(f64)
+			right_int := cast(i64)right.(f64)
+			return cast(f64)(left_int << uint(right_int))
 		case .SHR:
-			return EVAL_BITWISE(left, right, .SHR)
+			left_int := cast(i64)left.(f64)
+			right_int := cast(i64)right.(f64)
+			return cast(f64)(left_int >> uint(right_int))
 		case .DOT:
 			table_val := left
 			table, ok := table_val.(^Table)
@@ -501,7 +511,7 @@ EVAL_COMPARE :: proc(left, right: Value, op: Token) -> bool {
 		case (^Table):
 			return COMPARE_TABLE(left.(^Table), right.(^Table))
 		case (^Closure):
-			return COMPARE_CLOSURE(left.(^Closure), right.(^Closure))
+			return left.(^Closure) == right.(^Closure)
 		case ^ReturnValue:
 			return false
 		case ^BreakValue:
@@ -527,7 +537,7 @@ EVAL_COMPARE :: proc(left, right: Value, op: Token) -> bool {
 	case:
 		unimplemented("TODO")
 	}
-	panic("unreachable")
+	unreachable()
 }
 @(private = "file")
 EVAL_PLUS :: proc(left, right: Value) -> Value {
@@ -551,56 +561,6 @@ EVAL_PLUS :: proc(left, right: Value) -> Value {
 	return lvalue + rvalue
 }
 @(private = "file")
-EVAL_MINUS :: proc(left, right: Value) -> Value {
-	#partial switch ty in left {
-	case f64:
-		return left.(f64) - right.(f64)
-	case:
-		return nil
-	}
-}
-@(private = "file")
-EVAL_MUL :: proc(left, right: Value) -> Value {
-	#partial switch ty in left {
-	case f64:
-		return left.(f64) * right.(f64)
-	case:
-		return nil
-	}
-}
-@(private = "file")
-EVAL_DIV :: proc(left, right: Value) -> Value {
-	#partial switch ty in left {
-	case f64:
-		return left.(f64) / right.(f64)
-	case:
-		return nil
-	}
-}
-@(private = "file")
-EVAL_MOD :: proc(left, right: Value) -> Value {
-	return math.mod_f64(left.(f64), right.(f64))
-}
-@(private = "file")
-EVAL_BITWISE :: proc(left, right: Value, op: Token) -> Value {
-	left_int := cast(i64)left.(f64)
-	right_int := cast(i64)right.(f64)
-
-	#partial switch op {
-	case .SHL:
-		return cast(f64)(left_int << uint(right_int))
-	case .SHR:
-		return cast(f64)(left_int >> uint(right_int))
-	case .BAND:
-		return cast(f64)(left_int & right_int)
-	case .BOR:
-		return cast(f64)(left_int | right_int)
-	case .BXOR:
-		return cast(f64)(left_int ~ right_int)
-	}
-	return 0.0
-}
-@(private = "file")
 COMPARE_TABLE :: proc(left, right: ^Table) -> bool {
 	if left == right {
 		return true
@@ -611,7 +571,6 @@ COMPARE_TABLE :: proc(left, right: ^Table) -> bool {
 	if len(left.data) != len(right.data) {
 		return false
 	}
-
 	// Compare all key-value pairs
 	for key, left_val in left.data {
 		if right_val, ok := right.data[key]; !ok {
@@ -620,12 +579,7 @@ COMPARE_TABLE :: proc(left, right: ^Table) -> bool {
 			return false
 		}
 	}
-
 	return true
-}
-@(private = "file")
-COMPARE_CLOSURE :: proc(left, right: ^Closure) -> bool {
-	return left == right
 }
 @(private = "file")
 ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
