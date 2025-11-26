@@ -78,15 +78,15 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		return i->EVAL(c)
 	case .FOR:
 		var_name := i.nodes.name[node]
-		child := i->GET_CHILD(node)
-		init := i->EVAL(child)
-		child = i->GET_SIBLING(child)
-		limit := i->EVAL(child)
-		child = i->GET_SIBLING(child)
+		c := i->GET_CHILD(node)
+		init := i->EVAL(c)
+		c = i->GET_SIBLING(c)
+		limit := i->EVAL(c)
+		c = i->GET_SIBLING(c)
 		step: Value = 1.0
-		if child != 0 && i.nodes.kind[child] != .BLOCK {
-			step = i->EVAL(child)
-			child = i->GET_SIBLING(child)
+		if c != 0 && i.nodes.kind[c] != .BLOCK {
+			step = i->EVAL(c)
+			c = i->GET_SIBLING(c)
 		}
 		ENV_SET(i.current, var_name, init)
 		for {
@@ -95,7 +95,7 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 			   (step.(f64) < 0 && current_val.(f64) < limit.(f64)) {
 				break
 			}
-			body_result := i->EVAL(child)
+			body_result := i->EVAL(c)
 			if _, ok := body_result.(^ReturnValue); ok {
 				return body_result
 			}
