@@ -300,6 +300,7 @@ Frame :: struct {
 	result:      Value,
 }
 InterpreterVTable :: struct {
+	INTERPRET:   proc(i: ^Interpreter, root: NODEID) -> (result: Value),
 	EVAL:        proc(i: ^Interpreter, node: NODEID) -> Value,
 	ASSIGN:      proc(i: ^Interpreter, node: NODEID) -> Value,
 	GET_CHILD:   proc(i: ^Interpreter, node: NODEID) -> NODEID,

@@ -118,7 +118,7 @@ OUAU_EVAL_STRING :: proc(
 	p := NEW_PARSER(input, v) or_return
 	root := p->CHUNK() or_return
 	i.nodes = &p.nodes
-	return_value = INTERPRET(i, root)
+	return_value = i->INTERPRET(root)
 	return return_value, nil
 }
 dump_node :: proc(p: ^Parser, id: u32, indent: int) {

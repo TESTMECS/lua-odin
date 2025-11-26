@@ -614,6 +614,7 @@ EVAL_ERROR :: proc(i: ^Interpreter, msg: string) -> ^OuauError {
 }
 @(rodata)
 INTERPRETER_VTABLE := InterpreterVTable {
+	INTERPRET   = INTERPRET,
 	EVAL        = EVAL,
 	ASSIGN      = ASSIGN,
 	GET_CHILD   = GET_CHILD,

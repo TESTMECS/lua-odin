@@ -19,7 +19,7 @@ test_eval_block :: proc(t: ^testing.T) {
 	root, chunk_err := CHUNK(&p)
 	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
 	i := NEW_INTERPRETER(&p.nodes, &v)
-	val := INTERPRET(&i, root)
+	val := i->INTERPRET(root)
 	if val == nil || val.(f64) != 1 {
 		testing.fail(t)
 	}
@@ -43,7 +43,7 @@ test_function :: proc(t: ^testing.T) {
 	root, chunk_err := CHUNK(&p)
 	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
 	i := NEW_INTERPRETER(&p.nodes, &v)
-	val := INTERPRET(&i, root)
+	val := i->INTERPRET(root)
 	if val == nil || val.(f64) != 2 {
 		testing.fail(t)
 	}
@@ -66,7 +66,7 @@ test_eval_table :: proc(t: ^testing.T) {
 	root, chunk_err := CHUNK(&p)
 	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
 	i := NEW_INTERPRETER(&p.nodes, &v)
-	val := INTERPRET(&i, root)
+	val := i->INTERPRET(root)
 	if val == nil || val.(f64) != 2 {
 		testing.fail(t)
 	}
@@ -89,7 +89,7 @@ test_eval_array :: proc(t: ^testing.T) {
 	root, chunk_err := CHUNK(&p)
 	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
 	i := NEW_INTERPRETER(&p.nodes, &v)
-	val := INTERPRET(&i, root)
+	val := i->INTERPRET(root)
 	if val == nil || val.(f64) != 1 {
 		testing.fail(t)
 	}
@@ -114,7 +114,7 @@ test_ifelse :: proc(t: ^testing.T) {
 	root, chunk_err := CHUNK(&p)
 	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
 	i := NEW_INTERPRETER(&p.nodes, &v)
-	val := INTERPRET(&i, root)
+	val := i->INTERPRET(root)
 	if val == nil || val.(f64) != 3 {
 		testing.fail(t)
 	}
@@ -139,7 +139,7 @@ test_while :: proc(t: ^testing.T) {
 	root, chunk_err := CHUNK(&p)
 	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
 	i := NEW_INTERPRETER(&p.nodes, &v)
-	val := INTERPRET(&i, root)
+	val := i->INTERPRET(root)
 	if val == nil || val.(f64) != 1 {
 		testing.fail(t)
 	}
@@ -163,7 +163,7 @@ test_for :: proc(t: ^testing.T) {
 	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
 	// DUMP_AST(&p)
 	i := NEW_INTERPRETER(&p.nodes, &v)
-	val := INTERPRET(&i, root)
+	val := i->INTERPRET(root)
 	if val == nil || val.(f64) != 10 {
 		testing.fail(t)
 	}
@@ -184,7 +184,7 @@ test_for_list :: proc(t: ^testing.T) {
 	p, p_err := NEW_PARSER(input, &v)
 	root, chunk_err := CHUNK(&p)
 	i := NEW_INTERPRETER(&p.nodes, &v)
-	val := INTERPRET(&i, root)
+	val := i->INTERPRET(root)
 	tbl, ok := val.(^Table)
 	// log.infof("val::(%v)", val)
 	if val == nil || !ok {
@@ -207,7 +207,7 @@ test_global :: proc(t: ^testing.T) {
 	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
 	// DUMP_AST(&p)
 	i := NEW_INTERPRETER(&p.nodes, &v)
-	val := INTERPRET(&i, root)
+	val := i->INTERPRET(root)
 	// log.infof("val::(%v)", i.globals)
 	if val == nil || val.(f64) != 1 {
 		testing.fail(t)
