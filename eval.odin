@@ -130,10 +130,10 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		break_val := new(BreakValue, my_alloc)
 		return break_val
 	case .RETURN:
-		child := i->GET_CHILD(node)
+		c := i->GET_CHILD(node)
 		val: Value
-		if child != 0 {
-			val = i->EVAL(child)
+		if c != 0 {
+			val = i->EVAL(c)
 		} else {
 			val = nil
 		}
