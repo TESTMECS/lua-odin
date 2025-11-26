@@ -28,49 +28,42 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	// TODO: Finish partial
 	#partial switch kind {
 	case .BLOCK:
-		child := i.nodes.first_child[node]
+		child := i->GET_LEFT_CHILD(node)
 		last_result: Value
 		for child != 0 {
 			v := i->EVAL(child)
-			if _, ok := v.(^ReturnValue); ok {
-				return v
-			}
+			if _, ok := v.(^ReturnValue); ok { return v }
 			last_result = v
-			child = i.nodes.next_sibling[child]
+			child = i->GET_NEXT_SIBLING(child)
 		}
 		return last_result
 	case .UBLOCK:
 		child := i->GET_LEFT_CHILD(node)
 		block_result := i->EVAL(child)
-		if block_result != nil {
-			return block_result
-		}
-		child = i.nodes.next_sibling[child]
+		if block_result != nil { return block_result }
+		child = i->GET_NEXT_SIBLING(child)
 		condition := i->EVAL(child)
 		return condition
 	case .IF:
-		child := i.nodes.first_child[node]
+		child := i->GET_LEFT_CHILD(node)
 		cond := i->EVAL(child)
-		child = i.nodes.next_sibling[child]
+		child = i->GET_NEXT_SIBLING(child)
 		if IS_TRUTHY(cond) {
 			return i->EVAL(child)
 		} else {
-			child = i.nodes.next_sibling[child]
+			child = i->GET_NEXT_SIBLING(child)
 			for child != 0 {
-				// child is the condition, next sibling is the body
 				cond := i->EVAL(child)
-				body_child := i.nodes.next_sibling[child]
-				if IS_TRUTHY(cond) {
-					return i->EVAL(body_child)
-				}
-				child = i.nodes.next_sibling[body_child]
+				body_child := i->GET_NEXT_SIBLING(child)
+				if IS_TRUTHY(cond) { return i->EVAL(body_child) }
+				child = i->GET_NEXT_SIBLING(body_child)
 			}
 		}
 		return nil
 	case .WHILE:
-		child := i.nodes.first_child[node]
+		child := i->GET_LEFT_CHILD(node)
 		cond_node := child
-		body_node := i.nodes.next_sibling[child]
+		body_node := i->GET_NEXT_SIBLING(child)
 		for IS_TRUTHY(i->EVAL(cond_node)) {
 			result := i->EVAL(body_node)
 			if _, ok := result.(^BreakValue); ok {
@@ -79,33 +72,28 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		}
 		return nil
 	case .REPEAT:
-		child := i.nodes.first_child[node]
-		ublock_node := child
+		child := i->GET_LEFT_CHILD(node)
 		for {
-			block_result := i->EVAL(ublock_node)
-			if block_result != nil {
-				return block_result
-			}
-			condition := i->EVAL(i->GET_RIGHT_CHILD(ublock_node))
+			block_result := i->EVAL(child)
+			if block_result != nil { return block_result }
+			condition := i->EVAL(i->GET_RIGHT_CHILD(child))
 			if IS_TRUTHY(condition) { break }
 		}
 		return nil
 	case .DO:
-		child := i.nodes.first_child[node]
+		child := i->GET_LEFT_CHILD(node)
 		return i->EVAL(child)
 	case .FOR:
 		var_name := i.nodes.name[node]
-		child := i.nodes.first_child[node]
-		// Numeric for loop: init, limit, [step], body
+		child := i->GET_LEFT_CHILD(node)
 		init := i->EVAL(child)
-		child = i.nodes.next_sibling[child]
+		child = i->GET_NEXT_SIBLING(child)
 		limit := i->EVAL(child)
-		child = i.nodes.next_sibling[child]
+		child = i->GET_NEXT_SIBLING(child)
 		step: Value = 1.0
-		// Check if there's a step expression before the body
 		if child != 0 && i.nodes.kind[child] != .BLOCK {
 			step = i->EVAL(child)
-			child = i.nodes.next_sibling[child]
+			child = i->GET_NEXT_SIBLING(child)
 		}
 		ENV_SET(i.current, var_name, init)
 		for {
@@ -123,17 +111,17 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		}
 		return nil
 	case .LOCAL:
-		child := i.nodes.first_child[node]
+		child := i->GET_LEFT_CHILD(node)
 		vars := make([dynamic]string, my_alloc)
 		for child != 0 && i.nodes.kind[child] == .IDENTIFIER {
 			append(&vars, i.nodes.name[child])
-			child = i.nodes.next_sibling[child]
+			child = i->GET_NEXT_SIBLING(child)
 		}
 		values := make([dynamic]Value, my_alloc)
 		for child != 0 {
 			val := i->EVAL(child)
 			append(&values, val)
-			child = i.nodes.next_sibling[child]
+			child = i->GET_NEXT_SIBLING(child)
 		}
 		last_value: Value
 		for name, idx in vars {
@@ -145,12 +133,11 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 			}
 		}
 		return last_value
-
 	case .BREAK:
 		break_val := new(BreakValue, my_alloc)
 		return break_val
 	case .RETURN:
-		child := i.nodes.first_child[node]
+		child := i->GET_LEFT_CHILD(node)
 		val: Value
 		if child != 0 {
 			val = i->EVAL(child)
@@ -163,13 +150,9 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	case .CALL:
 		fn_child := i->GET_LEFT_CHILD(node)
 		fn_val := i->EVAL(fn_child)
-		if fn_val == nil {
-			return nil
-		}
+		if fn_val == nil { return nil }
 		fn_val_closure, ok := fn_val.(^Closure)
-		if !ok {
-			return nil
-		}
+		if !ok { return nil }
 		arg_child := GET_ARGUMENTS_CHILD(i, node)
 		args := EVAL_EXPRESSION_LIST(i, arg_child)
 		if fn_val_closure.is_native {
@@ -178,7 +161,7 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 			return CALL_USER_FUNCTION(i, fn_val_closure, args)
 		}
 	case .UNARY:
-		child := i.nodes.first_child[node]
+		child := i->GET_LEFT_CHILD(node)
 		operand := i->EVAL(child)
 		op := i.nodes.token[node]
 		#partial switch op {
@@ -191,9 +174,6 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 			case string:
 				return f64(len(val))
 			case ^Table:
-				// For tables, return the length of the array part
-				// This is a simplified version - in real Lua it's more complex
-				// We'll count consecutive integer keys starting from 1
 				length: i64 = 0
 				for {
 					key_tag := KeyTag {
@@ -288,9 +268,7 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		case .BOPEN:
 			table_val := left
 			table, ok := table_val.(^Table)
-			if !ok || table == nil {
-				return nil
-			}
+			if !ok || table == nil { return nil }
 			right_node_id := i->GET_RIGHT_CHILD(node)
 			key_val := i->EVAL(right_node_id)
 			key_tag := VALUE_TO_KEY_TAG(key_val)
@@ -300,11 +278,10 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 			return nil
 		}
 		return nil
-
 	case .TABLE:
 		table := new(Table, my_alloc)
 		table.data = make(map[KeyTag]Value, my_alloc)
-		child := i.nodes.first_child[node]
+		child := i->GET_LEFT_CHILD(node)
 		for child != 0 {
 			if i.nodes.kind[child] == .BINARY {
 				key := i->EVAL(i->GET_LEFT_CHILD(child))
@@ -312,7 +289,6 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 				key_tag := VALUE_TO_KEY_TAG(key)
 				table.data[key_tag] = value
 			} else {
-				// Array-style value (implicit integer key)
 				key_tag := KeyTag {
 					kind = 1,
 					i    = cast(i64)len(table.data) + 1,
@@ -320,21 +296,21 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 				value := i->EVAL(child)
 				table.data[key_tag] = value
 			}
-			child = i.nodes.next_sibling[child]
+			child = i->GET_NEXT_SIBLING(child)
 		}
 		return table
 	case .GLOBAL:
-		child := i.nodes.first_child[node]
+		child := i->GET_LEFT_CHILD(node)
 		vars := make([dynamic]string, my_alloc)
 		for child != 0 && i.nodes.kind[child] == .IDENTIFIER {
 			append(&vars, i.nodes.name[child])
-			child = i.nodes.next_sibling[child]
+			child = i->GET_NEXT_SIBLING(child)
 		}
 		values := make([dynamic]Value, my_alloc)
 		for child != 0 {
 			val := i->EVAL(child)
 			append(&values, val)
-			child = i.nodes.next_sibling[child]
+			child = i->GET_NEXT_SIBLING(child)
 		}
 		last_value: Value
 		for name, idx in vars {
@@ -402,6 +378,10 @@ GET_ARGUMENTS_CHILD :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
 	return arg_child
 }
 @(private = "file")
+GET_NEXT_SIBLING :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
+	return i.nodes.next_sibling[node]
+}
+@(private = "file")
 GET_RIGHT_CHILD :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
 	left := i.nodes.first_child[node]
 	return i.nodes.next_sibling[left]
@@ -419,9 +399,9 @@ EXTRACT_PARAMS :: proc(i: ^Interpreter, node: NODEID) -> []string {
 }
 @(private = "file")
 GET_FUNCTION_BODY :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
-	child := i.nodes.first_child[node]
+	child := i->GET_LEFT_CHILD(node)
 	for child != 0 && i.nodes.kind[child] == .IDENTIFIER {
-		child = i.nodes.next_sibling[child]
+		child = i->GET_NEXT_SIBLING(child)
 	}
 	return child
 }
@@ -451,27 +431,20 @@ IS_TRUTHY :: proc(PValue: Value) -> bool {
 CALL_USER_FUNCTION :: proc(i: ^Interpreter, fn: ^Closure, args: []Value) -> Value {
 	env := NEW_ENVIRONMENT(fn.closure, i.arena)
 	for param, i in fn.params {
-		if i < len(args) {
-			ENV_SET(env, param, args[i])
-		}
+		if i < len(args) { ENV_SET(env, param, args[i]) }
 	}
 	old_env := i.current
 	i.current = env
 	result := i->EVAL(fn.body)
 	i.current = old_env
-
-	if ret, ok := result.(^ReturnValue); ok {
-		return ret.value
-	}
-	return nil // No explicit return
+	if ret, ok := result.(^ReturnValue); ok { return ret.value }
+	return nil
 }
 @(private = "file")
 EVAL_EXPRESSION_LIST :: proc(i: ^Interpreter, node: NODEID) -> []Value {
 	my_alloc := virtual.arena_allocator(i.arena)
 	values := make([dynamic]Value, my_alloc)
-	if node == 0 {
-		return values[:]
-	}
+	if node == 0 { return values[:] }
 	// Check if this node is a container (like a block) or an actual argument
 	if i.nodes.kind[node] == .BLOCK {
 		child := i.nodes.first_child[node]
@@ -556,15 +529,9 @@ EVAL_PLUS :: proc(left, right: Value) -> Value {
 }
 @(private = "file")
 COMPARE_TABLE :: proc(left, right: ^Table) -> bool {
-	if left == right {
-		return true
-	}
-	if left == nil || right == nil {
-		return false
-	}
-	if len(left.data) != len(right.data) {
-		return false
-	}
+	if left == right { return true }
+	if left == nil || right == nil { return false }
+	if len(left.data) != len(right.data) { return false }
 	// Compare all key-value pairs
 	for key, left_val in left.data {
 		if right_val, ok := right.data[key]; !ok {
@@ -634,9 +601,10 @@ ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 }
 @(rodata)
 INTERPRETER_VTABLE := InterpreterVTable {
-	EVAL            = EVAL,
-	ASSIGN          = ASSIGN,
-	GET_LEFT_CHILD  = GET_LEFT_CHILD,
-	GET_RIGHT_CHILD = GET_RIGHT_CHILD,
+	EVAL             = EVAL,
+	ASSIGN           = ASSIGN,
+	GET_LEFT_CHILD   = GET_LEFT_CHILD,
+	GET_RIGHT_CHILD  = GET_RIGHT_CHILD,
+	GET_NEXT_SIBLING = GET_NEXT_SIBLING,
 }
 
