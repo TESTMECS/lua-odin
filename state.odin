@@ -181,7 +181,7 @@ NEW_LEXER :: proc(input: string, varena: ^virtual.Arena) -> Lexer {
 	 #Precedence | Precedence state, including LOWEST, ASSIGN, EQUALS, LESSGREATER, SUM, PRODUCT, PREFIX, CALL, INDEX.
 */
 NODEID :: u32
-NODE_KIND :: enum {
+NODE_KIND :: enum u8 {
 	INVALID,
 	BLOCK,
 	UBLOCK,
@@ -214,7 +214,7 @@ NODES :: struct {
 	string_value: [dynamic]string,
 	name:         [dynamic]string,
 }
-Precedence :: enum u8 {
+Precedence :: enum {
 	LOWEST,
 	ASSIGN,
 	EQUALS,
@@ -426,43 +426,54 @@ ENV_RESORT :: proc(env: ^Environment) {
 	 #Compiler| Compiler state, including instructions, constants, locals, upvalues, and AST nodes.
 	 #Prototype| Prototype state, including instructions, constants, prototypes, upvalues, and max stack size.
 */
+Local :: struct {
+	name:  string,
+	reg:   int, // register index
+	depth: int, // depth of the local
+}
 Compiler :: struct {
 	instructions: [dynamic]u32, // Bytecode instructions
 	constants:    [dynamic]Value, // pool for LoadK instructions
+	locals:       [dynamic]Local, // map of name -> register
+	upvalues:     [dynamic]UpValueDesc, // map of name -> upval index
 	const_index:  map[Value]int, // equality hashing for constants
-	locals:       map[string]int, // map of name -> register
-	upvalues:     map[string]int, // map of name -> upval index
 	nodes:        ^NODES, // AST nodes
 	max_stack:    int, // max stack size
-	nparams:      int, // number of parameters
-	local_count:  int, // next free register
+	num_params:   int, // number of parameters
+	scope_depth:  int, // current scope depth
 	free_regs:    [dynamic]int, // stack of freed reg indices
 	prototypes:   [dynamic]^Prototype, // nested function prototypes
-	parent:       ^Prototype, // upvalue resolution
+	parent:       ^Compiler, // upvalue resolution
 	arena:        ^virtual.Arena,
 }
 @(require_results)
-NEW_COMPILER :: proc(my_nodes: ^NODES, arena: ^virtual.Arena) -> ^Compiler {
+NEW_COMPILER :: proc(
+	my_nodes: ^NODES,
+	parent: ^Compiler = nil,
+	arena: ^virtual.Arena,
+) -> ^Compiler {
 	my_alloc := virtual.arena_allocator(arena)
 	c := new(Compiler, my_alloc)
 	c.nodes = my_nodes
 	c.constants = make([dynamic]Value, my_alloc)
 	c.const_index = make(map[Value]int, my_alloc)
-	c.locals = make(map[string]int, my_alloc)
-	c.upvalues = make(map[string]int, my_alloc)
+	c.locals = make([dynamic]Local, my_alloc)
+	c.upvalues = make([dynamic]UpValueDesc, my_alloc)
 	c.free_regs = make([dynamic]int, my_alloc)
 	c.prototypes = make([dynamic]^Prototype, my_alloc)
 	c.instructions = make([dynamic]u32, my_alloc)
-	c.parent = nil
+	c.parent = parent
+	c.scope_depth = 0
 	return c
 }
 Prototype :: struct {
-	instructions: [dynamic]u32, // Prototype instructions.
-	constants:    [dynamic]Value, // Prototype constants.
-	proto:        [dynamic]^Prototype, // Prototype prototypes.
-	upvalues:     [dynamic]^UpValueDesc, // Prototype upvalues.
+	instructions: []u32, // Prototype instructions.
+	constants:    []Value, // Prototype constants.
+	prototypes:   []^Prototype, // Prototype prototypes.
+	upvalues:     []UpValueDesc, // Prototype upvalues.
 	max_stack:    int, // Prototype max stack size.
 	num_params:   int, // Prototype number of parameters.
+	source_name:  string, // Prototype source name.
 }
 /* VM STATE TODO: Work in progress, figuring out compiler for now.
 	 <Structures>  | <Descriptions>

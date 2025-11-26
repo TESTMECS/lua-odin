@@ -4,7 +4,7 @@ import "core:log"
 /*
 	 ./stack.odin
 	 Copyright(C) 2025 TESTMEE
-	 Defines the stack functions for Ouau.
+	 Defines the stack functions for Ouau VM.
 */
 STACK_CHECK :: proc(vm: ^VM, needed: int) -> bool {
 	thread := vm.current_thread

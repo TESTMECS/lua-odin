@@ -1,6 +1,5 @@
 package ouau
 import "core:fmt"
-import "core:log"
 import "core:mem/virtual"
 /*
 *	 ./compiler.odin
@@ -16,17 +15,15 @@ ALLOC_REG :: proc(c: ^Compiler) -> int {
 	if len(c.free_regs) > 0 {
 		return pop(&c.free_regs)
 	}
-	r := c.local_count
-	c.local_count += 1
-	if c.local_count > c.max_stack do c.max_stack = c.local_count
+	r := len(c.locals)
+	if r > c.max_stack { c.max_stack = r }
 	return r
 }
 FREE_REG :: proc(c: ^Compiler, r: int) {
 	append(&c.free_regs, r)
 }
-COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
+COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> (register_idx: int) {
 	kind := c.nodes.kind[nodeid]
-	// log.infof("Compiling node %v", kind)
 	switch kind {
 	case .DO:
 		unimplemented("TODO")
@@ -35,41 +32,41 @@ COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	case .VARARGS:
 		unimplemented("TODO")
 	case .BLOCK:
-		return COMPILE_BLOCK(c, nodeid)
+		register_idx = COMPILE_BLOCK(c, nodeid)
 	case .LITERAL:
-		return COMPILE_LITERAL(c, nodeid)
+		register_idx = COMPILE_LITERAL(c, nodeid)
 	case .IDENTIFIER:
-		return COMPILE_IDENTIFIER(c, nodeid)
+		register_idx = COMPILE_IDENTIFIER(c, nodeid)
 	case .ASSIGN:
-		return COMPILE_ASSIGN(c, nodeid)
+		register_idx = COMPILE_ASSIGN(c, nodeid)
 	case .WHILE:
-		return COMPILE_WHILE(c, nodeid)
+		register_idx = COMPILE_WHILE(c, nodeid)
 	case .REPEAT:
-		return COMPILE_REPEAT(c, nodeid)
+		register_idx = COMPILE_REPEAT(c, nodeid)
 	case .TABLE:
-		return COMPILE_TABLE(c, nodeid)
+		register_idx = COMPILE_TABLE(c, nodeid)
 	case .FUNCTION:
-		return COMPILE_FUNCTION(c, nodeid)
+		register_idx = COMPILE_FUNCTION(c, nodeid)
 	case .UNARY:
-		return COMPILE_UNARY(c, nodeid)
+		register_idx = COMPILE_UNARY(c, nodeid)
 	case .UBLOCK:
-		return COMPILE_UBLOCK(c, nodeid)
+		register_idx = COMPILE_UBLOCK(c, nodeid)
 	case .BINARY:
-		return COMPILE_BINARY(c, nodeid)
+		register_idx = COMPILE_BINARY(c, nodeid)
 	case .STRING:
-		return COMPILE_STRING(c, nodeid)
+		register_idx = COMPILE_STRING(c, nodeid)
 	case .GLOBAL:
-		return COMPILE_GLOBAL(c, nodeid)
+		register_idx = COMPILE_GLOBAL(c, nodeid)
 	case .LOCAL:
-		return COMPILE_LOCAL(c, nodeid)
+		register_idx = COMPILE_LOCAL(c, nodeid)
 	case .FOR:
-		return COMPILE_FOR(c, nodeid)
+		register_idx = COMPILE_FOR(c, nodeid)
 	case .CALL:
-		return COMPILE_CALL(c, nodeid)
+		register_idx = COMPILE_CALL(c, nodeid)
 	case .RETURN:
-		return COMPILE_RETURN(c, nodeid)
+		register_idx = COMPILE_RETURN(c, nodeid)
 	case .IF:
-		return COMPILE_IF(c, nodeid)
+		register_idx = COMPILE_IF(c, nodeid)
 	case .INVALID:
 		return COMPILE_ERR(c, "Invalid node", kind)
 	}
@@ -133,7 +130,12 @@ COMPILE_LOCAL :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	}
 	var_name := c.nodes.name[var_node]
 	reg := ALLOC_REG(c)
-	c.locals[var_name] = reg
+	my_local := Local {
+		name  = var_name,
+		depth = c.scope_depth,
+		reg   = reg,
+	}
+	append(&c.locals, my_local)
 	// Check if there's an assignment (next sibling after variables)
 	assign_node := var_node
 	for c.nodes.next_sibling[assign_node] != 0 {
@@ -153,7 +155,6 @@ COMPILE_LOCAL :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 @(private = "file")
 COMPILE_IDENTIFIER :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	var_name := c.nodes.name[nodeid]
-	// Check if it's a local variable
 	if reg, ok := c.locals[var_name]; ok {
 		dest := ALLOC_REG(c)
 		EMITABC(c, .MOVE, u32(dest), u32(reg), 0)
@@ -317,96 +318,73 @@ COMPILE_FUNCTION :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	//TODO:
 	my_alloc := virtual.arena_allocator(c.arena)
 	func_name := c.nodes.name[nodeid]
-	assert(func_name == "test")
 	body := c.nodes.first_child[nodeid]
 	assert(c.nodes.kind[body] == .BLOCK)
 	if body == 0 {
 		return COMPILE_ERR(c, "FUNCTION node missing body")
 	}
 	prototype := new(Prototype, my_alloc)
-	function_compiler := NEW_COMPILER(c.nodes, c.arena)
-	saved_locals := c.locals
-	saved_local_count := c.local_count
-
-	function_compiler.locals = make(map[string]int, my_alloc)
-	function_compiler.local_count = 0
-	body_result := COMPILE_NODE(function_compiler, body)
-	// For functions, body_result < 0 is normal (due to RETURN), so don't return early
-	// prototype.instructions = function_compiler.instructions[:]
-	// prototype.constants = function_compiler.constants[:]
-	prototype.max_stack = function_compiler.max_stack
-	prototype.num_params = 0
+	prototype.source_name = func_name
+	// Create child compiler with parent link
+	child := NEW_COMPILER(c.nodes, c, c.arena)
+	// Compile function parameters
+	param_node := c.nodes.first_child[nodeid]
+	// ... handle parameters and add them as locals ...
+	// Compile body
+	BEGIN_SCOPE(child)
+	body_result := COMPILE_NODE(child, body)
+	END_SCOPE(child)
+	// Build prototype from compiled child
+	prototype.instructions = child.instructions[:]
+	prototype.constants = child.constants[:]
+	prototype.prototypes = child.prototypes[:]
+	prototype.upvalues = child.upvalues[:]
+	prototype.max_stack = child.max_stack
+	prototype.num_params = child.num_params
+	// Add prototype to parent
 	proto_index := len(c.prototypes)
 	append(&c.prototypes, prototype)
-	c.locals = saved_locals
-	c.local_count = saved_local_count
+	// Emit CLOSURE instruction
 	dest := ALLOC_REG(c)
 	EMITABX(c, .CLOSURE, u32(dest), u32(proto_index))
-	function_const_idx := ADD_CONST(c, func_name)
-	EMITABX(c, .SETGLOBAL, u32(dest), function_const_idx)
-	FREE_REG(c, dest)
+	//Emit upvalue initialization instructions
+	//Each upvalue needs a MOVE or GETUPVAL instruction
+	for uv in child.upvalues {
+		if uv.is_local {
+			//Capture local variable from parent's register
+			EMITABC(c, .MOVE, 0, u32(uv.index), 0)
+		} else {
+			//Capture upvalue from parent's upvalue
+			EMITABC(c, .GETUPVAL, 0, u32(uv.index), 0)
+		}
+	}
+	// Store in global if named function
+	if func_name != "" {
+		function_const_idx := ADD_CONST(c, func_name)
+		EMITABX(c, .SETGLOBAL, u32(dest), function_const_idx)
+	}
 	return dest
 }
 @(private = "file")
 COMPILE_ASSIGN :: proc(c: ^Compiler, nodeid: NODEID) -> int {
-	// Get left and right operands
-	left := c.nodes.first_child[nodeid]
-	right := c.nodes.next_sibling[left]
-	if left == 0 || right == 0 {
-		return COMPILE_ERR(c, "ASSIGN node missing operands")
+	reg, is_local, upval_idx := RESOLVE_VAR(c, c.nodes.name[nodeid])
+	value_reg := COMPILE_NODE(c, c.nodes.first_child[nodeid])
+	if is_local {
+		if reg != value_reg {
+			EMITABC(c, .MOVE, u32(reg), u32(value_reg), 0)
+		}
+		return reg
 	}
-	// Compile the right side (value)
-	value_reg := COMPILE_NODE(c, right)
-	if value_reg < 0 do return value_reg
-	// Handle assignment to variable
-	if c.nodes.kind[left] == .IDENTIFIER {
-		var_name := c.nodes.name[left]
-		// Check if it's a local variable
-		if reg, ok := c.locals[var_name]; ok {
-			// Move the value to the local variable's register
-			if value_reg != reg {
-				EMITABC(c, .MOVE, u32(reg), u32(value_reg), 0)
-			}
-			FREE_REG(c, value_reg)
-			return reg
-		}
-		// Treat as global variable assignment
-		const_idx := ADD_CONST(c, var_name)
-		EMITABX(c, .SETGLOBAL, u32(value_reg), const_idx)
-		FREE_REG(c, value_reg)
-		return value_reg
+	if upval_idx >= 0 {
+		// Store to upvalue
+		EMITABC(c, .SETUPVAL, u32(value_reg), u32(upval_idx), 0)
+		return reg
 	}
-	// Handle assignment to table field (e.g., table.field = value)
-	if c.nodes.kind[left] == .BINARY && c.nodes.token[left] == .DOT {
-		// Get table and field
-		table_node := c.nodes.first_child[left]
-		field_node := c.nodes.next_sibling[table_node]
-		if table_node == 0 || field_node == 0 {
-			FREE_REG(c, value_reg)
-			return COMPILE_ERR(c, "Table assignment missing table or field")
-		}
-		// Compile table
-		table_reg := COMPILE_NODE(c, table_node)
-		if table_reg < 0 {
-			FREE_REG(c, value_reg)
-			return table_reg
-		}
-		// Compile field
-		field_reg := COMPILE_NODE(c, field_node)
-		if field_reg < 0 {
-			FREE_REG(c, value_reg)
-			FREE_REG(c, table_reg)
-			return field_reg
-		}
-		// Set table[field] = value
-		EMITABC(c, .SETTABLE, u32(table_reg), u32(field_reg), u32(value_reg))
-		FREE_REG(c, table_reg)
-		FREE_REG(c, field_reg)
-		FREE_REG(c, value_reg)
-		return value_reg
-	}
-	FREE_REG(c, value_reg)
-	return COMPILE_ERR(c, "Unsupported assignment target")
+	// Store to global
+	name := c.nodes.name[nodeid]
+	name_idx := ADD_CONST(c, name)
+	EMITABX(c, .SETGLOBAL, u32(value_reg), name_idx)
+	return reg
 }
 @(private = "file")
 COMPILE_REPEAT :: proc(c: ^Compiler, nodeid: NODEID) -> int {
@@ -542,7 +520,7 @@ COMPILE_FOR :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	}
 	// Allocate register for loop variable
 	var_reg := ALLOC_REG(c)
-	c.locals[var_name] = var_reg
+	// c.locals[var_name] = var_reg
 	// Compile start value
 	start_reg := COMPILE_NODE(c, start_val)
 	if start_reg < 0 do return start_reg

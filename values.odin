@@ -1,6 +1,5 @@
 package ouau
 import "core:fmt"
-import "core:hash"
 import "core:io"
 import "core:mem/virtual"
 import "core:strings"
@@ -9,13 +8,15 @@ import "core:strings"
 	 Copyright(C) 2025 TESTMEE
 	 Values and Types for Ouau, now with errors as values.
  */
+/* Type Tag for Ouau Values */
 KeyTag :: struct {
 	kind: u8,
-	i:    i64,
-	f:    f64,
-	s:    string,
-	p:    rawptr,
+	i:    i64, // integer
+	f:    f64, // float
+	s:    string, // string
+	p:    rawptr, //userdata/table/closure/error
 }
+/* Ouau Values */
 Value :: union {
 	bool,
 	f64,
@@ -27,29 +28,34 @@ Value :: union {
 	^BreakValue,
 	^OuauError,
 }
+/* Ouau Break Value */
 BreakValue :: struct {}
+/* Ouau Return Value TODO: Remove this. */
 ReturnValue :: struct {
 	value: Value,
 }
+/* Ouau Closure */
 Closure :: struct {
 	params:       []string,
 	body:         NODEID,
-	closure:      ^Environment,
-	proto:        ^Prototype,
-	upvalues:     [dynamic]^Upvalue,
+	closure:      ^Environment, // Variables in the closure.
+	proto:        ^Prototype, // Prototype/Compilation context of the closure.
+	upvalues:     [dynamic]^Upvalue, // Upvalues in the closure.
 	is_native:    bool,
 	has_varargs:  bool,
 	varargs_name: string,
 	native_proc:  proc(args: []Value) -> Value,
 }
+/* Ouau Table */
 Table :: struct {
-	data:      map[KeyTag]Value,
-	sorted:    [dynamic]KeyTag,
-	dirty:     bool,
-	metatable: ^Table,
-	last_free: int,
+	data:      map[KeyTag]Value, // Dynamic part
+	sorted:    [dynamic]KeyTag, // Array part, sorted
+	dirty:     bool, // for Hashing
+	metatable: ^Table, // Metatable
+	last_free: int, // Free register
 }
 NEW_TABLE :: proc(allocator := context.allocator) -> ^Table {
+	// TODO: remove context.allocator, called in VM right now.
 	table := new(Table, allocator)
 	table.data = make(map[KeyTag]Value, allocator)
 	table.sorted = make([dynamic]KeyTag, allocator)
@@ -58,14 +64,18 @@ NEW_TABLE :: proc(allocator := context.allocator) -> ^Table {
 	table.last_free = 0
 	return table
 }
+/* Runtime Upvalue */
 Upvalue :: struct {
 	open:   ^Value,
 	closed: ^Value,
 }
+/* Up Value Descriptor::(compile-time) */
 UpValueDesc :: struct {
-	is_local: bool,
-	index:    int,
+	name:     string,
+	is_local: bool, // true = local, false = upvalue or in parent
+	index:    int, // register index(if in stack) or upvalue index(if not)
 }
+@(private)
 VALUE_TO_KEY_TAG :: proc(v: Value) -> KeyTag {
 	switch val in v {
 	case f64:
@@ -119,7 +129,7 @@ VALUE_TO_STRING :: proc(v: Value, varena: ^virtual.Arena) -> string {
 		return "nil"
 	}
 }
-// Error Values.
+/* Error Values. */
 OuauError :: struct {
 	kind:    ErrorKind,
 	msg:     string,
@@ -127,15 +137,18 @@ OuauError :: struct {
 		SyntaxErr,
 		ParseErr,
 		EvalErr,
+		CompileErr,
 		AllocatorErr,
 		IOErr,
 	},
 	cause:   ^OuauError, // for chained errors
 }
+/* Error Kinds */
 ErrorKind :: enum {
 	SyntaxErr,
 	ParseErr,
 	EvalErr,
+	CompileErr,
 	AllocatorErr,
 	IOErr,
 }
@@ -168,128 +181,20 @@ EvalErr :: struct {
 	msg:       string,
 	evaluator: ^Interpreter,
 }
-@(cold)
-compare_keytag :: proc(a, b: KeyTag) -> bool {
-	if a.kind != b.kind {
-		return a.kind < b.kind
-	}
-	switch a.kind {
-	case 0:
-		if a.s != b.s {
-			return a.s < b.s // lexicographic
-		}
-		return false // equal
-
-	case 1:
-		return a.i < b.i
-
-	case 2:
-		return a.f < b.f // handles +/-inf, NaN rules consistent
-
-	case 3:
-		return (a.i & 1) < (b.i & 1)
-
-	case 4:
-		checka := uintptr(a.p)
-		ensure(checka != 0, "Invalid Rawptr")
-		checkb := uintptr(b.p)
-		ensure(checkb != 0, "Invalid Rawptr")
-		return cast(u64)checka < cast(u64)checkb
-
-	case 5:
-		checka := uintptr(a.p)
-		ensure(checka != 0, "Invalid Rawptr")
-		checkb := uintptr(b.p)
-		ensure(checkb != 0, "Invalid Rawptr")
-		return cast(u64)checka < cast(u64)checkb
-
-	case 6:
-		checka := uintptr(a.p)
-		ensure(checka != 0, "Invalid Rawptr")
-		checkb := uintptr(b.p)
-		ensure(checkb != 0, "Invalid Rawptr")
-		return cast(u64)checka < cast(u64)checkb
-	}
-	return false
+CompileErr :: struct {
+	msg:             string,
+	compiler_object: ^Compiler,
 }
-@(cold)
-hash_keytag :: proc(k: KeyTag) -> u64 {
-	using hash
-	buf: [64]u8 // plenty for controlled encoding
-	idx := 0
-
-	// always encode kind first
-	buf[idx] = k.kind
-	idx += 1
-
-	switch k.kind {
-	case 0:
-		// string
-		// write length (u32)
-		len := cast(u32)len(k.s)
-		transmute_u32_to_bytes(buf[idx:], len)
-		idx += 4
-		// write string bytes
-		for b, i in k.s {
-			buf[idx] = k.s[i]
-			idx += 1
-		}
-	case 1:
-		// integer
-		transmute_i64_to_bytes(buf[idx:], k.i)
-		idx += 8
-
-	case 2:
-		// float
-		bits := transmute(u64)k.f
-		transmute_u64_to_bytes(buf[idx:], bits)
-		idx += 8
-
-	case 3:
-		// bool (encoded from `i`)
-		buf[idx] = u8(k.i & 1)
-		idx += 1
-
-	case 4:
-		// pointer
-		check := uintptr(k.p)
-		ensure(check != 0, "Invalid Rawptr")
-		transmute_u64_to_bytes(buf[idx:], cast(u64)check)
-		idx += 8
-
-	case 5:
-		// table pointer
-		check := uintptr(k.p)
-		ensure(check != 0, "Invalid Rawptr")
-		transmute_u64_to_bytes(buf[idx:], cast(u64)check)
-		idx += 8
-
-	case 6:
-		// closure pointer
-		check := uintptr(k.p)
-		ensure(check != 0, "Invalid Rawptr")
-		transmute_u64_to_bytes(buf[idx:], cast(u64)check)
-		idx += 8
+COMPILE_ERR :: proc(c: ^Compiler, msg: string, xtra: ..any) -> ^OuauError {
+	my_alloc := virtual.arena_allocator(c.arena)
+	e := new(OuauError, my_alloc)
+	e.kind = .CompileErr
+	e.msg = msg
+	e.payload = CompileErr {
+		msg             = msg,
+		compiler_object = c,
 	}
-
-	return fnv64a(buf[:idx])
-}
-@(cold)
-transmute_u32_to_bytes :: proc(dst: []u8, v: u32) {
-	dst[0] = u8(v >> 0)
-	dst[1] = u8(v >> 8)
-	dst[2] = u8(v >> 16)
-	dst[3] = u8(v >> 24)
-}
-@(cold)
-transmute_i64_to_bytes :: proc(dst: []u8, v: i64) {
-	u := transmute(u64)v
-	transmute_u64_to_bytes(dst, u)
-}
-@(cold)
-transmute_u64_to_bytes :: proc(dst: []u8, v: u64) {
-	for i in 0 ..< 8 {
-		dst[i] = u8(v >> uint(i * 8))
-	}
+	//
+	return e
 }
 
