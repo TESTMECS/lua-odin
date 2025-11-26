@@ -40,7 +40,7 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		}
 		return last_result
 	case .UBLOCK:
-		child := i.nodes.first_child[node]
+		child := i->GET_LEFT_CHILD(node)
 		block_result := i->EVAL(child)
 		if block_result != nil {
 			return block_result
