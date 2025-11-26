@@ -86,7 +86,7 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 			if block_result != nil {
 				return block_result
 			}
-			condition := i->EVAL(GET_RIGHT_CHILD(i, ublock_node))
+			condition := i->EVAL(i->GET_RIGHT_CHILD(ublock_node))
 			if IS_TRUTHY(condition) { break }
 		}
 		return nil
@@ -217,7 +217,7 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		}
 	case .BINARY:
 		left := i->EVAL(i->GET_LEFT_CHILD(node))
-		right := i->EVAL(GET_RIGHT_CHILD(i, node))
+		right := i->EVAL(i->GET_RIGHT_CHILD(node))
 		op := i.nodes.token[node]
 		#partial switch op {
 		case .ASSIGN:
@@ -278,7 +278,7 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 			if !ok || table == nil {
 				return nil
 			}
-			right_node_id := GET_RIGHT_CHILD(i, node)
+			right_node_id := i->GET_RIGHT_CHILD(node)
 			key_name := i.nodes.name[right_node_id]
 			key_tag := VALUE_TO_KEY_TAG(key_name)
 			if val, found := table.data[key_tag]; found {
@@ -291,7 +291,7 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 			if !ok || table == nil {
 				return nil
 			}
-			right_node_id := GET_RIGHT_CHILD(i, node)
+			right_node_id := i->GET_RIGHT_CHILD(node)
 			key_val := i->EVAL(right_node_id)
 			key_tag := VALUE_TO_KEY_TAG(key_val)
 			if val, found := table.data[key_tag]; found {
@@ -308,7 +308,7 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		for child != 0 {
 			if i.nodes.kind[child] == .BINARY {
 				key := i->EVAL(i->GET_LEFT_CHILD(child))
-				value := i->EVAL(GET_RIGHT_CHILD(i, child))
+				value := i->EVAL(i->GET_RIGHT_CHILD(child))
 				key_tag := VALUE_TO_KEY_TAG(key)
 				table.data[key_tag] = value
 			} else {
@@ -578,7 +578,7 @@ COMPARE_TABLE :: proc(left, right: ^Table) -> bool {
 @(private = "file")
 ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	lvalue := i->GET_LEFT_CHILD(node)
-	rvalue := GET_RIGHT_CHILD(i, node)
+	rvalue := i->GET_RIGHT_CHILD(node)
 
 	lvalue_kind := i.nodes.kind[lvalue]
 	#partial switch lvalue_kind {
@@ -604,7 +604,7 @@ ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 			if !ok || table == nil {
 				return nil
 			}
-			key_node := GET_RIGHT_CHILD(i, lvalue)
+			key_node := i->GET_RIGHT_CHILD(lvalue)
 			key_val := i->EVAL(key_node)
 			key_tag := VALUE_TO_KEY_TAG(key_val)
 
@@ -620,7 +620,7 @@ ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 			if !ok || table == nil {
 				return nil
 			}
-			key_node := GET_RIGHT_CHILD(i, lvalue)
+			key_node := i->GET_RIGHT_CHILD(lvalue)
 			key_val := i->EVAL(key_node)
 			key_tag := VALUE_TO_KEY_TAG(key_val)
 			// Now evaluate RHS after we have the table location
@@ -634,8 +634,9 @@ ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 }
 @(rodata)
 INTERPRETER_VTABLE := InterpreterVTable {
-	EVAL           = EVAL,
-	ASSIGN         = ASSIGN,
-	GET_LEFT_CHILD = GET_LEFT_CHILD,
+	EVAL            = EVAL,
+	ASSIGN          = ASSIGN,
+	GET_LEFT_CHILD  = GET_LEFT_CHILD,
+	GET_RIGHT_CHILD = GET_RIGHT_CHILD,
 }
 
