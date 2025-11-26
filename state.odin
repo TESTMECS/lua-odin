@@ -6,7 +6,14 @@ import "core:slice"
 /*
 	 ./state.odin
 	 Copyright(C) 2025 TESTMEE
-	 Defines all the state across lexing, parsing, evaluation, compilation, and VM for Ouau. 
+	 One stop shop for all State for Lexer, Parser, Interpreter, Compiler, VM::(Threads|GC).
+*/
+/* Lexer State
+	 <Structures> | <Descriptions>
+	 Token | Token type
+	 TokenDefinition | Token definition type
+	 LexerVTable | Lexer virtual table, including EAT, PEEK, NEXT, GET_TOKEN, SKIP_WHITESPACE, CREATE_NUMBER, CREATE_IDENTIFIER_OR_KEYWORD, SYNTAX_ERROR.
+	 Lexer | Lexer state, including input, ch, pos, read_pos, arena, and vtable.
 */
 Token :: enum u8 {
 	EOF,
@@ -104,6 +111,7 @@ KEYWORDS := [?]struct {
 	{"while", .WHILE},
 }
 LOOKUP_KEYWORD :: proc(name: string) -> (ok: bool, kind: Token) {
+	// Binary search for keyword, faster than switch statement.
 	lo := 0
 	hi := len(KEYWORDS) - 1
 	for lo <= hi {
@@ -120,19 +128,19 @@ LOOKUP_KEYWORD :: proc(name: string) -> (ok: bool, kind: Token) {
 	return false, .IDENTIFIER
 }
 TokenDefinition :: struct {
-	kind: Token,
-	text: []u8,
+	kind: Token, // Token kind like .IF or .EQ
+	text: []u8, // literal lext like "if" or "=="
 }
 LexerVTable :: struct {
-	EAT:                          proc(l: ^Lexer),
-	PEEK:                         proc(l: ^Lexer) -> u8,
-	NEXT:                         proc(l: ^Lexer) -> (TokenDefinition, ^OuauError),
+	EAT:                          proc(l: ^Lexer), // Consume the current token
+	PEEK:                         proc(l: ^Lexer) -> u8, // Peek the next literal
+	NEXT:                         proc(l: ^Lexer) -> (TokenDefinition, ^OuauError), // Get the next token definition
 	GET_TOKEN:                    proc(
 		l: ^Lexer,
 		type: Token,
 		start: int,
 		length: int,
-	) -> TokenDefinition,
+	) -> TokenDefinition, // Get the token definition given the current lexer state.
 	SKIP_WHITESPACE:              proc(l: ^Lexer),
 	CREATE_NUMBER:                proc(l: ^Lexer) -> TokenDefinition,
 	CREATE_IDENTIFIER_OR_KEYWORD: proc(l: ^Lexer) -> TokenDefinition,
@@ -140,7 +148,7 @@ LexerVTable :: struct {
 		l: ^Lexer,
 		my_msg: string,
 		token: TokenDefinition,
-	) -> ^OuauError,
+	) -> ^OuauError, // Create a syntax Error
 }
 Lexer :: struct {
 	input:        []u8,
@@ -163,6 +171,15 @@ NEW_LEXER :: proc(input: string, varena: ^virtual.Arena) -> Lexer {
 	l->EAT()
 	return l
 }
+/* Parser State
+	 <Structures> | <Descriptions>
+	 NODEID | Node ID type
+	 NODE_KIND | Node kind type
+	 NODES | Nodes state, including kind, first_child, next_sibling, token, int_value, string_value, and name.
+	 ParserVTable | Parser virtual table, including ADVANCE, APPEND_CHILD, IS, EXPECT, GET_TEXT, GET_TOKEN, CHUNK, BLOCK, EXP, EXPLIST, STMT, FUNCTION, PREFIX, TABLE, UBLOCK, PRIMARY, INFIX, PRECEDENCE, SET_NAME, SET_STRING, SET_INT, NEW_NODE, SET_TOKEN, PARSE_ERROR.
+	 Parser | Parser state, including pos, nodes, lexer, current, peek, arena, and vtable.
+	 Precedence | Precedence state, including LOWEST, ASSIGN, EQUALS, LESSGREATER, SUM, PRODUCT, PREFIX, CALL, INDEX.
+*/
 NODEID :: u32
 NODE_KIND :: enum {
 	INVALID,
@@ -293,27 +310,33 @@ PRECEDENCES := #partial [Token]Precedence {
 	.BOPEN  = .INDEX,
 	.BCLOSE = .LOWEST,
 }
+/* Evaluator State
+	 <Structures> | <Descriptions>
+	 Frame | Frame state, including environment, return address, and result.
+	 InterpreterVTable | Interpreter virtual table, including INTERPRET, EVAL, ASSIGN, GET_CHILD, GET_GCHILD, GET_SIBLING, EVAL_ERROR.
+	 Interpreter | Interpreter state, including globals, current, nodes, call_stack, arena, and vtable.
+*/
 Frame :: struct {
-	env:         ^Environment,
-	return_addr: NODEID,
-	result:      Value,
+	env:         ^Environment, // Hashable env of upvalues and locals
+	return_addr: NODEID, // Return address of the frame
+	result:      Value, // Result of the frame
 }
 InterpreterVTable :: struct {
-	INTERPRET:   proc(i: ^Interpreter, root: NODEID) -> (result: Value),
-	EVAL:        proc(i: ^Interpreter, node: NODEID) -> Value,
-	ASSIGN:      proc(i: ^Interpreter, node: NODEID) -> Value,
-	GET_CHILD:   proc(i: ^Interpreter, node: NODEID) -> NODEID,
-	GET_GCHILD:  proc(i: ^Interpreter, node: NODEID) -> NODEID,
-	GET_SIBLING: proc(i: ^Interpreter, node: NODEID) -> NODEID,
-	EVAL_ERROR:  proc(i: ^Interpreter, msg: string) -> ^OuauError,
+	INTERPRET:   proc(i: ^Interpreter, root: NODEID) -> (result: Value), // Interpret a node
+	EVAL:        proc(i: ^Interpreter, node: NODEID) -> Value, // Private: Evaluate a node
+	ASSIGN:      proc(i: ^Interpreter, node: NODEID) -> Value, // Private: Assign a node
+	GET_CHILD:   proc(i: ^Interpreter, node: NODEID) -> NODEID, // Private: Get child of a node
+	GET_GCHILD:  proc(i: ^Interpreter, node: NODEID) -> NODEID, // Private: Get grand child of a node
+	GET_SIBLING: proc(i: ^Interpreter, node: NODEID) -> NODEID, // Private: Get sibling of a node
+	EVAL_ERROR:  proc(i: ^Interpreter, msg: string) -> ^OuauError, // Private: Create an error
 }
 Interpreter :: struct {
-	globals:      map[string]Value,
-	current:      ^Environment,
-	nodes:        ^NODES,
-	call_stack:   [dynamic]^Frame,
-	arena:        ^virtual.Arena,
-	using vtable: InterpreterVTable,
+	globals:      map[string]Value, // Globals of the interpreter
+	current:      ^Environment, // Current environment of the interpreter
+	nodes:        ^NODES, // AST nodes of the interpreter
+	call_stack:   [dynamic]^Frame, // Call stack of the interpreter
+	arena:        ^virtual.Arena, // Arena of the interpreter
+	using vtable: InterpreterVTable, // Interpreter functions
 }
 @(require_results)
 NEW_INTERPRETER :: proc(nodes: ^NODES, varena: ^virtual.Arena) -> Interpreter {
@@ -398,15 +421,20 @@ ENV_RESORT :: proc(env: ^Environment) {
 	})
 	env.dirty = false
 }
+/* Compiler State TODO: Work in progress, figuring out compiler for now.
+	 <Structures> | <Descriptions>
+	 Compiler| Compiler state, including instructions, constants, locals, upvalues, and AST nodes.
+	 Prototype| Prototype state, including instructions, constants, prototypes, upvalues, and max stack size.
+*/
 Compiler :: struct {
-	instructions: [dynamic]u32,
-	constants:    [dynamic]Value, // pool for LoadK
-	const_index:  map[Value]int, // equality hashing
-	locals:       map[string]int, // name -> register
-	upvalues:     map[string]int, // name -> upval index
-	nodes:        ^NODES,
-	max_stack:    int,
-	nparams:      int,
+	instructions: [dynamic]u32, // Bytecode instructions
+	constants:    [dynamic]Value, // pool for LoadK instructions
+	const_index:  map[Value]int, // equality hashing for constants
+	locals:       map[string]int, // map of name -> register
+	upvalues:     map[string]int, // map of name -> upval index
+	nodes:        ^NODES, // AST nodes
+	max_stack:    int, // max stack size
+	nparams:      int, // number of parameters
 	local_count:  int, // next free register
 	free_regs:    [dynamic]int, // stack of freed reg indices
 	prototypes:   [dynamic]^Prototype, // nested function prototypes
@@ -429,20 +457,29 @@ NEW_COMPILER :: proc(my_nodes: ^NODES, arena: ^virtual.Arena) -> ^Compiler {
 	return c
 }
 Prototype :: struct {
-	instructions: [dynamic]u32,
-	constants:    [dynamic]Value,
-	proto:        [dynamic]^Prototype,
-	upvalues:     [dynamic]^UpValueDesc,
-	max_stack:    int,
-	num_params:   int,
+	instructions: [dynamic]u32, // Prototype instructions.
+	constants:    [dynamic]Value, // Prototype constants.
+	proto:        [dynamic]^Prototype, // Prototype prototypes.
+	upvalues:     [dynamic]^UpValueDesc, // Prototype upvalues.
+	max_stack:    int, // Prototype max stack size.
+	num_params:   int, // Prototype number of parameters.
 }
-STACK_LIMIT :: 1024 * 1024
+/* VM STATE TODO: Work in progress, figuring out compiler for now.
+	 <Structures>  | <Descriptions>
+	  GlobalState | Global State of the VM including the main thread.
+	  VmFrame     | Current closure context.
+	  VM          | VM state, including the main thread, call stack, and GC. 
+	  ThreadState | Thread state, including the call stack, call count, and base context. 
+	  ThreadStatus| Thread status, including OK, ERR, and YIELD. 
+	  VM_Config   | VM configuration, including stack size, call depth, and GC threshold. 
+ */
+STACK_LIMIT :: 1024 * 1024 // Stack Limit of VM
 GlobalState :: struct {
 	thread:      ^ThreadState, // Main Thread
 	globals:     ^Table, // Global Table
-	debug_level: int,
 	builtins:    [dynamic]^Table, // builtin functions
-	panic:       proc(state: ^ThreadState, msg: string, level: int),
+	panic:       proc(state: ^ThreadState, msg: string, level: int), // Builtin panic function.
+	debug_level: int, // Debug level
 }
 @(require_results)
 NEW_GLOBAL_STATE :: proc(allocator := context.allocator) -> ^GlobalState {

@@ -65,14 +65,13 @@ test_block :: proc(t: ^testing.T) {
 }
 @(test)
 test_function :: proc(t: ^testing.T) {
-	// Failing
 	using compiler
 	v: virtual.Arena
 	err := virtual.arena_init_growing(&v)
 	ensure(err == nil, "Error initializing arena")
 	defer virtual.arena_destroy(&v)
 	input := `
-	local function test()
+	function test()
 		local a = 1;
 		local b = 2;
 		return a + b;

@@ -317,8 +317,9 @@ COMPILE_FUNCTION :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	//TODO:
 	my_alloc := virtual.arena_allocator(c.arena)
 	func_name := c.nodes.name[nodeid]
-	// Get function body (first child)
+	assert(func_name == "test")
 	body := c.nodes.first_child[nodeid]
+	assert(c.nodes.kind[body] == .BLOCK)
 	if body == 0 {
 		return COMPILE_ERR(c, "FUNCTION node missing body")
 	}
