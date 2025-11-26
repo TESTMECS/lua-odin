@@ -4,4 +4,5 @@
 |bnot: '~21->22' | bnot: '!21->22' |
 |a=1| global a = 1|
 # Status
-- Add `**args`
+- Adding var args to eval.
+

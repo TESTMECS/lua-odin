@@ -24,6 +24,7 @@ INTERPRET :: proc(i: ^Interpreter, root: NODEID) -> (result: Value) {
 EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	my_alloc := virtual.arena_allocator(i.arena)
 	kind := i.nodes.kind[node]
+	// log.infof("EVAL: node %d kind=%d", node, NODE_KIND(kind))
 	switch kind {
 	case .INVALID:
 		return i->EVAL_ERROR("Invalid Node.")
@@ -492,10 +493,10 @@ CALL_USER_FUNCTION :: proc(i: ^Interpreter, fn: ^Closure, args: []Value) -> Valu
 	i.current = env
 	// log.infof("CALL_USER_FUNCTION: evaluating function body node %d", fn.body)
 	result := i->EVAL(fn.body)
-	// log.infof("CALL_USER_FUNCTION: function body result=%v", result)
+	log.infof("CALL_USER_FUNCTION: function body result=%v", result)
 	i.current = old_env
 	if ret, ok := result.(^ReturnValue); ok {
-		// log.infof("CALL_USER_FUNCTION: returning %v", ret.value)
+		log.infof("CALL_USER_FUNCTION: returning %v", ret.value)
 		return ret.value
 	}
 	if ret, ok := result.(^Table); ok {
