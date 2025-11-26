@@ -3,7 +3,7 @@
 |---| --- |
 |bnot: '~21->22' | bnot: '!21->22' |
 # Status
-- Evaluator is ok for now. Make it look nice.
+- Adding Error values to evaluation.
 # Bugs
 - Repl segfaults on function call.
 
