@@ -25,11 +25,9 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	kind := i.nodes.kind[node]
 	switch kind {
 	case .INVALID:
-		err := new(OuauError, my_alloc)
-		return err
+		return i->EVAL_ERROR("Invalid Node.")
 	case .VARARGS:
-		err := new(OuauError, my_alloc)
-		return err
+		return i->EVAL_ERROR("Varargs not supported yet.")
 	case .BLOCK:
 		last_result: Value
 		for c := i->GET_CHILD(node); c != 0; c = i->GET_SIBLING(c) {

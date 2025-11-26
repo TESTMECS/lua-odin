@@ -50,6 +50,7 @@ Ouau :: proc() -> (main_err: Maybe(^OuauError)) {
 		)
 		xtra_args := user_args[1:]
 		i := NEW_INTERPRETER(nil, &v)
+		accumulated_input := strings.builder_make(my_alloc)
 		for {
 			fmt.println(PROMPT)
 			input_builder := strings.builder_make(my_alloc)
@@ -71,7 +72,13 @@ Ouau :: proc() -> (main_err: Maybe(^OuauError)) {
 			}
 			complete_input := strings.to_string(input_builder)
 			if complete_input == "exit" do return nil
-			return_value := OUAU_EVAL_STRING(complete_input, &v, &i) or_return
+			strings.write_string(&accumulated_input, complete_input)
+			strings.write_byte(&accumulated_input, '\n')
+			return_value := OUAU_EVAL_STRING(
+				strings.to_string(accumulated_input),
+				&v,
+				&i,
+			) or_return
 			fmt.println("==> ", return_value)
 		}
 	case "file":

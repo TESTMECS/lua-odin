@@ -164,7 +164,6 @@ EvalErr :: struct {
 	msg:       string,
 	evaluator: ^Interpreter,
 }
-
 @(cold)
 compare_keytag :: proc(a, b: KeyTag) -> bool {
 	if a.kind != b.kind {
