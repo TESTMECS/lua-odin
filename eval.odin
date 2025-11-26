@@ -65,17 +65,17 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		}
 		return nil
 	case .REPEAT:
-		child := i->GET_CHILD(node)
+		c := i->GET_CHILD(node)
 		for {
-			block_result := i->EVAL(child)
+			block_result := i->EVAL(c)
 			if block_result != nil { return block_result }
-			condition := i->EVAL(i->GET_GCHILD(child))
+			condition := i->EVAL(i->GET_GCHILD(c))
 			if IS_TRUTHY(condition) { break }
 		}
 		return nil
 	case .DO:
-		child := i->GET_CHILD(node)
-		return i->EVAL(child)
+		c := i->GET_CHILD(node)
+		return i->EVAL(c)
 	case .FOR:
 		var_name := i.nodes.name[node]
 		child := i->GET_CHILD(node)
