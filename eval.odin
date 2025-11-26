@@ -26,6 +26,7 @@ INTERPRET :: proc(i: ^Interpreter, root: NODEID) -> Value {
 EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	my_alloc := virtual.arena_allocator(i.arena)
 	kind := i.nodes.kind[node]
+	// TODO: Finish partial
 	#partial switch kind {
 	case .BLOCK:
 		child := i.nodes.first_child[node]
@@ -161,7 +162,7 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		ret_val.value = val
 		return ret_val
 	case .CALL:
-		fn_child := GET_FUNCTION_CHILD(i, node)
+		fn_child := GET_LEFT_CHILD(i, node)
 		fn_val := i->EVAL(fn_child)
 		if fn_val == nil {
 			return nil
@@ -388,7 +389,7 @@ EVAL_FUNCTION :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	return fn
 }
 @(private = "file")
-GET_FUNCTION_CHILD :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
+GET_LEFT_CHILD :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
 	return i.nodes.first_child[node]
 }
 @(private = "file")
@@ -396,10 +397,6 @@ GET_ARGUMENTS_CHILD :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
 	fn_child := i.nodes.first_child[node]
 	arg_child := i.nodes.next_sibling[fn_child]
 	return arg_child
-}
-@(private = "file")
-GET_LEFT_CHILD :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
-	return i.nodes.first_child[node]
 }
 @(private = "file")
 GET_RIGHT_CHILD :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
