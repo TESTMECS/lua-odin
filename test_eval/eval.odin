@@ -187,6 +187,7 @@ test_for_list :: proc(t: ^testing.T) {
 	i := NEW_INTERPRETER(&p.nodes, &v)
 	val := INTERPRET(&i, root)
 	tbl, ok := val.(^Table)
+	// log.infof("val::(%v)", val)
 	if val == nil || !ok {
 		testing.fail(t)
 	}
@@ -208,6 +209,7 @@ test_global :: proc(t: ^testing.T) {
 	DUMP_AST(&p)
 	i := NEW_INTERPRETER(&p.nodes, &v)
 	val := INTERPRET(&i, root)
+	// log.infof("val::(%v)", i.globals)
 	if val == nil || val.(f64) != 1 {
 		testing.fail(t)
 	}
