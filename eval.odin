@@ -1,5 +1,4 @@
 package ouau
-import "core:log"
 import "core:math"
 import "core:mem/virtual"
 import "core:strings"
@@ -173,10 +172,6 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		}
 		arg_child := GET_ARGUMENTS_CHILD(i, node)
 		args := EVAL_EXPRESSION_LIST(i, arg_child)
-		log.infof("Function call with %d arguments", len(args))
-		for arg, idx in args {
-			log.infof("Arg %d: %v", idx, arg)
-		}
 		if fn_val_closure.is_native {
 			return fn_val_closure.native_proc(args)
 		} else {
@@ -226,7 +221,7 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		op := i.nodes.token[node]
 		#partial switch op {
 		case .ASSIGN:
-			return EVAL_ASSIGN(i, node)
+			return i->ASSIGN(node)
 		case .EQ:
 			return EVAL_COMPARE(left, right, .EQ)
 		case .NE:
@@ -344,7 +339,7 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	case .STRING:
 		return i.nodes.string_value[node]
 	case .ASSIGN:
-		return EVAL_ASSIGN(i, node)
+		return i->ASSIGN(node)
 	case .FUNCTION:
 		return EVAL_FUNCTION(i, node)
 	case .IDENTIFIER:
@@ -633,7 +628,7 @@ COMPARE_CLOSURE :: proc(left, right: ^Closure) -> bool {
 	return left == right
 }
 @(private = "file")
-EVAL_ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
+ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	lvalue := GET_LEFT_CHILD(i, node)
 	rvalue := GET_RIGHT_CHILD(i, node)
 
@@ -694,6 +689,7 @@ EVAL_ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 }
 @(rodata)
 INTERPRETER_VTABLE := InterpreterVTable {
-	EVAL = EVAL,
+	EVAL   = EVAL,
+	ASSIGN = ASSIGN,
 }
 
