@@ -147,7 +147,6 @@ dump_node :: proc(p: ^Parser, id: u32, indent: int) {
 		child = p.nodes.next_sibling[child]
 	}
 }
-
 DUMP_AST :: proc(p: ^Parser) {
 	fmt.println("=== AST DUMP ===")
 	dump_node(p, 0, 0)

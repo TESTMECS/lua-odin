@@ -223,7 +223,7 @@ test_varargs :: proc(t: ^testing.T) {
 	defer virtual.arena_destroy(&v)
 	input := `
 	function a(..args)
-		return args[1]
+		return args[1] + args[2]
 	end
 	a(1,2,3)`
 	p, p_err := NEW_PARSER(input, &v)
@@ -232,7 +232,7 @@ test_varargs :: proc(t: ^testing.T) {
 	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
 	i := NEW_INTERPRETER(&p.nodes, &v)
 	val := i->INTERPRET(root)
-	if val == nil || val.(f64) != 1 {
+	if val == nil || val.(f64) != 3 {
 		testing.fail(t)
 	}
 }
