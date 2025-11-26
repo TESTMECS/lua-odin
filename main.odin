@@ -50,11 +50,11 @@ Ouau :: proc() -> (main_err: Maybe(OuauError)) {
 		)
 		xtra_args := user_args[1:]
 		i := NEW_INTERPRETER(nil, &v)
-		repl: for {
+		for {
 			fmt.println(PROMPT)
 			input_builder := strings.builder_make(my_alloc)
 			defer strings.builder_destroy(&input_builder)
-			for {
+			expr: for {
 				line := bufio.reader_read_string(&reader, '\n', my_alloc) or_return
 				line = strings.trim_space(line)
 				if strings.has_suffix(line, "\\") {
@@ -62,10 +62,10 @@ Ouau :: proc() -> (main_err: Maybe(OuauError)) {
 					strings.write_string(&input_builder, line)
 					strings.write_byte(&input_builder, '\n')
 					fmt.print("...")
-					continue repl
+					continue expr
 				} else {
 					strings.write_string(&input_builder, line)
-					break repl
+					break
 				}
 			}
 			complete_input := strings.to_string(input_builder)
