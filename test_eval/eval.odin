@@ -13,7 +13,7 @@ test_eval_block :: proc(t: ^testing.T) {
 	input := `
 	do 
 	 local a = 1;
-		return a;
+	 return a;
 	end`
 	p, p_err := NEW_PARSER(input, &v)
 	testing.expectf(t, p_err == nil, "Error creating Parser::(%v)", p_err)
@@ -21,7 +21,7 @@ test_eval_block :: proc(t: ^testing.T) {
 	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
 	i := NEW_INTERPRETER(&p.nodes, &v)
 	val := INTERPRET(&i, root)
-	if val == nil || val.(f64) != 3 {
+	if val == nil || val.(f64) != 1 {
 		testing.fail(t)
 	}
 }
@@ -162,7 +162,7 @@ test_for :: proc(t: ^testing.T) {
 	testing.expectf(t, p_err == nil, "Error creating Parser::(%v)", p_err)
 	root, chunk_err := CHUNK(&p)
 	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
-	DUMP_AST(&p)
+	// DUMP_AST(&p)
 	i := NEW_INTERPRETER(&p.nodes, &v)
 	val := INTERPRET(&i, root)
 	if val == nil || val.(f64) != 10 {

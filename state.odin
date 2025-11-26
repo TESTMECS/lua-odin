@@ -295,12 +295,16 @@ Frame :: struct {
 	return_addr: NODEID,
 	result:      Value,
 }
+InterpreterVTable :: struct {
+	EVAL: proc(i: ^Interpreter, node: NODEID) -> Value,
+}
 Interpreter :: struct {
-	globals:    map[string]Value,
-	current:    ^Environment,
-	nodes:      ^NODES,
-	call_stack: [dynamic]^Frame,
-	arena:      ^virtual.Arena,
+	globals:      map[string]Value,
+	current:      ^Environment,
+	nodes:        ^NODES,
+	call_stack:   [dynamic]^Frame,
+	arena:        ^virtual.Arena,
+	using vtable: InterpreterVTable,
 }
 @(require_results)
 NEW_INTERPRETER :: proc(nodes: ^NODES, varena: ^virtual.Arena) -> Interpreter {
@@ -311,6 +315,7 @@ NEW_INTERPRETER :: proc(nodes: ^NODES, varena: ^virtual.Arena) -> Interpreter {
 		call_stack = make([dynamic]^Frame, my_alloc),
 		arena      = varena,
 		nodes      = nodes,
+		vtable     = INTERPRETER_VTABLE,
 	}
 	INIT_BUILTINS(&i, varena)
 	return i
