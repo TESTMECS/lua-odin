@@ -34,34 +34,31 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		}
 		return last_result
 	case .UBLOCK:
-		child := i->GET_CHILD(node)
-		block_result := i->EVAL(child)
+		c := i->GET_CHILD(node)
+		block_result := i->EVAL(c)
 		if block_result != nil { return block_result }
-		child = i->GET_SIBLING(child)
-		condition := i->EVAL(child)
+		c = i->GET_SIBLING(c)
+		condition := i->EVAL(c)
 		return condition
 	case .IF:
-		child := i->GET_CHILD(node)
-		cond := i->EVAL(child)
-		child = i->GET_SIBLING(child)
+		c := i->GET_CHILD(node)
+		cond := i->EVAL(c)
+		c = i->GET_SIBLING(c)
 		if IS_TRUTHY(cond) {
-			return i->EVAL(child)
+			return i->EVAL(c)
 		} else {
-			child = i->GET_SIBLING(child)
-			for child != 0 {
-				cond := i->EVAL(child)
-				body_child := i->GET_SIBLING(child)
-				if IS_TRUTHY(cond) { return i->EVAL(body_child) }
-				child = i->GET_SIBLING(body_child)
+			for c = i->GET_SIBLING(c); c != 0; c = i->GET_SIBLING(c) {
+				cond := i->EVAL(c)
+				body := i->GET_SIBLING(c)
+				if IS_TRUTHY(cond) { return i->EVAL(body) }
 			}
 		}
 		return nil
 	case .WHILE:
-		child := i->GET_CHILD(node)
-		cond_node := child
-		body_node := i->GET_SIBLING(child)
-		for IS_TRUTHY(i->EVAL(cond_node)) {
-			result := i->EVAL(body_node)
+		cond := i->GET_CHILD(node)
+		body := i->GET_SIBLING(cond)
+		for IS_TRUTHY(i->EVAL(cond)) {
+			result := i->EVAL(body)
 			if _, ok := result.(^BreakValue); ok {
 				return nil
 			}
