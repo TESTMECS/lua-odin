@@ -4,6 +4,6 @@
 |bnot: '~21->22' | bnot: '!21->22' |
 |a=1| global a = 1|
 # Status
-- Add comments.
+- Errors don't resolve in repl 
 - Fix Bnot to `~`
 - Add `*args`
