@@ -86,7 +86,7 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		c = i->GET_SIBLING(c)
 		limit := i->EVAL(c)
 		c = i->GET_SIBLING(c)
-		step: Value = 1.0 // TODO:
+		step: Value = 1.0
 		if c != 0 && i.nodes.kind[c] != .BLOCK {
 			step = i->EVAL(c)
 			c = i->GET_SIBLING(c)

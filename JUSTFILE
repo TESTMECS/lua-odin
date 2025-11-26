@@ -21,7 +21,7 @@ test_parser_name := "test_do"
 test_parser:
 	odin test ./test_parser -define:ODIN_TEST_NAMES={{test_parser_name}}
 # test eval functions
-test_eval_name := "test_global"
+test_eval_name := "test_for"
 test_eval:
 	odin test ./test_eval -define:ODIN_TEST_NAMES={{test_eval_name}}
 

@@ -1,5 +1,6 @@
 package test_eval
 import i "../"
+import "core:log"
 import "core:mem/virtual"
 import "core:testing"
 @(test)
@@ -153,10 +154,10 @@ test_for :: proc(t: ^testing.T) {
 	defer virtual.arena_destroy(&v)
 	input := `
 	local a = 0;
-	for i = 0, 9 do
-		a = i + 1;
+	for i = 0, 10, 3 do
+		a = a + i;
 	end
-	return a;`
+	a;`
 	p, p_err := NEW_PARSER(input, &v)
 	testing.expectf(t, p_err == nil, "Error creating Parser::(%v)", p_err)
 	root, chunk_err := CHUNK(&p)
@@ -164,7 +165,7 @@ test_for :: proc(t: ^testing.T) {
 	// DUMP_AST(&p)
 	i := NEW_INTERPRETER(&p.nodes, &v)
 	val := i->INTERPRET(root)
-	if val == nil || val.(f64) != 10 {
+	if val == nil || val.(f64) != 18 {
 		testing.fail(t)
 	}
 }
