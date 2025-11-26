@@ -154,8 +154,8 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 			return CALL_USER_FUNCTION(i, fn_val_closure, args)
 		}
 	case .UNARY:
-		child := i->GET_CHILD(node)
-		operand := i->EVAL(child)
+		c := i->GET_CHILD(node)
+		operand := i->EVAL(c)
 		op := i.nodes.token[node]
 		#partial switch op {
 		case .MINUS:
@@ -274,11 +274,10 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	case .TABLE:
 		table := new(Table, my_alloc)
 		table.data = make(map[KeyTag]Value, my_alloc)
-		child := i->GET_CHILD(node)
-		for child != 0 {
-			if i.nodes.kind[child] == .BINARY {
-				key := i->EVAL(i->GET_CHILD(child))
-				value := i->EVAL(i->GET_GCHILD(child))
+		for c := i->GET_CHILD(node); c != 0; c = i->GET_SIBLING(c) {
+			if i.nodes.kind[c] == .BINARY {
+				key := i->EVAL(i->GET_CHILD(c))
+				value := i->EVAL(i->GET_GCHILD(c))
 				key_tag := VALUE_TO_KEY_TAG(key)
 				table.data[key_tag] = value
 			} else {
@@ -286,10 +285,9 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 					kind = 1,
 					i    = cast(i64)len(table.data) + 1,
 				}
-				value := i->EVAL(child)
+				value := i->EVAL(c)
 				table.data[key_tag] = value
 			}
-			child = i->GET_SIBLING(child)
 		}
 		return table
 	case .GLOBAL:
