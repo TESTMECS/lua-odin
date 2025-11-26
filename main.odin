@@ -10,11 +10,10 @@ import "core:strings"
 *	 Copyright(C) 2025 TESTMEE
 *	 This file defines the main functions for Ouau CLI.
 */
-HELP_MSG :: "Usage: lua-odin <file|repl|ast|regs> <file>"
+HELP_MSG :: "Usage: ouau <file|repl|ast|regs> <file>"
 PROMPT :: "(Ouau)$ "
 EXIT_MSG :: "Bye!"
 VERSION :: "0.0.1"
-
 main :: proc() {
 	if err := Ouau(); err != nil {
 		fmt.eprintln("[ERROR]::(%v)", err)
@@ -71,7 +70,10 @@ Ouau :: proc() -> (main_err: Maybe(^OuauError)) {
 				}
 			}
 			complete_input := strings.to_string(input_builder)
-			if complete_input == "exit" do return nil
+			if complete_input == "exit" {
+				fmt.println(EXIT_MSG)
+				os.exit(0)
+			}
 			strings.write_string(&accumulated_input, complete_input)
 			strings.write_byte(&accumulated_input, '\n')
 			return_value := OUAU_EVAL_STRING(
@@ -79,7 +81,7 @@ Ouau :: proc() -> (main_err: Maybe(^OuauError)) {
 				&v,
 				&i,
 			) or_return
-			fmt.println("==> ", return_value)
+			fmt.println("==> ", VALUE_TO_STRING(return_value))
 		}
 	case "file":
 		i := NEW_INTERPRETER(nil, &v)

@@ -544,7 +544,6 @@ COMPARE_TABLE :: proc(left, right: ^Table) -> bool {
 ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	lvalue := i->GET_CHILD(node)
 	rvalue := i->GET_GCHILD(node)
-
 	lvalue_kind := i.nodes.kind[lvalue]
 	#partial switch lvalue_kind {
 	case .IDENTIFIER:
@@ -567,23 +566,21 @@ ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 			table_val := i->EVAL(table_expr_node)
 			table, ok := table_val.(^Table)
 			if !ok || table == nil {
-				return nil
+				return i->EVAL_ERROR("Expected table in dot expression")
 			}
 			key_node := i->GET_GCHILD(lvalue)
 			key_val := i->EVAL(key_node)
 			key_tag := VALUE_TO_KEY_TAG(key_val)
-
 			// Now evaluate RHS after we have the table location
 			value_to_assign := i->EVAL(rvalue)
 			table.data[key_tag] = value_to_assign
 			return value_to_assign
-
 		} else if op == .BOPEN {
 			table_expr_node := i->GET_CHILD(lvalue)
 			table_val := i->EVAL(table_expr_node)
 			table, ok := table_val.(^Table)
 			if !ok || table == nil {
-				return nil
+				return i->EVAL_ERROR("Expected table in dot expression")
 			}
 			key_node := i->GET_GCHILD(lvalue)
 			key_val := i->EVAL(key_node)
