@@ -296,11 +296,11 @@ Frame :: struct {
 	result:      Value,
 }
 InterpreterVTable :: struct {
-	EVAL:            proc(i: ^Interpreter, node: NODEID) -> Value,
-	ASSIGN:          proc(i: ^Interpreter, node: NODEID) -> Value,
-	GET_CHILD:       proc(i: ^Interpreter, node: NODEID) -> NODEID,
-	GET_RIGHT_CHILD: proc(i: ^Interpreter, node: NODEID) -> NODEID,
-	GET_SIBLING:     proc(i: ^Interpreter, node: NODEID) -> NODEID,
+	EVAL:        proc(i: ^Interpreter, node: NODEID) -> Value,
+	ASSIGN:      proc(i: ^Interpreter, node: NODEID) -> Value,
+	GET_CHILD:   proc(i: ^Interpreter, node: NODEID) -> NODEID,
+	GET_GCHILD:  proc(i: ^Interpreter, node: NODEID) -> NODEID,
+	GET_SIBLING: proc(i: ^Interpreter, node: NODEID) -> NODEID,
 }
 Interpreter :: struct {
 	globals:      map[string]Value,
