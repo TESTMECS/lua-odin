@@ -12,11 +12,8 @@ import "core:strings"
 @(require_results)
 INTERPRET :: proc(i: ^Interpreter, root: NODEID) -> (result: Value) {
 	for c := i->GET_CHILD(root); c != 0; c = i->GET_SIBLING(c) {
-		log.infof("INTERPRET: evaluating node %d (kind=%v)", c, i.nodes.kind[c])
 		v := i->EVAL(c)
-		log.infof("INTERPRET: node %d result=%v", c, v)
 		if ret, ok := v.(^ReturnValue); ok {
-			log.infof("INTERPRET: returning %v", ret.value)
 			return ret.value
 		}
 		result = v
@@ -27,7 +24,6 @@ INTERPRET :: proc(i: ^Interpreter, root: NODEID) -> (result: Value) {
 EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	my_alloc := virtual.arena_allocator(i.arena)
 	kind := i.nodes.kind[node]
-	log.infof("EVAL: node %d kind=%v", node, kind)
 	switch kind {
 	case .INVALID:
 		return i->EVAL_ERROR("Invalid Node.")
@@ -36,13 +32,11 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		my_alloc := virtual.arena_allocator(i.arena)
 		table := new(Table, my_alloc)
 		table.data = make(map[KeyTag]Value, my_alloc)
-		log.infof("VARARGS: len=%d", len(i.current.varargs))
 		for val, idx in i.current.varargs {
 			key_tag := KeyTag {
 				kind = 1,
 				i    = cast(i64)idx + 1,
 			}
-			log.infof("VARARGS[%d]=%v", key_tag.i, val)
 			table.data[key_tag] = val
 		}
 		return table
@@ -295,19 +289,14 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 			table_val := left
 			table, ok := table_val.(^Table)
 			if !ok || table == nil {
-				log.infof("BOPEN: table_val=%v, ok=%v", table_val, ok)
 				return nil
 			}
 			right_node_id := i->GET_GCHILD(node)
 			key_val := i->EVAL(right_node_id)
-			log.infof("BOPEN: key_val=%v", key_val)
 			key_tag := VALUE_TO_KEY_TAG(key_val)
-			log.infof("BOPEN: key_tag=%v", key_tag)
 			if val, found := table.data[key_tag]; found {
-				log.infof("BOPEN: found=%v", val)
 				return val
 			}
-			log.infof("BOPEN: not found")
 			return nil
 		}
 		return nil
@@ -493,33 +482,27 @@ CALL_USER_FUNCTION :: proc(i: ^Interpreter, fn: ^Closure, args: []Value) -> Valu
 			// No named parameters, all arguments go to varargs
 			start_idx = 0
 		}
-		log.infof(
-			"CALL_USER_FUNCTION: has_varargs=true, params=%d, args=%d, start_idx=%d",
-			len(fn.params),
-			len(args),
-			start_idx,
-		)
 		for idx in start_idx ..< len(args) {
-			log.infof("Adding arg[%d]=%v to varargs", idx, args[idx])
+			// log.infof("Adding arg[%d]=%v to varargs", idx, args[idx])
 			append(&varargs, args[idx])
 		}
 		env.varargs = varargs
 	}
 	old_env := i.current
 	i.current = env
-	log.infof("CALL_USER_FUNCTION: evaluating function body node %d", fn.body)
+	// log.infof("CALL_USER_FUNCTION: evaluating function body node %d", fn.body)
 	result := i->EVAL(fn.body)
-	log.infof("CALL_USER_FUNCTION: function body result=%v", result)
+	// log.infof("CALL_USER_FUNCTION: function body result=%v", result)
 	i.current = old_env
 	if ret, ok := result.(^ReturnValue); ok {
-		log.infof("CALL_USER_FUNCTION: returning %v", ret.value)
+		// log.infof("CALL_USER_FUNCTION: returning %v", ret.value)
 		return ret.value
 	}
 	if ret, ok := result.(^Table); ok {
-		log.infof("CALL_USER_FUNCTION: returning table %v", ret)
+		// log.infof("CALL_USER_FUNCTION: returning table %v", ret)
 		return ret
 	}
-	log.infof("CALL_USER_FUNCTION: no return value, returning nil")
+	// log.infof("CALL_USER_FUNCTION: no return value, returning nil")
 	return nil
 }
 @(private = "file")
