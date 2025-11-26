@@ -8,16 +8,15 @@ import "core:strings"
 *	 Defines the interpreter functions for Ouau.
 */
 @(require_results)
-INTERPRET :: proc(i: ^Interpreter, root: NODEID) -> Value {
-	last_val: Value
+INTERPRET :: proc(i: ^Interpreter, root: NODEID) -> (result: Value) {
 	for c := i->GET_CHILD(root); c != 0; c = i->GET_SIBLING(c) {
 		v := i->EVAL(c)
 		if ret, ok := v.(^ReturnValue); ok {
 			return ret.value
 		}
-		last_val = v
+		result = v
 	}
-	return last_val
+	return result
 }
 @(private = "file")
 EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
