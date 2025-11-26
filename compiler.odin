@@ -1,14 +1,32 @@
 package ouau
 import "core:fmt"
 import "core:log"
+import "core:mem/virtual"
 /*
 *	 ./compiler.odin
 *	 Copyright(C) 2025 TESTMEE
 *	 Defines the compiler functions for Ouau.
 */
+Register_Allocator :: struct {
+	free_regs: [dynamic]int,
+	used_regs: [dynamic]int,
+	max_regs:  int,
+}
+ALLOC_REG :: proc(c: ^Compiler) -> int {
+	if len(c.free_regs) > 0 {
+		return pop(&c.free_regs)
+	}
+	r := c.local_count
+	c.local_count += 1
+	if c.local_count > c.max_stack do c.max_stack = c.local_count
+	return r
+}
+FREE_REG :: proc(c: ^Compiler, r: int) {
+	append(&c.free_regs, r)
+}
 COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	kind := c.nodes.kind[nodeid]
-	log.infof("Compiling node %v", kind)
+	// log.infof("Compiling node %v", kind)
 	switch kind {
 	case .DO:
 		unimplemented("TODO")
@@ -59,14 +77,11 @@ COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 }
 @(private = "file")
 CHECK_KIND :: proc(c: ^Compiler, nodeid: NODEID, kind: NODE_KIND) -> bool {
-	if c.nodes.kind[nodeid] == kind {
-		return true
-	}
+	if c.nodes.kind[nodeid] == kind { return true }
 	return false
 }
 @(private = "file")
 COMPILE_LITERAL :: proc(c: ^Compiler, nodeid: NODEID) -> int {
-	// Check if it's a number literal
 	if c.nodes.int_value[nodeid] != 0 {
 		val := f64(c.nodes.int_value[nodeid])
 		const_idx := ADD_CONST(c, val)
@@ -110,17 +125,15 @@ COMPILE_STRING :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 @(private = "file")
 COMPILE_LOCAL :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	var_node := c.nodes.first_child[nodeid] // Get the first child(namelist or function)
-	log.infof("Compiling LOCAL node %v", c.nodes.kind[var_node] == .FUNCTION)
-
-	if var_node == 0 do return COMPILE_ERR(c, "LOCAL node has no variable name or function definition.")
-	if c.nodes.kind[var_node] != .IDENTIFIER do return COMPILE_ERR(c, "Expected identifier in LOCAL declaration") // Should be function as well but fix later.
-
+	if var_node == 0 {
+		return COMPILE_ERR(c, "LOCAL node has no variable name or function definition.")
+	}
+	if c.nodes.kind[var_node] != .IDENTIFIER {
+		return COMPILE_ERR(c, "Expected identifier in LOCAL declaration")
+	}
 	var_name := c.nodes.name[var_node]
-	log.infof("Compiling LOCAL node with name::%v", var_name)
-
 	reg := ALLOC_REG(c)
 	c.locals[var_name] = reg
-
 	// Check if there's an assignment (next sibling after variables)
 	assign_node := var_node
 	for c.nodes.next_sibling[assign_node] != 0 {
@@ -156,17 +169,12 @@ COMPILE_IDENTIFIER :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 COMPILE_BLOCK :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 	child := c.nodes.first_child[nodeid] // Get first child
 	assert(child != nodeid, "First child of BLOCK is itself")
-
 	last_result := -1 // Assume no result
-
 	for child != 0 {
 		result := COMPILE_NODE(c, child) // Compile child
-
 		if result < 0 && c.nodes.kind[child] != .RETURN && c.nodes.kind[child] != .FUNCTION {
-			// RETURN and FUNCTION statements return -1, which is not an error in blocks
 			return result
 		}
-
 		// Free the result register unless it's the last expression
 		next_child := c.nodes.next_sibling[child]
 		if next_child != 0 && result >= 0 {
@@ -174,10 +182,8 @@ COMPILE_BLOCK :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 		} else {
 			last_result = result
 		}
-
 		child = next_child
 	}
-
 	return last_result
 }
 @(private = "file")
@@ -189,7 +195,7 @@ COMPILE_BINARY :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 		return COMPILE_ERR(c, "BINARY node missing operands")
 	}
 	left_reg := COMPILE_NODE(c, left)
-	if left_reg < 0 do return left_reg
+	if left_reg < 0 { return left_reg }
 	right_reg := COMPILE_NODE(c, right)
 	if right_reg < 0 {
 		FREE_REG(c, left_reg)
@@ -272,7 +278,7 @@ COMPILE_UNARY :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 		return COMPILE_ERR(c, "UNARY node missing operand")
 	}
 	operand_reg := COMPILE_NODE(c, operand)
-	if operand_reg < 0 do return operand_reg
+	if operand_reg < 0 { return operand_reg }
 	dest := ALLOC_REG(c)
 	op := c.nodes.token[nodeid]
 	// Map token to opcode
@@ -308,44 +314,36 @@ COMPILE_RETURN :: proc(c: ^Compiler, nodeid: NODEID) -> int {
 }
 @(private = "file")
 COMPILE_FUNCTION :: proc(c: ^Compiler, nodeid: NODEID) -> int {
+	//TODO:
+	my_alloc := virtual.arena_allocator(c.arena)
 	func_name := c.nodes.name[nodeid]
-
 	// Get function body (first child)
 	body := c.nodes.first_child[nodeid]
 	if body == 0 {
 		return COMPILE_ERR(c, "FUNCTION node missing body")
 	}
-
-	prototype := new(Prototype, context.allocator)
+	prototype := new(Prototype, my_alloc)
 	function_compiler := NEW_COMPILER(c.nodes, c.arena)
 	saved_locals := c.locals
 	saved_local_count := c.local_count
 
-	function_compiler.locals = make(map[string]int, context.allocator)
+	function_compiler.locals = make(map[string]int, my_alloc)
 	function_compiler.local_count = 0
-
 	body_result := COMPILE_NODE(function_compiler, body)
-
 	// For functions, body_result < 0 is normal (due to RETURN), so don't return early
 	// prototype.instructions = function_compiler.instructions[:]
 	// prototype.constants = function_compiler.constants[:]
 	prototype.max_stack = function_compiler.max_stack
 	prototype.num_params = 0
-
 	proto_index := len(c.prototypes)
 	append(&c.prototypes, prototype)
-
 	c.locals = saved_locals
 	c.local_count = saved_local_count
-
 	dest := ALLOC_REG(c)
 	EMITABX(c, .CLOSURE, u32(dest), u32(proto_index))
-
 	function_const_idx := ADD_CONST(c, func_name)
 	EMITABX(c, .SETGLOBAL, u32(dest), function_const_idx)
-
 	FREE_REG(c, dest)
-
 	return dest
 }
 @(private = "file")

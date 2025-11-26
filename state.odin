@@ -416,7 +416,7 @@ Compiler :: struct {
 @(require_results)
 NEW_COMPILER :: proc(my_nodes: ^NODES, arena: ^virtual.Arena) -> ^Compiler {
 	my_alloc := virtual.arena_allocator(arena)
-	c := new(Compiler)
+	c := new(Compiler, my_alloc)
 	c.nodes = my_nodes
 	c.constants = make([dynamic]Value, my_alloc)
 	c.const_index = make(map[Value]int, my_alloc)
@@ -424,6 +424,7 @@ NEW_COMPILER :: proc(my_nodes: ^NODES, arena: ^virtual.Arena) -> ^Compiler {
 	c.upvalues = make(map[string]int, my_alloc)
 	c.free_regs = make([dynamic]int, my_alloc)
 	c.prototypes = make([dynamic]^Prototype, my_alloc)
+	c.instructions = make([dynamic]u32, my_alloc)
 	c.parent = nil
 	return c
 }
