@@ -10,10 +10,10 @@ import "core:slice"
 */
 /* Lexer State
 	 <Structures> | <Descriptions>
-	 Token | Token type
-	 TokenDefinition | Token definition type
-	 LexerVTable | Lexer virtual table, including EAT, PEEK, NEXT, GET_TOKEN, SKIP_WHITESPACE, CREATE_NUMBER, CREATE_IDENTIFIER_OR_KEYWORD, SYNTAX_ERROR.
-	 Lexer | Lexer state, including input, ch, pos, read_pos, arena, and vtable.
+	 #Token | Token type
+	 #TokenDefinition | Token definition type
+	 #LexerVTable | Lexer virtual table, including EAT, PEEK, NEXT, GET_TOKEN, SKIP_WHITESPACE, CREATE_NUMBER, CREATE_IDENTIFIER_OR_KEYWORD, SYNTAX_ERROR.
+	 #Lexer | Lexer state, including input, ch, pos, read_pos, arena, and vtable.
 */
 Token :: enum u8 {
 	EOF,
@@ -173,12 +173,12 @@ NEW_LEXER :: proc(input: string, varena: ^virtual.Arena) -> Lexer {
 }
 /* Parser State
 	 <Structures> | <Descriptions>
-	 NODEID | Node ID type
-	 NODE_KIND | Node kind type
-	 NODES | Nodes state, including kind, first_child, next_sibling, token, int_value, string_value, and name.
-	 ParserVTable | Parser virtual table, including ADVANCE, APPEND_CHILD, IS, EXPECT, GET_TEXT, GET_TOKEN, CHUNK, BLOCK, EXP, EXPLIST, STMT, FUNCTION, PREFIX, TABLE, UBLOCK, PRIMARY, INFIX, PRECEDENCE, SET_NAME, SET_STRING, SET_INT, NEW_NODE, SET_TOKEN, PARSE_ERROR.
-	 Parser | Parser state, including pos, nodes, lexer, current, peek, arena, and vtable.
-	 Precedence | Precedence state, including LOWEST, ASSIGN, EQUALS, LESSGREATER, SUM, PRODUCT, PREFIX, CALL, INDEX.
+	 #NODEID | Node ID type
+	 #NODE_KIND | Node kind type
+	 #NODES | Nodes state, including kind, first_child, next_sibling, token, int_value, string_value, and name.
+	 #ParserVTable | Parser virtual table, including ADVANCE, APPEND_CHILD, IS, EXPECT, GET_TEXT, GET_TOKEN, CHUNK, BLOCK, EXP, EXPLIST, STMT, FUNCTION, PREFIX, TABLE, UBLOCK, PRIMARY, INFIX, PRECEDENCE, SET_NAME, SET_STRING, SET_INT, NEW_NODE, SET_TOKEN, PARSE_ERROR.
+	 #Parser | Parser state, including pos, nodes, lexer, current, peek, arena, and vtable.
+	 #Precedence | Precedence state, including LOWEST, ASSIGN, EQUALS, LESSGREATER, SUM, PRODUCT, PREFIX, CALL, INDEX.
 */
 NODEID :: u32
 NODE_KIND :: enum {
@@ -312,9 +312,9 @@ PRECEDENCES := #partial [Token]Precedence {
 }
 /* Evaluator State
 	 <Structures> | <Descriptions>
-	 Frame | Frame state, including environment, return address, and result.
-	 InterpreterVTable | Interpreter virtual table, including INTERPRET, EVAL, ASSIGN, GET_CHILD, GET_GCHILD, GET_SIBLING, EVAL_ERROR.
-	 Interpreter | Interpreter state, including globals, current, nodes, call_stack, arena, and vtable.
+	 #Frame | Frame state, including environment, return address, and result.
+	 #InterpreterVTable | Interpreter virtual table, including INTERPRET, EVAL, ASSIGN, GET_CHILD, GET_GCHILD, GET_SIBLING, EVAL_ERROR.
+	 #Interpreter | Interpreter state, including globals, current, nodes, call_stack, arena, and vtable.
 */
 Frame :: struct {
 	env:         ^Environment, // Hashable env of upvalues and locals
@@ -423,8 +423,8 @@ ENV_RESORT :: proc(env: ^Environment) {
 }
 /* Compiler State TODO: Work in progress, figuring out compiler for now.
 	 <Structures> | <Descriptions>
-	 Compiler| Compiler state, including instructions, constants, locals, upvalues, and AST nodes.
-	 Prototype| Prototype state, including instructions, constants, prototypes, upvalues, and max stack size.
+	 #Compiler| Compiler state, including instructions, constants, locals, upvalues, and AST nodes.
+	 #Prototype| Prototype state, including instructions, constants, prototypes, upvalues, and max stack size.
 */
 Compiler :: struct {
 	instructions: [dynamic]u32, // Bytecode instructions
@@ -466,12 +466,12 @@ Prototype :: struct {
 }
 /* VM STATE TODO: Work in progress, figuring out compiler for now.
 	 <Structures>  | <Descriptions>
-	  GlobalState | Global State of the VM including the main thread.
-	  VmFrame     | Current closure context.
-	  VM          | VM state, including the main thread, call stack, and GC. 
-	  ThreadState | Thread state, including the call stack, call count, and base context. 
-	  ThreadStatus| Thread status, including OK, ERR, and YIELD. 
-	  VM_Config   | VM configuration, including stack size, call depth, and GC threshold. 
+	 #GlobalState | Global State of the VM including the main thread.
+	 #VmFrame     | Current closure context.
+	 #VM          | VM state, including the main thread, call stack, and GC. 
+	 #ThreadState | Thread state, including the call stack, call count, and base context. 
+	 #ThreadStatus| Thread status, including OK, ERR, and YIELD. 
+	 #VM_Config   | VM configuration, including stack size, call depth, and GC threshold. 
  */
 STACK_LIMIT :: 1024 * 1024 // Stack Limit of VM
 GlobalState :: struct {
