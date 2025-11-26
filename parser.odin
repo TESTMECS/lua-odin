@@ -279,8 +279,10 @@ FUNCTION :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 					p->EXPECT(.COMMA) or_return
 				case .DOTDOT:
 					p->ADVANCE() or_return // past ..
-					p->ADVANCE() or_return // past varargs
+					varargs_name := p->GET_TEXT()
+					p->ADVANCE() or_return // past varargs name
 					args := p->NEW_NODE(.VARARGS)
+					p->SET_NAME(args, varargs_name)
 					p->APPEND_CHILD(node, args)
 					break each_param
 				case:

@@ -32,14 +32,15 @@ ReturnValue :: struct {
 	value: Value,
 }
 Closure :: struct {
-	params:      []string,
-	body:        NODEID,
-	closure:     ^Environment,
-	proto:       ^Prototype,
-	upvalues:    [dynamic]^Upvalue,
-	is_native:   bool,
-	has_varargs: bool,
-	native_proc: proc(args: []Value) -> Value,
+	params:       []string,
+	body:         NODEID,
+	closure:      ^Environment,
+	proto:        ^Prototype,
+	upvalues:     [dynamic]^Upvalue,
+	is_native:    bool,
+	has_varargs:  bool,
+	varargs_name: string,
+	native_proc:  proc(args: []Value) -> Value,
 }
 Table :: struct {
 	data:      map[KeyTag]Value,

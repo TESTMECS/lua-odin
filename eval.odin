@@ -24,23 +24,9 @@ INTERPRET :: proc(i: ^Interpreter, root: NODEID) -> (result: Value) {
 EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	my_alloc := virtual.arena_allocator(i.arena)
 	kind := i.nodes.kind[node]
-	// log.infof("EVAL: node %d kind=%d", node, NODE_KIND(kind))
-	switch kind {
+	#partial switch kind {
 	case .INVALID:
 		return i->EVAL_ERROR("Invalid Node.")
-	case .VARARGS:
-		// Return varargs as a table
-		my_alloc := virtual.arena_allocator(i.arena)
-		table := new(Table, my_alloc)
-		table.data = make(map[KeyTag]Value, my_alloc)
-		for val, idx in i.current.varargs {
-			key_tag := KeyTag {
-				kind = 1,
-				i    = cast(i64)idx + 1,
-			}
-			table.data[key_tag] = val
-		}
-		return table
 	case .BLOCK:
 		last_result: Value
 		for c := i->GET_CHILD(node); c != 0; c = i->GET_SIBLING(c) {
@@ -379,7 +365,7 @@ EVAL_FUNCTION :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	fn := new(Closure, my_alloc)
 	fn.is_native = false
 	fn.params = EXTRACT_PARAMS(i, node)
-	fn.has_varargs = HAS_VARARGS(i, node)
+	fn.has_varargs, fn.varargs_name = GET_VARARGS_INFO(i, node)
 	fn.body = GET_FUNCTION_BODY(i, node)
 	fn.closure = i.current
 	name := i.nodes.name[node]
@@ -420,20 +406,20 @@ EXTRACT_PARAMS :: proc(i: ^Interpreter, node: NODEID) -> []string {
 	return params[:]
 }
 @(private = "file")
-HAS_VARARGS :: proc(i: ^Interpreter, node: NODEID) -> bool {
+GET_VARARGS_INFO :: proc(i: ^Interpreter, node: NODEID) -> (has_varargs: bool, name: string) {
 	child := i.nodes.first_child[node]
 	for child != 0 {
 		if i.nodes.kind[child] == .VARARGS {
-			return true
+			return true, i.nodes.name[child]
 		}
 		child = i.nodes.next_sibling[child]
 	}
-	return false
+	return false, ""
 }
 @(private = "file")
 GET_FUNCTION_BODY :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
 	child := i->GET_CHILD(node)
-	for child != 0 && i.nodes.kind[child] == .IDENTIFIER {
+	for child != 0 && (i.nodes.kind[child] == .IDENTIFIER || i.nodes.kind[child] == .VARARGS) {
 		child = i->GET_SIBLING(child)
 	}
 	return child
@@ -476,34 +462,25 @@ CALL_USER_FUNCTION :: proc(i: ^Interpreter, fn: ^Closure, args: []Value) -> Valu
 	// Set varargs if function has them
 	if fn.has_varargs {
 		my_alloc := virtual.arena_allocator(i.arena)
-		varargs := make([dynamic]Value, my_alloc)
-		// Add arguments to varargs (all args if no named params, extra args if named params)
+		varargs_table := new(Table, my_alloc)
+		varargs_table.data = make(map[KeyTag]Value, my_alloc)
 		start_idx := len(fn.params)
-		if start_idx == 0 {
-			// No named parameters, all arguments go to varargs
-			start_idx = 0
-		}
 		for idx in start_idx ..< len(args) {
-			// log.infof("Adding arg[%d]=%v to varargs", idx, args[idx])
-			append(&varargs, args[idx])
+			key_tag := KeyTag {
+				kind = 1,
+				i    = cast(i64)(idx - start_idx) + 1,
+			}
+			varargs_table.data[key_tag] = args[idx]
 		}
-		env.varargs = varargs
+		ENV_SET(env, fn.varargs_name, varargs_table)
 	}
 	old_env := i.current
 	i.current = env
-	// log.infof("CALL_USER_FUNCTION: evaluating function body node %d", fn.body)
 	result := i->EVAL(fn.body)
-	log.infof("CALL_USER_FUNCTION: function body result=%v", result)
 	i.current = old_env
 	if ret, ok := result.(^ReturnValue); ok {
-		log.infof("CALL_USER_FUNCTION: returning %v", ret.value)
 		return ret.value
 	}
-	if ret, ok := result.(^Table); ok {
-		// log.infof("CALL_USER_FUNCTION: returning table %v", ret)
-		return ret
-	}
-	// log.infof("CALL_USER_FUNCTION: no return value, returning nil")
 	return nil
 }
 @(private = "file")
@@ -674,9 +651,9 @@ EVAL_ERROR :: proc(i: ^Interpreter, msg: string) -> ^OuauError {
 		msg       = msg,
 		evaluator = i,
 	}
-	fmt.eprintfln("Eval Error::Msg::(%s)|", msg)
-	fmt.eprintfln("Call Stack::(%v)|", i.call_stack)
-	fmt.eprintfln("Globals::(%v)|", i.globals)
+	fmt.eprintfln("|Eval Error::Msg::(%s)|", msg)
+	fmt.eprintfln("|Call Stack::(%v)|", i.call_stack)
+	fmt.eprintfln("|Globals::(%v)|", i.globals)
 	return e
 }
 @(rodata)
