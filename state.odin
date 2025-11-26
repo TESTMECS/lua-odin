@@ -61,7 +61,6 @@ Token :: enum u8 {
 	TILDE,
 	BXOR,
 	POUND,
-	DOTS,
 	BAND,
 	BOR,
 	BANG,

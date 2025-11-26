@@ -398,4 +398,22 @@ test_global :: proc(t: ^testing.T) {
 	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
 	DUMP_AST(&p)
 }
+@(test)
+test_varargs :: proc(t: ^testing.T) {
+	using parser
+	v: virtual.Arena
+	err := virtual.arena_init_growing(&v)
+	ensure(err == nil, "Error initializing arena")
+	defer virtual.arena_destroy(&v)
+	input := `
+	local function a(..args)
+		return args 
+	end
+	a(1,2,3)`
+	p, p_err := NEW_PARSER(input, &v)
+	testing.expectf(t, p_err == nil, "Error creating parser::(%v)", p_err)
+	nodeid, chunk_err := p->CHUNK()
+	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
+	DUMP_AST(&p)
+}
 

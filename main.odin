@@ -135,7 +135,7 @@ dump_node :: proc(p: ^Parser, id: u32, indent: int) {
 		fmt.printf(" name='%s'", p.nodes.name[id])
 	}
 	if p.nodes.int_value[id] != 0 {
-		fmt.printf(" int=%d", p.nodes.int_value[id])
+		fmt.printf(" int=%g", p.nodes.int_value[id])
 	}
 	if p.nodes.string_value[id] != "" {
 		fmt.printf(" str='%s'", p.nodes.string_value[id])

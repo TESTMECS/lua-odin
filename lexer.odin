@@ -42,12 +42,7 @@ NEXT :: proc(l: ^Lexer) -> (token: TokenDefinition, err: ^OuauError) {
 		if l->PEEK() == '.' {
 			start := l.pos
 			l->EAT()
-			if l->PEEK() == '.' {
-				l->EAT()
-				token = l->GET_TOKEN(.DOTS, start, 3)
-			} else {
-				token = l->GET_TOKEN(.DOTDOT, start, 2)
-			}
+			token = l->GET_TOKEN(.DOTDOT, start, 2)
 		} else {
 			token = l->GET_TOKEN(.DOT, l.pos, 1)
 		}

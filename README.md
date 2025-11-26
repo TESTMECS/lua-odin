@@ -4,5 +4,4 @@
 |bnot: '~21->22' | bnot: '!21->22' |
 |a=1| global a = 1|
 # Status
-- Fix Bnot to `~`
-- Add `*args`
+- Add `**args`

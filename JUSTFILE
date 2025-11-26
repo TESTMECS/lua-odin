@@ -17,7 +17,7 @@ alias re := repl
 repl:
 	odin run . -- repl 
 # test parser functions
-test_parser_name := "test_do"
+test_parser_name := "test_varargs"
 test_parser:
 	odin test ./test_parser -define:ODIN_TEST_NAMES={{test_parser_name}}
 # test eval functions
