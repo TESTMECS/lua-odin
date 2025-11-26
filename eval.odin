@@ -9,15 +9,13 @@ import "core:strings"
 */
 @(require_results)
 INTERPRET :: proc(i: ^Interpreter, root: NODEID) -> Value {
-	child := i.nodes.first_child[root]
 	last_val: Value
-	for child != 0 {
-		v := i->EVAL(child)
+	for c := i->GET_CHILD(root); c != 0; c = i->GET_SIBLING(c) {
+		v := i->EVAL(c)
 		if ret, ok := v.(^ReturnValue); ok {
 			return ret.value
 		}
 		last_val = v
-		child = i.nodes.next_sibling[child]
 	}
 	return last_val
 }
@@ -29,8 +27,8 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	#partial switch kind {
 	case .BLOCK:
 		last_result: Value
-		for child := i->GET_CHILD(node); child != 0; child = i->GET_SIBLING(child) {
-			v := i->EVAL(child)
+		for c := i->GET_CHILD(node); c != 0; c = i->GET_SIBLING(c) {
+			v := i->EVAL(c)
 			if _, ok := v.(^ReturnValue); ok { return v }
 			last_result = v
 		}
