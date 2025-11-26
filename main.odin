@@ -50,7 +50,7 @@ Ouau :: proc() -> (main_err: Maybe(OuauError)) {
 		)
 		xtra_args := user_args[1:]
 		i := NEW_INTERPRETER(nil, &v)
-		for {
+		repl: for {
 			fmt.println(PROMPT)
 			input_builder := strings.builder_make(my_alloc)
 			defer strings.builder_destroy(&input_builder)
@@ -62,10 +62,10 @@ Ouau :: proc() -> (main_err: Maybe(OuauError)) {
 					strings.write_string(&input_builder, line)
 					strings.write_byte(&input_builder, '\n')
 					fmt.print("...")
-					continue
+					continue repl
 				} else {
 					strings.write_string(&input_builder, line)
-					break
+					break repl
 				}
 			}
 			complete_input := strings.to_string(input_builder)
