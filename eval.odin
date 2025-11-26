@@ -211,7 +211,19 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		case .GE:
 			return EVAL_COMPARE(left, right, .GE)
 		case .OR:
-			return IS_TRUTHY(left) || IS_TRUTHY(right)
+			if IS_TRUTHY(left) {
+				return left
+			} else {
+				right := i->EVAL(i->GET_GCHILD(node))
+				return right
+			}
+		case .AND:
+			if !IS_TRUTHY(left) {
+				return left
+			} else {
+				right := i->EVAL(i->GET_GCHILD(node))
+				return right
+			}
 		case .ANDAND:
 			return IS_TRUTHY(left) && IS_TRUTHY(right)
 		case .OROR:
