@@ -291,17 +291,17 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		}
 		return table
 	case .GLOBAL:
-		child := i->GET_CHILD(node)
+		c := i->GET_CHILD(node)
 		vars := make([dynamic]string, my_alloc)
-		for child != 0 && i.nodes.kind[child] == .IDENTIFIER {
-			append(&vars, i.nodes.name[child])
-			child = i->GET_SIBLING(child)
+		for c != 0 && i.nodes.kind[c] == .IDENTIFIER {
+			append(&vars, i.nodes.name[c])
+			c = i->GET_SIBLING(c)
 		}
 		values := make([dynamic]Value, my_alloc)
-		for child != 0 {
-			val := i->EVAL(child)
+		for c != 0 {
+			val := i->EVAL(c)
 			append(&values, val)
-			child = i->GET_SIBLING(child)
+			c = i->GET_SIBLING(c)
 		}
 		last_value: Value
 		for name, idx in vars {
