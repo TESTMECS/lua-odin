@@ -348,13 +348,14 @@ Environment :: struct {
 	sorted:  [dynamic]string,
 	dirty:   bool,
 	outer:   ^Environment,
-	varargs: []Value,
+	varargs: [dynamic]Value,
 }
 NEW_ENVIRONMENT :: proc(outer: ^Environment, varena: ^virtual.Arena) -> ^Environment {
 	my_alloc := virtual.arena_allocator(varena)
 	env := new(Environment, my_alloc)
 	env.outer = outer
 	env.values = make(map[string]Value, my_alloc)
+	env.varargs = make([dynamic]Value, my_alloc)
 	return env
 }
 ENV_GET :: proc(env: ^Environment, name: string) -> (Value, bool) {

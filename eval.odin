@@ -27,8 +27,18 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	case .INVALID:
 		return i->EVAL_ERROR("Invalid Node.")
 	case .VARARGS:
-		return i->EVAL_ERROR("Varargs not supported yet.") // TODO
-	// return i.current.varargs
+		// Return varargs as a table
+		my_alloc := virtual.arena_allocator(i.arena)
+		table := new(Table, my_alloc)
+		table.data = make(map[KeyTag]Value, my_alloc)
+		for val, idx in i.current.varargs {
+			key_tag := KeyTag {
+				kind = 1,
+				i    = cast(i64)idx + 1,
+			}
+			table.data[key_tag] = val
+		}
+		return table
 	case .BLOCK:
 		last_result: Value
 		for c := i->GET_CHILD(node); c != 0; c = i->GET_SIBLING(c) {
@@ -365,6 +375,7 @@ EVAL_FUNCTION :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	fn := new(Closure, my_alloc)
 	fn.is_native = false
 	fn.params = EXTRACT_PARAMS(i, node)
+	fn.has_varargs = HAS_VARARGS(i, node)
 	fn.body = GET_FUNCTION_BODY(i, node)
 	fn.closure = i.current
 	name := i.nodes.name[node]
@@ -405,6 +416,17 @@ EXTRACT_PARAMS :: proc(i: ^Interpreter, node: NODEID) -> []string {
 	return params[:]
 }
 @(private = "file")
+HAS_VARARGS :: proc(i: ^Interpreter, node: NODEID) -> bool {
+	child := i.nodes.first_child[node]
+	for child != 0 {
+		if i.nodes.kind[child] == .VARARGS {
+			return true
+		}
+		child = i.nodes.next_sibling[child]
+	}
+	return false
+}
+@(private = "file")
 GET_FUNCTION_BODY :: proc(i: ^Interpreter, node: NODEID) -> NODEID {
 	child := i->GET_CHILD(node)
 	for child != 0 && i.nodes.kind[child] == .IDENTIFIER {
@@ -439,9 +461,29 @@ IS_TRUTHY :: proc(PValue: Value) -> bool {
 @(private = "file")
 CALL_USER_FUNCTION :: proc(i: ^Interpreter, fn: ^Closure, args: []Value) -> Value {
 	env := NEW_ENVIRONMENT(fn.closure, i.arena)
-	for param, i in fn.params {
-		if i < len(args) { ENV_SET(env, param, args[i]) }
+
+	// Set regular parameters
+	for param, idx in fn.params {
+		if idx < len(args) {
+			ENV_SET(env, param, args[idx])
+		} else {
+			ENV_SET(env, param, nil)
+		}
 	}
+
+	// Set varargs if function has them
+	if fn.has_varargs {
+		my_alloc := virtual.arena_allocator(i.arena)
+		varargs := make([dynamic]Value, my_alloc)
+
+		// Add extra arguments to varargs
+		for idx in len(fn.params) ..< len(args) {
+			append(&varargs, args[idx])
+		}
+
+		env.varargs = varargs
+	}
+
 	old_env := i.current
 	i.current = env
 	result := i->EVAL(fn.body)

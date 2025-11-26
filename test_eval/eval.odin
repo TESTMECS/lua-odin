@@ -214,4 +214,27 @@ test_global :: proc(t: ^testing.T) {
 		testing.fail(t)
 	}
 }
+@(test)
+test_varargs :: proc(t: ^testing.T) {
+	using i
+	v: virtual.Arena
+	err := virtual.arena_init_growing(&v)
+	ensure(err == nil, "Error initializing arena")
+	defer virtual.arena_destroy(&v)
+	input := `
+	local function a(..args)
+		return args[1]
+	end
+	a(1,2,3)`
+	p, p_err := NEW_PARSER(input, &v)
+	testing.expectf(t, p_err == nil, "Error creating parser::(%v)", p_err)
+	root, chunk_err := CHUNK(&p)
+	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
+	i := NEW_INTERPRETER(&p.nodes, &v)
+	val := i->INTERPRET(root)
+	log.infof("val::(%v)", val)
+	if val == nil || val.(f64) != 1 {
+		testing.fail(t)
+	}
+}
 
