@@ -18,6 +18,23 @@ NEXT :: proc(l: ^Lexer) -> (token: TokenDefinition, err: ^OuauError) {
 	case '+':
 		token = l->GET_TOKEN(.PLUS, l.pos, 1)
 	case '-':
+		if l->PEEK() == '-' {
+			l->EAT() // consume second '-'
+			// Multi-Line Comments
+			if l->PEEK() == '[' {
+				l->EAT() // consume '['
+				if l->PEEK() == '[' {
+					l->EAT() // consume second '['
+					for l.ch != ']' && l.ch != 0 { l->EAT() }
+					l->EAT() // consume ']'
+					l->EAT() // consume ']'
+					l->NEXT()
+				}
+			}
+			// Single-Line Comments
+			for l.ch != '\n' && l.ch != 0 { l->EAT() }
+			return l->NEXT()
+		}
 		token = l->GET_TOKEN(.MINUS, l.pos, 1)
 	case '*':
 		token = l->GET_TOKEN(.MUL, l.pos, 1)
