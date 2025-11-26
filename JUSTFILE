@@ -24,15 +24,13 @@ test_parser:
 test_eval_name := "test_for"
 test_eval:
 	odin test ./test_eval -define:ODIN_TEST_NAMES={{test_eval_name}}
-
 # test compiler functions
 test_compiler_name := "test_local"
 test_compiler:
 	odin test ./test_compiler -define:ODIN_TEST_NAMES={{test_compiler_name}}
-
 # test a .ouau file
 test_file_dir := "./examples"
-test_file_name := "test.ouau"
+test_file_name := "loops.ouau"
 alias tf := test-file
 test-file:
 	odin run . -- file {{test_file_dir}}/{{test_file_name}}

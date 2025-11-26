@@ -1,0 +1,12 @@
+
+local function add(a, b)
+	return a + b
+end
+
+print(add(1, 2))
+
+function addr(a,b)
+	return add(a,b) + add(a,b)
+end
+
+print(addr(1,2))

@@ -1,0 +1,26 @@
+local a = 0
+for i = 1, 10 do
+	a = a + i
+end
+print(a)
+
+local step_test = 0
+for i = 1, 10, 2 do
+	step_test = step_test + i
+end
+print(step_test)
+
+local b = 0
+while true do
+	b = b + 1
+	break
+end
+print(b)
+
+local c = 0
+repeat
+	c = c + 1
+until c == 2
+print(c)
+
+	
