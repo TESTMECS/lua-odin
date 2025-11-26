@@ -431,6 +431,31 @@ Local :: struct {
 	reg:   int, // register index
 	depth: int, // depth of the local
 }
+CompilerVTable :: struct {
+	BEGIN_SCOPE:     proc(c: ^Compiler),
+	END_SCOPE:       proc(c: ^Compiler),
+	DECLARE_LOCAL:   proc(c: ^Compiler, name: string) -> int,
+	RESOLVE_VAR:     proc(
+		c: ^Compiler,
+		name: string,
+	) -> (
+		reg: int,
+		is_local: bool,
+		upval_idx: int,
+	),
+	EMIT_JUMP:       proc(c: ^Compiler) -> int,
+	PATCH_JUMP:      proc(c: ^Compiler, pc_slot: int, target_pc: int),
+	EMITABC:         proc(c: ^Compiler, op: Opcodes, a, b, cvar: u32) -> int,
+	EMITABX:         proc(c: ^Compiler, op: Opcodes, a, bx: u32) -> int,
+	EMITASBX:        proc(c: ^Compiler, op: Opcodes, a: u32, sbx: i32) -> int,
+	ADD_CONST:       proc(c: ^Compiler, v: Value) -> u32,
+	MAKE_ABC:        proc(a, b, c: u32) -> u32,
+	MAKE_ABX:        proc(a, bx: u32) -> u32,
+	MAKE_ASBX:       proc(a: u32, sbx: i32) -> u32,
+	ADD_UPVALUE:     proc(c: ^Compiler, name: string, in_stack: bool, index: int) -> int,
+	FIND_LOCAL:      proc(c: ^Compiler, name: string) -> int,
+	RESOLVE_UPVALUE: proc(c: ^Compiler, name: string) -> int,
+}
 Compiler :: struct {
 	instructions: [dynamic]u32, // Bytecode instructions
 	constants:    [dynamic]Value, // pool for LoadK instructions
@@ -445,26 +470,31 @@ Compiler :: struct {
 	prototypes:   [dynamic]^Prototype, // nested function prototypes
 	parent:       ^Compiler, // upvalue resolution
 	arena:        ^virtual.Arena,
+	using vtable: CompilerVTable,
 }
 @(require_results)
 NEW_COMPILER :: proc(
 	my_nodes: ^NODES,
 	parent: ^Compiler = nil,
 	arena: ^virtual.Arena,
-) -> ^Compiler {
+) -> (
+	c: Compiler,
+) {
 	my_alloc := virtual.arena_allocator(arena)
-	c := new(Compiler, my_alloc)
-	c.nodes = my_nodes
-	c.constants = make([dynamic]Value, my_alloc)
-	c.const_index = make(map[Value]int, my_alloc)
-	c.locals = make([dynamic]Local, my_alloc)
-	c.upvalues = make([dynamic]UpValueDesc, my_alloc)
-	c.free_regs = make([dynamic]int, my_alloc)
-	c.prototypes = make([dynamic]^Prototype, my_alloc)
-	c.instructions = make([dynamic]u32, my_alloc)
-	c.parent = parent
-	c.scope_depth = 0
-	return c
+	return Compiler {
+		nodes = my_nodes,
+		constants = make([dynamic]Value, my_alloc),
+		const_index = make(map[Value]int, my_alloc),
+		locals = make([dynamic]Local, my_alloc),
+		upvalues = make([dynamic]UpValueDesc, my_alloc),
+		free_regs = make([dynamic]int, my_alloc),
+		prototypes = make([dynamic]^Prototype, my_alloc),
+		instructions = make([dynamic]u32, my_alloc),
+		vtable = COMPILER_VTABLE,
+		parent = parent,
+		scope_depth = 0,
+		arena = arena,
+	}
 }
 Prototype :: struct {
 	instructions: []u32, // Prototype instructions.

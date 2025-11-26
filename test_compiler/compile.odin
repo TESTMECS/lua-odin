@@ -17,8 +17,8 @@ test_local :: proc(t: ^testing.T) {
 	testing.expectf(t, p_err == nil, "Error creating Parser::(%v)", p_err)
 	nodeid, chunk_err := p->CHUNK()
 	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
-	c := NEW_COMPILER(&p.nodes, &v)
-	COMPILE_NODE(c, nodeid)
+	c := NEW_COMPILER(&p.nodes, nil, &v)
+	COMPILE_NODE(&c, nodeid)
 	insts := new_clone(c.instructions, my_alloc)
 	if len(insts) == 0 {
 		testing.fail(t)
@@ -48,8 +48,8 @@ test_block :: proc(t: ^testing.T) {
 	testing.expectf(t, p_err == nil, "Error creating Parser::(%v)", p_err)
 	nodeid, chunk_err := p->CHUNK()
 	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
-	c := NEW_COMPILER(&p.nodes, &v)
-	COMPILE_NODE(c, nodeid)
+	c := NEW_COMPILER(&p.nodes, nil, &v)
+	COMPILE_NODE(&c, nodeid)
 	insts := c.instructions[:]
 	if len(insts) == 0 {
 		testing.fail(t)
@@ -80,8 +80,8 @@ test_function :: proc(t: ^testing.T) {
 	testing.expectf(t, p_err == nil, "Error creating Parser::(%v)", p_err)
 	nodeid, chunk_err := p->CHUNK()
 	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
-	c := NEW_COMPILER(&p.nodes, &v)
-	COMPILE_NODE(c, nodeid)
+	c := NEW_COMPILER(&p.nodes, nil, &v)
+	COMPILE_NODE(&c, nodeid)
 	insts := c.instructions[:]
 	if len(insts) == 0 {
 		testing.fail(t)
@@ -105,8 +105,8 @@ test_table :: proc(t: ^testing.T) {
 	testing.expectf(t, p_err == nil, "Error creating Parser::(%v)", p_err)
 	nodeid, chunk_err := p->CHUNK()
 	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
-	c := NEW_COMPILER(&p.nodes, &v)
-	COMPILE_NODE(c, nodeid)
+	c := NEW_COMPILER(&p.nodes, nil, &v)
+	COMPILE_NODE(&c, nodeid)
 	insts := c.instructions[:]
 	if len(insts) == 0 {
 		testing.fail(t)
@@ -132,8 +132,8 @@ test_global :: proc(t: ^testing.T) {
 	testing.expectf(t, p_err == nil, "Error creating Parser::(%v)", p_err)
 	nodeid, chunk_err := p->CHUNK()
 	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
-	c := NEW_COMPILER(&p.nodes, &v)
-	COMPILE_NODE(c, nodeid)
+	c := NEW_COMPILER(&p.nodes, nil, &v)
+	COMPILE_NODE(&c, nodeid)
 	insts := c.instructions[:]
 	if len(insts) == 0 {
 		testing.fail(t)
@@ -164,8 +164,8 @@ test_while :: proc(t: ^testing.T) {
 	testing.expectf(t, p_err == nil, "Error creating Parser::(%v)", p_err)
 	nodeid, chunk_err := p->CHUNK()
 	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
-	c := NEW_COMPILER(&p.nodes, &v)
-	COMPILE_NODE(c, nodeid)
+	c := NEW_COMPILER(&p.nodes, nil, &v)
+	COMPILE_NODE(&c, nodeid)
 	insts := c.instructions[:]
 	if len(insts) == 0 {
 		testing.fail(t)
@@ -209,8 +209,8 @@ test_repeat :: proc(t: ^testing.T) {
 	testing.expectf(t, p_err == nil, "Error creating Parser::(%v)", p_err)
 	nodeid, chunk_err := p->CHUNK()
 	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
-	c := NEW_COMPILER(&p.nodes, &v)
-	COMPILE_NODE(c, nodeid)
+	c := NEW_COMPILER(&p.nodes, nil, &v)
+	COMPILE_NODE(&c, nodeid)
 	insts := c.instructions[:]
 	if len(insts) == 0 {
 		testing.fail(t)
@@ -252,8 +252,8 @@ test_for :: proc(t: ^testing.T) {
 	testing.expectf(t, p_err == nil, "Error creating Parser::(%v)", p_err)
 	nodeid, chunk_err := p->CHUNK()
 	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
-	c := NEW_COMPILER(&p.nodes, &v)
-	COMPILE_NODE(c, nodeid)
+	c := NEW_COMPILER(&p.nodes, nil, &v)
+	COMPILE_NODE(&c, nodeid)
 	insts := c.instructions[:]
 	if len(insts) == 0 {
 		testing.fail(t)
@@ -296,8 +296,8 @@ test_if :: proc(t: ^testing.T) {
 	testing.expectf(t, p_err == nil, "Error creating Parser::(%v)", p_err)
 	nodeid, chunk_err := p->CHUNK()
 	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
-	c := NEW_COMPILER(&p.nodes, &v)
-	COMPILE_NODE(c, nodeid)
+	c := NEW_COMPILER(&p.nodes, nil, &v)
+	COMPILE_NODE(&c, nodeid)
 	insts := c.instructions[:]
 	if len(insts) == 0 {
 		testing.fail(t)
@@ -329,8 +329,8 @@ test_call :: proc(t: ^testing.T) {
 	testing.expectf(t, p_err == nil, "Error creating Parser::(%v)", p_err)
 	nodeid, chunk_err := p->CHUNK()
 	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)
-	c := NEW_COMPILER(&p.nodes, &v)
-	COMPILE_NODE(c, nodeid)
+	c := NEW_COMPILER(&p.nodes, nil, &v)
+	COMPILE_NODE(&c, nodeid)
 	insts := c.instructions[:]
 	if len(insts) == 0 {
 		testing.fail(t)

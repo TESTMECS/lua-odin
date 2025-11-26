@@ -39,8 +39,7 @@ DEBUG_REGISTERS :: proc(vm: ^VM, msg: string, start: int, count: int) {
 		if i < thread.top {
 			val := thread.stack[i]
 			log.infof("    R%d: %v", i - thread.base, val)
-		}
-		 else {
+		} else {
 			log.infof("    R%d: <uninitialized>", i - thread.base)
 		}
 	}
@@ -72,8 +71,7 @@ VM_ERROR :: proc(vm: ^VM, thread: ^ThreadState, msg: string, details: ..any) {
 	// Enhanced panic with context
 	if thread.globals.panic != nil {
 		thread.globals.panic(thread, msg, 1)
-	}
-	 else {
+	} else {
 		fmt.printf("PANIC: %s\n", msg)
 		panic(msg)
 	}
@@ -197,8 +195,7 @@ EXECUTE_INSTRUCTION :: proc(vm: ^VM, instruction: u32) -> Value {
 		function_value := STACK_GET(vm.current_thread, int(a))
 		if closure, ok := function_value.(^Closure); ok {
 			return EXECUTE_CALL(vm, closure, a, b, c)
-		}
-		 else {
+		} else {
 			vm.current_thread.globals.panic(
 				vm.current_thread,
 				"attempt to call non-function value",
@@ -368,8 +365,7 @@ EXECUTE_GETTABLE :: proc(vm: ^VM, a, b, c: u32) {
 		key := VALUE_TO_KEY_TAG(key_val)
 		if val, exists := table.data[key]; exists {
 			STACK_SET(thread, int(a), val)
-		}
-		 else {
+		} else {
 			STACK_SET(thread, int(a), nil)
 		}
 	}
@@ -398,7 +394,7 @@ EXECUTE_JMP :: proc(vm: ^VM, a, b, c: u32) {
 EXECUTE_CLOSURE :: proc(vm: ^VM, a, bx: u32) {
 	thread := vm.current_thread
 	frame := thread.call_stack[thread.call_count]
-	proto := frame.func.proto.proto[int(bx)]
+	proto := frame.func.proto.prototypes[int(bx)]
 	if proto == nil {
 		thread.globals.panic(thread, "CLOSURE proto is nil", 0)
 		return
@@ -423,13 +419,11 @@ EXECUTE_GETGLOBAL :: proc(vm: ^VM, a, bx: u32) {
 		key := VALUE_TO_KEY_TAG(constant)
 		if val, exists := thread.globals.globals.data[key]; exists {
 			STACK_SET(thread, int(a), val)
-		}
-		 else {
+		} else {
 			// Global not found, set to nil
 			STACK_SET(thread, int(a), nil)
 		}
-	}
-	 else {
+	} else {
 		// Not a string key, shouldn't happen
 		STACK_SET(thread, int(a), nil)
 	}
