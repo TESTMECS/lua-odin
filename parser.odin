@@ -278,6 +278,8 @@ FUNCTION :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 					p->ADVANCE() or_return // past param
 					p->EXPECT(.COMMA) or_return
 				case .DOTDOT:
+					args := p->NEW_NODE(.VARARGS)
+					p->APPEND_CHILD(node, args)
 					p->ADVANCE() or_return // past ..
 					p->ADVANCE() or_return // past varargs
 					break each_param
@@ -318,7 +320,7 @@ GET_PRECEDENCE :: proc(t: Token) -> Precedence {
 		return .PRODUCT
 	case .POW, .OPEN, .DOT:
 		return .CALL
-	case .BANG, .POUND, .NOT:
+	case .BANG, .POUND, .NOT, .DOTDOT:
 		return .PREFIX
 	case .BOPEN:
 		return .INDEX

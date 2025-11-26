@@ -76,7 +76,7 @@ Token :: enum u8 {
 }
 @(rodata)
 KEYWORDS := [?]struct {
-	// Must be sorted alphabetically
+	// Must be sorted alphabetically for binary search to work.
 	text: string,
 	kind: Token,
 } {
@@ -344,10 +344,11 @@ BUILTIN_PRINT :: proc(args: []Value) -> Value {
 	return nil
 }
 Environment :: struct {
-	values: map[string]Value,
-	sorted: [dynamic]string,
-	dirty:  bool,
-	outer:  ^Environment,
+	values:  map[string]Value,
+	sorted:  [dynamic]string,
+	dirty:   bool,
+	outer:   ^Environment,
+	varargs: []Value,
 }
 NEW_ENVIRONMENT :: proc(outer: ^Environment, varena: ^virtual.Arena) -> ^Environment {
 	my_alloc := virtual.arena_allocator(varena)

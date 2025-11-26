@@ -38,6 +38,7 @@ Closure :: struct {
 	proto:       ^Prototype,
 	upvalues:    [dynamic]^Upvalue,
 	is_native:   bool,
+	has_varargs: bool,
 	native_proc: proc(args: []Value) -> Value,
 }
 Table :: struct {

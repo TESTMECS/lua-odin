@@ -27,7 +27,8 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 	case .INVALID:
 		return i->EVAL_ERROR("Invalid Node.")
 	case .VARARGS:
-		return i->EVAL_ERROR("Varargs not supported yet.")
+		return i->EVAL_ERROR("Varargs not supported yet.") // TODO
+	// return i.current.varargs
 	case .BLOCK:
 		last_result: Value
 		for c := i->GET_CHILD(node); c != 0; c = i->GET_SIBLING(c) {

@@ -407,7 +407,7 @@ test_varargs :: proc(t: ^testing.T) {
 	defer virtual.arena_destroy(&v)
 	input := `
 	local function a(..args)
-		return args 
+		return args[1]
 	end
 	a(1,2,3)`
 	p, p_err := NEW_PARSER(input, &v)
