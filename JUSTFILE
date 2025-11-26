@@ -30,7 +30,7 @@ test_compiler:
 	odin test ./test_compiler -define:ODIN_TEST_NAMES={{test_compiler_name}}
 # test a .ouau file
 test_file_dir := "./examples"
-test_file_name := "loops.ouau"
+test_file_name := "scope.ouau"
 alias tf := test-file
 test-file:
 	odin run . -- file {{test_file_dir}}/{{test_file_name}}

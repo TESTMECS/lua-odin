@@ -1,0 +1,10 @@
+
+global a = 1
+
+function foo()
+	local a = 2
+	print(a)
+end
+
+foo()
+print(a)
