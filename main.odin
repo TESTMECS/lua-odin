@@ -76,11 +76,7 @@ Ouau :: proc() -> (main_err: Maybe(^OuauError)) {
 			}
 			strings.write_string(&accumulated_input, complete_input)
 			strings.write_byte(&accumulated_input, '\n')
-			return_value := OUAU_EVAL_STRING(
-				strings.to_string(accumulated_input),
-				&v,
-				&i,
-			) or_return
+			return_value := OUAU_EVAL_STRING(strings.to_string(accumulated_input), &v, &i)
 			fmt.println("==> ", VALUE_TO_STRING(return_value))
 		}
 	case "file":
@@ -88,7 +84,7 @@ Ouau :: proc() -> (main_err: Maybe(^OuauError)) {
 		assert(user_args[1] != "")
 		file_path := user_args[1]
 		if file, ok := os.read_entire_file_from_filename(file_path, my_alloc); ok {
-			return_value := OUAU_EVAL_STRING(string(file), &v, &i) or_return
+			return_value := OUAU_EVAL_STRING(string(file), &v, &i)
 			fmt.println("==> ", return_value)
 		} else {
 			return IO_ERROR(io.Error.Unexpected_EOF, "Error reading file", &v)
@@ -115,13 +111,12 @@ OUAU_EVAL_STRING :: proc(
 	i: ^Interpreter,
 ) -> (
 	return_value: Value,
-	err: ^OuauError,
 ) {
 	p := NEW_PARSER(input, v) or_return
 	root := p->CHUNK() or_return
 	i.nodes = &p.nodes
 	return_value = i->INTERPRET(root)
-	return return_value, nil
+	return return_value
 }
 dump_node :: proc(p: ^Parser, id: u32, indent: int) {
 	for _ in 0 ..< indent {

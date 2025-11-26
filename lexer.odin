@@ -1,5 +1,4 @@
 package ouau
-import "core:fmt"
 import "core:mem/virtual"
 /*
 *	 ./lexer.odin
@@ -199,10 +198,6 @@ SYNTAX_ERROR :: proc(l: ^Lexer, my_msg: string, token: TokenDefinition) -> ^Ouau
 		kind = token.kind,
 		text = string(token.text),
 	}
-	fmt.eprintfln("Syntax Error::Msg::(%s)|", e.msg)
-	fmt.eprintfln("Payload::(%v)|", e.payload)
-	fmt.eprintfln("Kind::(%v)|", token.kind)
-	fmt.eprintfln("Text::(%s)|", token.text)
 	return e
 }
 @(rodata)

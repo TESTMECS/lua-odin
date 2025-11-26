@@ -111,6 +111,8 @@ VALUE_TO_STRING :: proc(v: Value, allocator := context.allocator) -> string {
 		return VALUE_TO_STRING(val.value)
 	case ^BreakValue:
 		return "break"
+	case ^OuauError:
+		return fmt.tprintf("(%v): %s", val.kind, val.msg)
 	case:
 		return "nil"
 	}

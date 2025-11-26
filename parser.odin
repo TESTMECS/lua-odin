@@ -1,5 +1,4 @@
 package ouau
-import "core:fmt"
 import "core:mem/virtual"
 import "core:strconv"
 /*
@@ -577,12 +576,6 @@ PARSE_ERROR :: proc(p: ^Parser, msg: string) -> ^OuauError {
 		msg           = msg,
 		parser_object = p,
 	}
-	fmt.eprintfln("|Parse Error::Msg::(%s)|", msg)
-	fmt.eprintfln("|Pos::(%d)|", p.pos)
-	fmt.eprintfln("|Current Token Text::(%s)|", p.current.text)
-	fmt.eprintfln("|Current Token Kind::(%v)|", p.current.kind)
-	fmt.eprintfln("|Peek Token Kind::(%s)|", p.peek.kind)
-	fmt.eprintfln("|Peek Token Text::(%s)|", p.peek.text)
 	return e
 }
 @(rodata)
