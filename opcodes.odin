@@ -276,4 +276,37 @@ OpModes :: [NUM_OPCODES]u8 {
 	opmode(false, false, true, false, true, iABC), // VARARGPREP
 	opmode(false, false, false, false, false, iABC), // EXTRAARG
 }
+/*
+4. Notes for correctness
+OT means “opcode produces multiple results” (open table, open call, varargs tail, etc.).
+IT means “opcode consumes multiple results” (call-like IN instructions).
+The flag check testOTMode(op) or testITMode(op) only works because you filled OpModes correctly.
+*/
+testOTMode :: proc(op: Opcodes) -> bool {
+	return (OpModes[op] & OPMODE_OT) != 0
+}
+
+testITMode :: proc(op: Opcodes) -> bool {
+	return (OpModes[op] & OPMODE_IT) != 0
+}
+luaP_isOT :: proc(i: Instruction) -> bool {
+	op := GET_OPCODE(i)
+
+	// OP_TAILCALL always uses OT
+	if op == .TAILCALL {
+		return true
+	}
+
+	// Otherwise: OT flag must be set AND C == 0
+	return testOTMode(op) && (GETARG_C(i) == 0)
+}
+luaP_isIT :: proc(i: Instruction) -> bool {
+	op := GET_OPCODE(i)
+
+	if op == .SETLIST {
+		return testITMode(op) && (GETARG_vB(i) == 0)
+	}
+
+	return testITMode(op) && (GETARG_B(i) == 0)
+}
 
