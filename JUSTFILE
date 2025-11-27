@@ -24,10 +24,6 @@ test_parser:
 test_eval_name := "test_varargs"
 test_eval:
 	odin test ./test_eval -define:ODIN_TEST_NAMES={{test_eval_name}}
-# test compiler functions
-test_compiler_name := "test_function"
-test_compiler:
-	odin test ./test_compiler -define:ODIN_TEST_NAMES={{test_compiler_name}}
 # test a .ouau file
 test_file_dir := "./examples"
 test_file_name := "scope.ouau"
@@ -38,4 +34,10 @@ test-file:
 alias ast := ast-file
 ast-file:
 	odin run . -- ast {{test_file_dir}}/{{test_file_name}}
+# print bytecode for a .lua file
+lua_test_file_dir := "./examples"
+lua_test_file_name := "test.lua"
+alias bc := bytecode-file
+bytecode-file:
+	luac -l {{lua_test_file_dir}}/{{lua_test_file_name}}
 
