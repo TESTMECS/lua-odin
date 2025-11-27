@@ -2,7 +2,7 @@ package ouau
 /* 
 *	 opcodes.odin
 * Copyright(C) 2025 TESTMEE
-* This file defines the @Opcodes and @Definition__Table__ for the Ouau VM. 
+* This file defines the Opcodes and for the Ouau VM. 
 * The format of the opcodes and instructions is copied {lopcodes.h} from lua source 
 * but is also described in detail here.
 =================
@@ -71,7 +71,7 @@ POS_sJ :: POS_A
 /* Opcodes 
 Name|<Args>|<Description>|
 */
-NUM_OPCODES :: 81
+NUM_OPCODES :: 82
 
 Opcodes :: enum {
 	MOVE       = 0, /*| A, B | Reg[A] := R[B]|*/
@@ -141,23 +141,24 @@ Opcodes :: enum {
 	GEI        = 63, /*|A sB k | if ((R[A] >= sB) ~= k); pc++|*/
 	TEST       = 64, /*|A, k| if (not R[A] == k) then pc++*/
 	TESTSET    = 65, /*|A,B,k | if (not R[B] == k) then pc++ else R[A] := R[B]|*/
-	CALL       = 66, /*|A,B,C | R[A] := R[A+C-2] := R[A](R[A+1],...,R[A+B-1])|*/
-	TAILCALL   = 67, /*|A,B,C,k | return R[A] (R[A+1], ..., R[A+B-1]) */
-	RETURN     = 68, /*|A,B,C,k | return R[A], ... ,R[A+B-2] */
-	RETURN0    = 69, /* return */
-	RETURN1    = 70, /*|A| return R[A]| */
-	FORLOOP    = 71, /*|A, Bx| update counters; if loop continues then pc-=Bx; */
-	FORPREP    = 72, /*|A, Bx| <check values and prepare counters>; if not to run then pc+=Bx+1; */
-	TFORPREP   = 73, /*|A, Bx|create upvalue for R[A+3]; pc+=Bx |*/
-	TFORCALL   = 74, /*|A, C| R[A+4], ... , R[A+3+C] := R[A](R[A+1], R[A+2]); |*/
-	TFORLOOP   = 75, /*|A, Bx|if R[A+2] ~= nil then { R[A]=R[A+2]; pc -= Bx }|*/
-	SETLIST    = 76, /*|A, vB, vC, k|R[A][vC+i] := R[A+i], 1 <= i <= vB; |*/
-	CLOSURE    = 77, /*|A, Bx|R[A] := closure(KProto[Bx]) |*/
-	VARARG     = 78, /*|A, C| R[A], R[A+1], ..., R[A+C-2] = vararg; |*/
-	GETVARG    = 79, /*|A, B, C| R[A] := R[B][R[C]], R[B] is vararg parameter |*/
-	ERRNNIL    = 80, /*|A, Bx|raise error if R[A] ~= nil (K[Bx] is global name) |*/
-	VARARGPREP = 81, /* Prepare vararg parameters |*/
-	EXTRAARG   = 82, /* Ax| extra (larger) argument for previous opcode |*/
+	TESTTYPE   = 66, /*|A, B, k| if ((type(R[A]) == B) ~= k) pc++ | **NEW** */
+	CALL       = 67, /*|A,B,C | R[A] := R[A+C-2] := R[A](R[A+1],...,R[A+B-1])|*/
+	TAILCALL   = 68, /*|A,B,C,k | return R[A] (R[A+1], ..., R[A+B-1]) */
+	RETURN     = 69, /*|A,B,C,k | return R[A], ... ,R[A+B-2] */
+	RETURN0    = 70, /* return */
+	RETURN1    = 71, /*|A| return R[A]| */
+	FORLOOP    = 72, /*|A, Bx| update counters; if loop continues then pc-=Bx; */
+	FORPREP    = 73, /*|A, Bx| <check values and prepare counters>; if not to run then pc+=Bx+1; */
+	TFORPREP   = 74, /*|A, Bx|create upvalue for R[A+3]; pc+=Bx |*/
+	TFORCALL   = 75, /*|A, C| R[A+4], ... , R[A+3+C] := R[A](R[A+1], R[A+2]); |*/
+	TFORLOOP   = 76, /*|A, Bx|if R[A+2] ~= nil then { R[A]=R[A+2]; pc -= Bx }|*/
+	SETLIST    = 77, /*|A, vB, vC, k|R[A][vC+i] := R[A+i], 1 <= i <= vB; |*/
+	CLOSURE    = 78, /*|A, Bx|R[A] := closure(KProto[Bx]) |*/
+	VARARG     = 79, /*|A, C| R[A], R[A+1], ..., R[A+C-2] = vararg; |*/
+	GETVARG    = 80, /*|A, B, C| R[A] := R[B][R[C]], R[B] is vararg parameter |*/
+	ERRNNIL    = 81, /*|A, Bx|raise error if R[A] ~= nil (K[Bx] is global name) |*/
+	VARARGPREP = 82, /* Prepare vararg parameters |*/
+	EXTRAARG   = 83, /* Ax| extra (larger) argument for previous opcode |*/
 }
 Format :: enum {
 	FORMAT_iABC,
@@ -188,7 +189,6 @@ opmode :: proc "contextless" (mm, ot, it, t, a: bool, mode: u8) -> u8 {
 		(mode & 0b111) \
 	)
 }
-// TODO: Double check this.
 OpModes :: [NUM_OPCODES]u8 {
 	opmode(false, false, false, false, true, iABC), // MOVE
 	opmode(false, false, false, false, true, iAsBx), // LOADI
@@ -258,6 +258,7 @@ OpModes :: [NUM_OPCODES]u8 {
 	opmode(false, false, false, true, false, iABC), // GEI
 	opmode(false, false, false, true, false, iABC), // TEST
 	opmode(false, false, false, true, true, iABC), // TESTSET
+	opmode(false, false, false, true, false, iABC), // TESTTYPE **NEW**
 	opmode(false, true, true, false, true, iABC), // CALL
 	opmode(false, true, true, false, true, iABC), // TAILCALL
 	opmode(false, false, true, false, true, iABC), // RETURN
@@ -274,39 +275,32 @@ OpModes :: [NUM_OPCODES]u8 {
 	opmode(false, false, false, false, true, iABC), // GETVARG
 	opmode(false, false, false, false, false, iABx), // ERRNNIL
 	opmode(false, false, true, false, true, iABC), // VARARGPREP
-	opmode(false, false, false, false, false, iABC), // EXTRAARG
+	opmode(false, false, false, false, false, iAx), // EXTRAARG
 }
 /*
-4. Notes for correctness
 OT means “opcode produces multiple results” (open table, open call, varargs tail, etc.).
 IT means “opcode consumes multiple results” (call-like IN instructions).
-The flag check testOTMode(op) or testITMode(op) only works because you filled OpModes correctly.
 */
 testOTMode :: proc(op: Opcodes) -> bool {
 	return (OpModes[op] & OPMODE_OT) != 0
 }
-
 testITMode :: proc(op: Opcodes) -> bool {
 	return (OpModes[op] & OPMODE_IT) != 0
 }
-luaP_isOT :: proc(i: Instruction) -> bool {
+Ouau_isOT :: proc(i: Instruction) -> bool {
 	op := GET_OPCODE(i)
-
 	// OP_TAILCALL always uses OT
 	if op == .TAILCALL {
 		return true
 	}
-
 	// Otherwise: OT flag must be set AND C == 0
 	return testOTMode(op) && (GETARG_C(i) == 0)
 }
-luaP_isIT :: proc(i: Instruction) -> bool {
+Ouau_isIT :: proc(i: Instruction) -> bool {
 	op := GET_OPCODE(i)
-
 	if op == .SETLIST {
 		return testITMode(op) && (GETARG_vB(i) == 0)
 	}
-
 	return testITMode(op) && (GETARG_B(i) == 0)
 }
 
