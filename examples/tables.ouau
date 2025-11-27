@@ -1,0 +1,5 @@
+local a = {1,2,3}
+print(a[1])
+
+local b = {"a"=1, "b"=2}
+print(b["a"])
