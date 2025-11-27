@@ -1,5 +1,6 @@
 package ouau
 import "core:fmt"
+import "core:log"
 import "core:mem/virtual"
 /*
 *	 ./compiler.odin
@@ -143,11 +144,12 @@ COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> (register_idx: int) {
 		}
 		return dest
 	case .FUNCTION:
+		// Some kind of recursive
 		my_alloc := virtual.arena_allocator(c.arena)
 		function_name := c.nodes.name[nodeid]
 		params_node := c.nodes.first_child[nodeid]
 		body_node := c.nodes.next_sibling[params_node]
-		child := NEW_COMPILER(c.nodes, c.parent, c.arena)
+		child := NEW_COMPILER(c.nodes, c, c.arena)
 		param := c.nodes.first_child[params_node]
 		for param != 0 {
 			name := c.nodes.name[param]
@@ -155,8 +157,6 @@ COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> (register_idx: int) {
 			child.num_params += 1
 			param = c.nodes.next_sibling[param]
 		}
-		// Compile function body
-		COMPILE_NODE(&child, body_node)
 		// Ensure function body returns
 		EMITABC(&child, .RETURN, 0, 1, 0)
 		// Create prototype

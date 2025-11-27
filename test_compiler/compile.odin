@@ -90,6 +90,10 @@ test_function :: proc(t: ^testing.T) {
 	if len(insts) == 0 {
 		testing.fail(t)
 	}
+	context.logger.lowest_level = .Debug
+	for i in insts {
+		DEBUG_INSTRUCTION(t, i)
+	}
 	CHECK_DECODE_ABC(t, insts[0], Opcodes.CLOSURE)
 	CHECK_DECODE_ABC(t, insts[1], Opcodes.SETGLOBAL)
 }

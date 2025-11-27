@@ -461,7 +461,6 @@ Compiler :: struct {
 	constants:    [dynamic]Value, // pool for LoadK instructions
 	locals:       [dynamic]Local, // map of name -> register
 	upvalues:     [dynamic]UpValueDesc, // map of name -> upval index
-	const_index:  map[Value]int, // equality hashing for constants
 	nodes:        ^NODES, // AST nodes
 	max_stack:    int, // max stack size
 	num_params:   int, // number of parameters
@@ -484,7 +483,6 @@ NEW_COMPILER :: proc(
 	return Compiler {
 		nodes = my_nodes,
 		constants = make([dynamic]Value, my_alloc),
-		const_index = make(map[Value]int, my_alloc),
 		locals = make([dynamic]Local, my_alloc),
 		upvalues = make([dynamic]UpValueDesc, my_alloc),
 		free_regs = make([dynamic]int, my_alloc),
@@ -494,6 +492,8 @@ NEW_COMPILER :: proc(
 		parent = parent,
 		scope_depth = 0,
 		arena = arena,
+		max_stack = 0,
+		num_params = 0,
 	}
 }
 Prototype :: struct {

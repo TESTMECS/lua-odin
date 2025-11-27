@@ -12,7 +12,7 @@ MASK_B := MASK(SIZE_B)
 MASK_C := MASK(SIZE_C)
 MASK_Bx := MASK(SIZE_Bx)
 // (1 << bx - 1) - 1 / (2^17) - 1
-BxBIAS := (1 << (SIZE_Bx - 1)) - 1 / math.pow2_f64(17) - 1
+BxBIAS := (1 << (SIZE_Bx - 1)) - 1
 // Sizes
 SIZE_OP :: 6
 SIZE_A :: 8

@@ -25,7 +25,7 @@ test_eval_name := "test_varargs"
 test_eval:
 	odin test ./test_eval -define:ODIN_TEST_NAMES={{test_eval_name}}
 # test compiler functions
-test_compiler_name := "test_block"
+test_compiler_name := "test_function"
 test_compiler:
 	odin test ./test_compiler -define:ODIN_TEST_NAMES={{test_compiler_name}}
 # test a .ouau file
