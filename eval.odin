@@ -1,6 +1,5 @@
 package ouau
 import "core:fmt"
-import "core:log"
 import "core:math"
 import "core:mem/virtual"
 import "core:strings"

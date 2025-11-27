@@ -4,7 +4,6 @@ import "core:mem/virtual"
 *	 ./lexer.odin
 *	 Copyright(C) 2025 TESTMEE
 *	 Defines the lexer functions for Ouau.
-*	 @Lexer
 */
 @(require_results)
 NEXT :: proc(l: ^Lexer) -> (token: TokenDefinition, err: ^OuauError) {

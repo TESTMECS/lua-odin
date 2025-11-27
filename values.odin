@@ -34,6 +34,15 @@ BreakValue :: struct {}
 ReturnValue :: struct {
 	value: Value,
 }
+Prototype :: struct {
+	instructions: []u32, // Prototype instructions.
+	constants:    []Value, // Prototype constants.
+	prototypes:   []^Prototype, // Prototype prototypes.
+	upvalues:     []UpValueDesc, // Prototype upvalues.
+	max_stack:    int, // Prototype max stack size.
+	num_params:   int, // Prototype number of parameters.
+	source_name:  string, // Prototype source name.
+}
 /* Ouau Closure */
 Closure :: struct {
 	params:       []string,
@@ -53,16 +62,6 @@ Table :: struct {
 	dirty:     bool, // for Hashing
 	metatable: ^Table, // Metatable
 	last_free: int, // Free register
-}
-NEW_TABLE :: proc(allocator := context.allocator) -> ^Table {
-	// TODO: remove context.allocator, called in VM right now.
-	table := new(Table, allocator)
-	table.data = make(map[KeyTag]Value, allocator)
-	table.sorted = make([dynamic]KeyTag, allocator)
-	table.dirty = false
-	table.metatable = nil
-	table.last_free = 0
-	return table
 }
 /* Runtime Upvalue */
 Upvalue :: struct {
@@ -137,7 +136,6 @@ OuauError :: struct {
 		SyntaxErr,
 		ParseErr,
 		EvalErr,
-		CompileErr,
 		AllocatorErr,
 		IOErr,
 	},
@@ -180,21 +178,5 @@ ParseErr :: struct {
 EvalErr :: struct {
 	msg:       string,
 	evaluator: ^Interpreter,
-}
-CompileErr :: struct {
-	msg:             string,
-	compiler_object: ^Compiler,
-}
-COMPILE_ERR :: proc(c: ^Compiler, msg: string, xtra: ..any) -> ^OuauError {
-	my_alloc := virtual.arena_allocator(c.arena)
-	e := new(OuauError, my_alloc)
-	e.kind = .CompileErr
-	e.msg = msg
-	e.payload = CompileErr {
-		msg             = msg,
-		compiler_object = c,
-	}
-	//
-	return e
 }
 

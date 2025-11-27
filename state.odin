@@ -1,12 +1,11 @@
 package ouau
 import "core:fmt"
-import "core:mem"
 import "core:mem/virtual"
 import "core:slice"
 /*
 	 ./state.odin
 	 Copyright(C) 2025 TESTMEE
-	 One stop shop for all State for Lexer, Parser, Interpreter, Compiler, VM::(Threads|GC).
+	 One stop shop for all State for Lexer, Parser, Interpreter.
 */
 /* Lexer State
 	 <Structures> | <Descriptions>
@@ -367,11 +366,11 @@ BUILTIN_PRINT :: proc(args: []Value) -> Value {
 	return nil
 }
 Environment :: struct {
-	values:  map[string]Value,
-	sorted:  [dynamic]string,
-	dirty:   bool,
-	outer:   ^Environment,
-	varargs: [dynamic]Value,
+	values:  map[string]Value, /* Map of name -> value */
+	sorted:  [dynamic]string, /* Sorted list of names */
+	dirty:   bool, /* Dirty flag */
+	outer:   ^Environment, /* Outer environment */
+	varargs: [dynamic]Value, /* Varargs */
 }
 NEW_ENVIRONMENT :: proc(outer: ^Environment, varena: ^virtual.Arena) -> ^Environment {
 	my_alloc := virtual.arena_allocator(varena)
@@ -420,89 +419,5 @@ ENV_RESORT :: proc(env: ^Environment) {
 		return a < b
 	})
 	env.dirty = false
-}
-/* Compiler State TODO: Work in progress, figuring out compiler for now.
-	 <Structures> | <Descriptions>
-	 #Compiler| Compiler state, including instructions, constants, locals, upvalues, and AST nodes.
-	 #Prototype| Prototype state, including instructions, constants, prototypes, upvalues, and max stack size.
-*/
-Local :: struct {
-	name:  string,
-	reg:   int, // register index
-	depth: int, // depth of the local
-}
-CompilerVTable :: struct {
-	BEGIN_SCOPE:     proc(c: ^Compiler),
-	END_SCOPE:       proc(c: ^Compiler),
-	DECLARE_LOCAL:   proc(c: ^Compiler, name: string) -> int,
-	RESOLVE_VAR:     proc(
-		c: ^Compiler,
-		name: string,
-	) -> (
-		reg: int,
-		is_local: bool,
-		upval_idx: int,
-	),
-	EMIT_JUMP:       proc(c: ^Compiler) -> int,
-	PATCH_JUMP:      proc(c: ^Compiler, pc_slot: int, target_pc: int),
-	EMITABC:         proc(c: ^Compiler, op: Opcodes, a, b, cvar: u32) -> int,
-	EMITABX:         proc(c: ^Compiler, op: Opcodes, a, bx: u32) -> int,
-	EMITASBX:        proc(c: ^Compiler, op: Opcodes, a: u32, sbx: i32) -> int,
-	ADD_CONST:       proc(c: ^Compiler, v: Value) -> u32,
-	MAKE_ABC:        proc(a, b, c: u32) -> u32,
-	MAKE_ABX:        proc(a, bx: u32) -> u32,
-	MAKE_ASBX:       proc(a: u32, sbx: i32) -> u32,
-	ADD_UPVALUE:     proc(c: ^Compiler, name: string, in_stack: bool, index: int) -> int,
-	FIND_LOCAL:      proc(c: ^Compiler, name: string) -> int,
-	RESOLVE_UPVALUE: proc(c: ^Compiler, name: string) -> int,
-}
-Compiler :: struct {
-	instructions: [dynamic]u32, // Bytecode instructions
-	constants:    [dynamic]Value, // pool for LoadK instructions
-	locals:       [dynamic]Local, // map of name -> register
-	upvalues:     [dynamic]UpValueDesc, // map of name -> upval index
-	nodes:        ^NODES, // AST nodes
-	max_stack:    int, // max stack size
-	num_params:   int, // number of parameters
-	scope_depth:  int, // current scope depth
-	free_regs:    [dynamic]int, // stack of freed reg indices
-	prototypes:   [dynamic]^Prototype, // nested function prototypes
-	parent:       ^Compiler, // upvalue resolution
-	arena:        ^virtual.Arena,
-	using vtable: CompilerVTable,
-}
-@(require_results)
-NEW_COMPILER :: proc(
-	my_nodes: ^NODES,
-	parent: ^Compiler = nil,
-	arena: ^virtual.Arena,
-) -> (
-	c: Compiler,
-) {
-	my_alloc := virtual.arena_allocator(arena)
-	return Compiler {
-		nodes = my_nodes,
-		constants = make([dynamic]Value, my_alloc),
-		locals = make([dynamic]Local, my_alloc),
-		upvalues = make([dynamic]UpValueDesc, my_alloc),
-		free_regs = make([dynamic]int, my_alloc),
-		prototypes = make([dynamic]^Prototype, my_alloc),
-		instructions = make([dynamic]u32, my_alloc),
-		vtable = COMPILER_VTABLE,
-		parent = parent,
-		scope_depth = 0,
-		arena = arena,
-		max_stack = 0,
-		num_params = 0,
-	}
-}
-Prototype :: struct {
-	instructions: []u32, // Prototype instructions.
-	constants:    []Value, // Prototype constants.
-	prototypes:   []^Prototype, // Prototype prototypes.
-	upvalues:     []UpValueDesc, // Prototype upvalues.
-	max_stack:    int, // Prototype max stack size.
-	num_params:   int, // Prototype number of parameters.
-	source_name:  string, // Prototype source name.
 }
 

@@ -34,10 +34,4 @@ test-file:
 alias ast := ast-file
 ast-file:
 	odin run . -- ast {{test_file_dir}}/{{test_file_name}}
-# print bytecode for a .lua file
-lua_test_file_dir := "./examples"
-lua_test_file_name := "test.lua"
-alias bc := bytecode-file
-bytecode-file:
-	luac -l {{lua_test_file_dir}}/{{lua_test_file_name}}
 
