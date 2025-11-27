@@ -14,6 +14,5 @@ DEBUG_INSTRUCTION :: proc(testptr: ^testing.T, instruction: u32) {
 	using compiler
 	op, a, b, c := DECODE_ABC(instruction)
 	log.debugf("op::%v/%v, reg_a::%v, reg_b::%v, reg_c::%v", op, Opcodes(op), a, b, c)
-
 }
 

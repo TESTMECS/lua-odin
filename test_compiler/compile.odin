@@ -11,7 +11,6 @@ test_local :: proc(t: ^testing.T) {
 	ensure(err == nil, "Error initializing arena")
 	defer virtual.arena_destroy(&v)
 	my_alloc := virtual.arena_allocator(&v)
-
 	input := `local a = 1+1;`
 	p, p_err := NEW_PARSER(input, &v)
 	testing.expectf(t, p_err == nil, "Error creating Parser::(%v)", p_err)
@@ -23,10 +22,10 @@ test_local :: proc(t: ^testing.T) {
 	if len(insts) == 0 {
 		testing.fail(t)
 	}
-	// context.logger.lowest_level = .Debug
-	// for i in insts {
-	// 	DEBUG_INSTRUCTION(t, i)
-	// }
+	context.logger.lowest_level = .Debug
+	for i in insts {
+		DEBUG_INSTRUCTION(t, i)
+	}
 	my_insts := insts[:]
 	CHECK_DECODE_ABC(t, my_insts[0], Opcodes.LOADK)
 	CHECK_DECODE_ABC(t, my_insts[1], Opcodes.MOVE)
@@ -54,6 +53,11 @@ test_block :: proc(t: ^testing.T) {
 	if len(insts) == 0 {
 		testing.fail(t)
 	}
+	context.logger.lowest_level = .Debug
+	for i in insts {
+		DEBUG_INSTRUCTION(t, i)
+	}
+	log.infof("locals::(%v)", c.locals)
 	CHECK_DECODE_ABC(t, insts[0], Opcodes.LOADK)
 	CHECK_DECODE_ABC(t, insts[1], Opcodes.MOVE)
 	CHECK_DECODE_ABC(t, insts[2], Opcodes.LOADK)

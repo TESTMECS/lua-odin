@@ -82,7 +82,7 @@ Token :: enum u8 {
 	BCLOSE,
 }
 @(rodata)
-KEYWORDS := [?]struct {
+KEYWORDS := [22]struct {
 	// Must be sorted alphabetically for binary search to work.
 	text: string,
 	kind: Token,

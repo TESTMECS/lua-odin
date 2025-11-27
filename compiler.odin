@@ -1,4 +1,5 @@
 package ouau
+import "core:fmt"
 import "core:mem/virtual"
 /*
 *	 ./compiler.odin
@@ -22,6 +23,7 @@ FREE_REG :: proc(c: ^Compiler, r: int) {
 	append(&c.free_regs, r)
 }
 COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> (register_idx: int) {
+	/* TODO: Compiler err|nil::(-1) for now. */
 	kind := c.nodes.kind[nodeid]
 	switch kind {
 	case .DO:
@@ -92,7 +94,53 @@ COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> (register_idx: int) {
 	case .REPEAT:
 		unimplemented("TODO")
 	case .TABLE:
-		unimplemented("TODO")
+		dest := ALLOC_REG(c)
+		c->EMITABC(.NEWTABLE, u32(dest), 0, 0)
+		child := c.nodes.first_child[nodeid]
+		element_index := 1
+		for child != 0 {
+			// key-value pair(Binary node with ASSIGN token)
+			if c.nodes.kind[child] == .BINARY && c.nodes.token[child] == .ASSIGN {
+				key_node := c.nodes.first_child[child]
+				value_node := c.nodes.next_sibling[key_node]
+				if key_node == 0 || value_node == 0 {
+					FREE_REG(c, dest)
+					return -1
+				}
+				// Compile Key
+				key_reg := COMPILE_NODE(c, key_node)
+				if key_reg < 0 {
+					FREE_REG(c, dest)
+					return key_reg
+				}
+				// Compile Value
+				value_reg := COMPILE_NODE(c, value_node)
+				if value_reg < 0 {
+					FREE_REG(c, dest)
+					FREE_REG(c, key_reg)
+					return value_reg
+				}
+				// Set table[key] = value
+				c->EMITABC(.SETTABLE, u32(dest), u32(key_reg), u32(value_reg))
+				FREE_REG(c, key_reg)
+				FREE_REG(c, value_reg)
+			} else {
+				value_reg := COMPILE_NODE(c, child)
+				if value_reg < 0 {
+					FREE_REG(c, dest)
+					return value_reg
+				}
+				index_reg := ALLOC_REG(c)
+				index_const := c->ADD_CONST(f64(element_index))
+				c->EMITABX(.LOADK, u32(index_reg), index_const)
+				c->EMITABC(.SETTABLE, u32(dest), u32(index_reg), u32(value_reg))
+				FREE_REG(c, index_reg)
+				FREE_REG(c, value_reg)
+				element_index += 1
+			}
+			child = c.nodes.next_sibling[child]
+		}
+		return dest
 	case .FUNCTION:
 		my_alloc := virtual.arena_allocator(c.arena)
 		function_name := c.nodes.name[nodeid]
@@ -183,7 +231,41 @@ COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> (register_idx: int) {
 		case .POW:
 			Opcode = .POW
 		case .ASSIGN:
-			unimplemented("TODO")
+			/*TODO: Not sure if this is correct.*/
+			value_reg := COMPILE_NODE(c, right)
+			target_kind := c.nodes.kind[left]
+			#partial switch target_kind {
+			case .IDENTIFIER:
+				/* Simple assignment local k = v */
+				target_name := c.nodes.name[left]
+				// Check if its a local variable
+				local_reg := c->FIND_LOCAL(target_name)
+				if local_reg >= 0 {
+					// Store to local
+					if value_reg != local_reg {
+						EMITABC(c, .MOVE, u32(local_reg), u32(value_reg), 0)
+					}
+					FREE_REG(c, value_reg)
+					return local_reg
+				}
+				// Check if its an upvalue
+				upval_idx := c->RESOLVE_UPVALUE(target_name)
+				if upval_idx >= 0 {
+					// Store to upvalue
+					EMITABC(c, .SETUPVAL, u32(value_reg), u32(upval_idx), 0)
+					FREE_REG(c, value_reg)
+					return value_reg
+				}
+				// Must be a global
+				name_idx := c->ADD_CONST(target_name)
+				c->EMITABX(.SETGLOBAL, u32(value_reg), name_idx)
+				FREE_REG(c, value_reg)
+				return value_reg
+			case:
+				fmt.printf("ASSIGN: Unknown target kind %v\n", target_kind)
+				FREE_REG(c, value_reg)
+				return -1
+			}
 		}
 		EMITABC(c, Opcode, u32(dest), u32(left_reg), u32(right_reg))
 		FREE_REG(c, left_reg)
@@ -209,7 +291,45 @@ COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> (register_idx: int) {
 		}
 		return dest
 	case .FOR:
-		unimplemented("TODO")
+		var_name := c.nodes.name[nodeid]
+		start_val := c.nodes.first_child[nodeid]
+		end_val := c.nodes.next_sibling[start_val]
+		body := c.nodes.next_sibling[end_val]
+		if start_val == 0 || end_val == 0 || body == 0 { return -1 }
+		var_reg := ALLOC_REG(c)
+		start_reg := COMPILE_NODE(c, start_val)
+		if start_reg < 0 { return start_reg }
+		end_reg := COMPILE_NODE(c, end_val)
+		if end_reg < 0 {
+			FREE_REG(c, start_reg)
+			return end_reg
+		}
+		step_reg := ALLOC_REG(c)
+		one_const := c->ADD_CONST(1)
+		c->EMITABX(.LOADK, u32(step_reg), one_const)
+		c->EMITABC(.MOVE, u32(var_reg), u32(start_reg), 0)
+		loop_start := len(c.instructions)
+		c->EMITABC(.LE, 0, u32(var_reg), u32(end_reg))
+		exit_jmp := EMIT_JUMP(c)
+		body_result := COMPILE_NODE(c, body)
+		if body_result < 0 {
+			FREE_REG(c, start_reg)
+			FREE_REG(c, end_reg)
+			FREE_REG(c, step_reg)
+			return body_result
+		}
+		if body_result >= 0 {
+			FREE_REG(c, body_result)
+		}
+		c->EMITABC(.ADD, u32(var_reg), u32(var_reg), u32(step_reg))
+		// Jump back to loop start
+		back_jmp := EMIT_JUMP(c)
+		PATCH_JUMP(c, back_jmp, loop_start)
+		PATCH_JUMP(c, exit_jmp, len(c.instructions))
+		FREE_REG(c, start_reg)
+		FREE_REG(c, end_reg)
+		FREE_REG(c, step_reg)
+		return -1 // for loops don't produce a value
 	case .CALL:
 		function_node := c.nodes.first_child[nodeid]
 		function_reg := COMPILE_NODE(c, function_node)
@@ -239,7 +359,26 @@ COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> (register_idx: int) {
 		}
 		return -1
 	case .IF:
-		unimplemented("TODO")
+		cond := c.nodes.first_child[nodeid]
+		then := c.nodes.next_sibling[cond]
+		if cond == 0 || then == 0 { return -1 }
+		cond_reg := COMPILE_NODE(c, cond)
+		if cond_reg < 0 { return cond_reg }
+		else_jmp := EMIT_JUMP(c)
+		FREE_REG(c, cond_reg)
+		then_result := COMPILE_NODE(c, then)
+		if then_result < 0 { return then_result }
+		if then_result >= 0 { FREE_REG(c, then_result) }
+		end_jmp := EMIT_JUMP(c)
+		PATCH_JUMP(c, else_jmp, len(c.instructions))
+		next := c.nodes.next_sibling[then]
+		if next != 0 {
+			else_result := COMPILE_NODE(c, next)
+			if else_result < 0 { return else_result }
+			if else_result >= 0 { FREE_REG(c, else_result) }
+		}
+		PATCH_JUMP(c, end_jmp, len(c.instructions))
+		return -1
 	case .INVALID:
 		return -1
 	}
