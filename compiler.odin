@@ -27,7 +27,8 @@ COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> (register_idx: int) {
 	kind := c.nodes.kind[nodeid]
 	switch kind {
 	case .DO:
-		unimplemented("TODO")
+		child := c.nodes.first_child[nodeid]
+		COMPILE_NODE(c, child)
 	case .BREAK:
 		unimplemented("TODO")
 	case .VARARGS:
@@ -199,9 +200,41 @@ COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> (register_idx: int) {
 		}
 		return dest
 	case .UNARY:
-		unimplemented("TODO")
+		operand := c.nodes.first_child[nodeid]
+		if operand == 0 { return -1 }
+		operand_reg := COMPILE_NODE(c, operand)
+		if operand_reg < 0 { return operand_reg }
+		dest := ALLOC_REG(c)
+		op := c.nodes.token[nodeid]
+		#partial switch op {
+		case .MINUS:
+			c->EMITABC(.UNM, u32(dest), u32(operand_reg), 0)
+		case .NOT:
+			c->EMITABC(.NOT, u32(dest), u32(operand_reg), 0)
+		case:
+			FREE_REG(c, operand_reg)
+			FREE_REG(c, dest)
+			return -1
+		}
+		FREE_REG(c, operand_reg)
+		return dest
 	case .UBLOCK:
-		unimplemented("TODO")
+		child := c.nodes.first_child[nodeid]
+		last_result := -1
+		for child != 0 {
+			result := COMPILE_NODE(c, child)
+			if result < 0 {
+				return result
+			}
+			next_child := c.nodes.next_sibling[child]
+			if next_child != 0 && result >= 0 {
+				FREE_REG(c, result)
+			} else {
+				last_result = result
+			}
+			child = next_child
+		}
+		return last_result
 	case .BINARY:
 		op := c.nodes.token[nodeid]
 		left := c.nodes.first_child[nodeid]
@@ -213,23 +246,33 @@ COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> (register_idx: int) {
 		Opcode: Opcodes
 		#partial switch op {
 		case .EQ:
-			Opcode = .EQ
+			c->EMITABC(.EQ, 0, u32(left_reg), u32(right_reg))
+			c->EMITABC(.JMP, 0, 1, 0)
+			c->EMITABC(.LOADBOOL, u32(dest), 0, 1)
+			c->EMITABC(.LOADBOOL, u32(dest), 1, 0)
 		case .NE:
-			unimplemented("TODO")
+			c->EMITABC(.EQ, 0, u32(left_reg), u32(right_reg))
+			c->EMITABC(.JMP, 0, 0, 0)
+			c->EMITABC(.LOADBOOL, u32(dest), 0, 1)
+			c->EMITABC(.LOADBOOL, u32(dest), 1, 0)
 		case .LT:
-			Opcode = .LT
+			c->EMITABC(.LT, 0, u32(left_reg), u32(right_reg))
+			c->EMITABC(.JMP, 0, 1, 0)
+			c->EMITABC(.LOADBOOL, u32(dest), 0, 1)
+			c->EMITABC(.LOADBOOL, u32(dest), 1, 0)
 		case .LE:
-			Opcode = .LE
+			c->EMITABC(.LE, 0, u32(left_reg), u32(right_reg))
+			c->EMITABC(.JMP, 0, 1, 0)
+			c->EMITABC(.LOADBOOL, u32(dest), 0, 1)
+			c->EMITABC(.LOADBOOL, u32(dest), 1, 0)
 		case .PLUS:
-			Opcode = .ADD
+			c->EMITABC(.ADD, u32(dest), u32(left_reg), u32(right_reg))
 		case .MINUS:
-			Opcode = .SUB
+			c->EMITABC(.SUB, u32(dest), u32(left_reg), u32(right_reg))
 		case .MUL:
-			Opcode = .MUL
+			c->EMITABC(.MUL, u32(dest), u32(left_reg), u32(right_reg))
 		case .DIV:
-			Opcode = .DIV
-		case .POW:
-			Opcode = .POW
+			c->EMITABC(.DIV, u32(dest), u32(left_reg), u32(right_reg))
 		case .ASSIGN:
 			/*TODO: Not sure if this is correct.*/
 			value_reg := COMPILE_NODE(c, right)
@@ -267,14 +310,39 @@ COMPILE_NODE :: proc(c: ^Compiler, nodeid: NODEID) -> (register_idx: int) {
 				return -1
 			}
 		}
-		EMITABC(c, Opcode, u32(dest), u32(left_reg), u32(right_reg))
 		FREE_REG(c, left_reg)
 		FREE_REG(c, right_reg)
 		return dest
 	case .STRING:
-		unimplemented("TODO")
+		str := c.nodes.string_value[nodeid]
+		const_idx := c->ADD_CONST(str)
+		dest := ALLOC_REG(c)
+		c->EMITABX(.LOADK, u32(dest), const_idx)
+		return dest
 	case .GLOBAL:
-		unimplemented("TODO")
+		var_node := c.nodes.first_child[nodeid]
+		if var_node == 0 {
+			return -1
+		}
+		if c.nodes.kind[var_node] != .IDENTIFIER {
+			return -1
+		}
+		var_name := c.nodes.name[var_node]
+		assign_node := var_node
+		for c.nodes.next_sibling[assign_node] != 0 {
+			assign_node = c.nodes.next_sibling[assign_node]
+		}
+		if assign_node != var_node {
+			value_reg := COMPILE_NODE(c, assign_node)
+			if value_reg < 0 {
+				return value_reg
+			}
+			func_const_idx := c->ADD_CONST(var_name)
+			c->EMITABX(.SETGLOBAL, u32(value_reg), func_const_idx)
+			FREE_REG(c, value_reg)
+			return value_reg
+		}
+		return -1
 	case .LOCAL:
 		name := c.nodes.name[nodeid]
 		init_node := c.nodes.first_child[nodeid]
