@@ -1,4 +1,5 @@
 package ouau
+import "core:fmt"
 import "core:log"
 import "core:mem/virtual"
 import "core:strconv"
@@ -13,14 +14,14 @@ ParserVTable :: struct {
 	APPEND_CHILD: proc(p: ^Parser, parent, child: NODEID),
 	// Check Current node Kind.
 	IS:           proc(p: ^Parser, kind: Token) -> bool,
-	// Expect node is, and consume.
+	// Advances if kind is expected else doesn't advance.
 	EXPECT:       proc(p: ^Parser, kind: Token) -> (err: ^OuauError),
 	// Get text of current.
 	GET_TEXT:     proc(p: ^Parser) -> (text: string),
 	// Get token for current.
 	GET_TOKEN:    proc(p: ^Parser) -> (kind: Token),
 	// Should be a union later.
-	PARSE_ERROR:  proc(p: ^Parser, msg: string) -> ^OuauError,
+	PARSE_ERROR:  proc(p: ^Parser, msg: string, xtra: ..any) -> ^OuauError,
 	// Should match `lua.ebnf`
 	CHUNK:        proc(p: ^Parser) -> (NODEID, ^OuauError),
 	BLOCK:        proc(p: ^Parser) -> (NODEID, ^OuauError),
@@ -46,7 +47,6 @@ ParserVTable :: struct {
 CHUNK :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 	p->ADVANCE() or_return // Init p.peek
 	p->ADVANCE() or_return // Init p.current to p.peek
-	// log.info("[Parsing Chunk]")
 	node = p->BLOCK() or_return
 	return node, nil
 }
@@ -55,7 +55,6 @@ ADVANCE :: proc(p: ^Parser) -> (err: ^OuauError) {
 	p.current = p.peek
 	next_token := p.lexer->NEXT() or_return
 	p.peek = next_token
-	// log.info("[p.current]::(%v)", p.current)
 	return nil
 }
 @(private = "file", require_results)
@@ -68,7 +67,6 @@ EXPECT :: proc(p: ^Parser, kind: Token) -> (err: ^OuauError) {
 @(private = "file", require_results)
 BLOCK :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 	node = p->NEW_NODE(.BLOCK)
-	// log.info("[Block Loop]")
 	block_loop: for {
 		#partial switch p->GET_TOKEN() {
 		case .SEMI:
@@ -280,7 +278,6 @@ STMT :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 			}
 		}
 		return node, nil
-
 	// endlaststmt
 	case .OPEN:
 		p->EXPECT(.OPEN) or_return
@@ -306,34 +303,6 @@ STMT :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 			return node, nil
 		}
 		return node, nil
-	}
-	return node, nil
-}
-FUNCTION_BLOCK :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
-	node = p->NEW_NODE(.BLOCK)
-	// Parse statements until 'end'
-	block_loop: for {
-		#partial switch p->GET_TOKEN() {
-		case .SEMI:
-			p->ADVANCE() or_return
-			continue block_loop
-		case .END:
-			// Don't consume 'end' here - let caller handle it
-			break block_loop
-		case .RETURN:
-			// Parse return statement
-			p->ADVANCE() or_return
-			return_node := p->NEW_NODE(.RETURN)
-			if !(p->IS(.SEMI)) && !(p->IS(.END)) {
-				values := p->EXPLIST() or_return
-				for val in values { p->APPEND_CHILD(return_node, val) }
-			}
-			p->APPEND_CHILD(node, return_node)
-		case:
-			// Parse other statements
-			stmt := p->STMT() or_return
-			p->APPEND_CHILD(node, stmt)
-		}
 	}
 	return node, nil
 }
@@ -383,7 +352,7 @@ PARAMS :: proc(p: ^Parser, fn_node: NODEID) -> (node: NODEID, err: ^OuauError) {
 				fn_param := p->NEW_NODE(.IDENTIFIER)
 				p->SET_NAME(fn_param, p->GET_TEXT())
 				p->APPEND_CHILD(fn_node, fn_param)
-				p->ADVANCE() or_return
+				p->ADVANCE() or_return // past param
 				p->EXPECT(.COMMA) or_return
 			case .DOTDOT:
 				p->ADVANCE() or_return
@@ -402,51 +371,6 @@ PARAMS :: proc(p: ^Parser, fn_node: NODEID) -> (node: NODEID, err: ^OuauError) {
 	} else {
 		return fn_node, p->PARSE_ERROR("Expected arg list in anon function")
 	}
-}
-@(private = "file", require_results)
-FUNCTION :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
-	p->EXPECT(.FUNCTION) or_return
-	// FUNCNAME
-	fn_name := p->GET_TEXT()
-	node = p->NEW_NODE(.FUNCTION)
-	p->SET_NAME(node, fn_name) or_return
-	p->ADVANCE() or_return // past 'function name'
-	// Params
-	#partial switch p->GET_TOKEN() {
-	case .OPEN:
-		p->ADVANCE() or_return // past '('
-		if !p->IS(.CLOSE) {
-			each_param: for !(p->IS(.CLOSE)) {
-				#partial switch (p->GET_TOKEN()) {
-				case .IDENTIFIER:
-					fn_param := p->NEW_NODE(.IDENTIFIER)
-					p->SET_NAME(fn_param, p->GET_TEXT())
-					p->APPEND_CHILD(node, fn_param)
-					p->ADVANCE() or_return // past param
-					p->EXPECT(.COMMA) or_return
-				case .DOTDOT:
-					p->ADVANCE() or_return // past ..
-					varargs_name := p->GET_TEXT()
-					p->ADVANCE() or_return // past varargs name
-					args := p->NEW_NODE(.VARARGS)
-					p->SET_NAME(args, varargs_name)
-					p->APPEND_CHILD(node, args)
-					break each_param
-				case:
-					break each_param
-				}
-			}
-		}
-		p->EXPECT(.CLOSE) or_return
-	case:
-		return node, p->PARSE_ERROR("Invalid Token in Function Declaration")
-	}
-	// Block
-	body := p->BLOCK() or_return
-	// Sep
-	p->EXPECT(.END) or_return
-	p->APPEND_CHILD(node, body)
-	return node, nil
 }
 @(private = "file", require_results)
 PRECEDENCE :: proc(p: ^Parser, prec: Precedence) -> (lhs: NODEID, err: ^OuauError) {
@@ -717,11 +641,15 @@ APPEND_CHILD :: proc(p: ^Parser, parent, child: NODEID) {
 	}
 }
 @(private = "file")
-PARSE_ERROR :: proc(p: ^Parser, msg: string) -> ^OuauError {
+PARSE_ERROR :: proc(p: ^Parser, msg: string, xtra: ..any) -> ^OuauError {
 	my_alloc := virtual.arena_allocator(p.arena)
 	e := new(OuauError, my_alloc)
+	if len(xtra) > 0 {
+		e.msg = fmt.tprintf(msg, ..xtra)
+	} else {
+		e.msg = msg
+	}
 	e.kind = .ParseErr
-	e.msg = msg
 	e.payload = ParseErr {
 		msg           = msg,
 		parser_object = p,
