@@ -112,7 +112,7 @@ NEXT :: proc(l: ^Lexer) -> (token: TokenDefinition, err: ^OuauError) {
 			start := l.pos
 			l->EAT()
 			token = l->GET_TOKEN(.NEQ, start, 2)
-		} else { token = l->GET_TOKEN(.TILDE, l.pos, 1) }
+		} else { token = l->GET_TOKEN(.BXOR, l.pos, 1) }
 	case '|':
 		if l->PEEK() == '|' {
 			start := l.pos

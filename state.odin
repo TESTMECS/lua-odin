@@ -56,7 +56,6 @@ Token :: enum u8 {
 	ANDAND,
 	SHL,
 	SHR,
-	TILDE,
 	BXOR,
 	POUND,
 	BAND,
@@ -225,29 +224,32 @@ NEW_PARSER :: proc(
 	new_parser.nodes.name = make([dynamic]string, my_alloc)
 	return new_parser, nil
 }
+// Lowest to highest
 @(rodata)
 PRECEDENCES := #partial [Token]Precedence {
-	.ASSIGN = .ASSIGN,
-	.EQ     = .EQUALS,
-	.NE     = .EQUALS,
-	.NEQ    = .EQUALS,
-	.TILDE  = .EQUALS,
-	.BOR    = .EQUALS,
-	.LE     = .LESSGREATER,
-	.LT     = .LESSGREATER,
-	.GE     = .LESSGREATER,
-	.GT     = .LESSGREATER,
-	.PLUS   = .SUM,
-	.MINUS  = .SUM,
-	.MUL    = .PRODUCT,
-	.DIV    = .PRODUCT,
-	.MOD    = .PRODUCT,
-	.POW    = .PRODUCT,
-	.BANG   = .PREFIX,
-	.POUND  = .PREFIX,
-	.OPEN   = .CALL,
-	.DOT    = .CALL,
-	.BOPEN  = .INDEX,
+	.OR     = .LOWEST, // or
+	.AND    = .ASSIGN, // and
+	.ASSIGN = .EQUALS, // =
+	.EQ     = .EQUALS, // ==
+	.NE     = .EQUALS, // ~=
+	.BXOR   = .EQUALS, // ~
+	.BOR    = .EQUALS, // |
+	.LE     = .EQUALS, // <=
+	.LT     = .EQUALS,
+	.GE     = .EQUALS, // >=
+	.GT     = .EQUALS,
+	.DOTDOT = .LESSGREATER, // .. (string concatenation)
+	.PLUS   = .SUM, // +
+	.MINUS  = .SUM, // -
+	.MUL    = .PRODUCT, // *
+	.DIV    = .PRODUCT, // /
+	.MOD    = .PRODUCT, // %
+	.BANG   = .PREFIX, // ! (bitwise not)
+	.POUND  = .PREFIX, // #
+	.POW    = .CALL, // ^
+	.OPEN   = .CALL, // (
+	.DOT    = .CALL, // method calls
+	.BOPEN  = .INDEX, // [] table indexing
 	.BCLOSE = .LOWEST,
 }
 /* Interpreter State */
