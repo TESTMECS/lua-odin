@@ -227,20 +227,25 @@ NEW_PARSER :: proc(
 	new_parser.nodes.name = make([dynamic]string, my_alloc)
 	return new_parser, nil
 }
-// Lowest to highest
+// Lowest to highest (following EBNF precedence rules)
 @(rodata)
 PRECEDENCES := #partial [Token]Precedence {
-	.OR     = .LOWEST, // or
-	.AND    = .ASSIGN, // and
+	.OR     = .LOWEST, // or (lowest precedence)
+	.AND    = .ASSIGN, // and (higher than or, lower than relational)
 	.ASSIGN = .EQUALS, // =
 	.EQ     = .EQUALS, // ==
 	.NEQ    = .EQUALS, // ~=
+	.LEQ    = .EQUALS, // <= (duplicate, but keeping for compatibility)
+	.LE     = .EQUALS, // <=
+	.GEQ    = .EQUALS, // >= (duplicate, but keeping for compatibility)
+	.GE     = .EQUALS, // >=
+	.LT     = .EQUALS, // <
+	.GT     = .EQUALS, // >
 	.BXOR   = .EQUALS, // ~
 	.BOR    = .EQUALS, // |
-	.LE     = .EQUALS, // <=
-	.LT     = .EQUALS, // <
-	.GE     = .EQUALS, // >=
-	.GT     = .EQUALS, // >
+	.BAND   = .EQUALS, // &
+	.SHL    = .EQUALS, // <<
+	.SHR    = .EQUALS, // >>
 	.DOTDOT = .LESSGREATER, // .. (string concatenation)
 	.PLUS   = .SUM, // +
 	.MINUS  = .SUM, // -
@@ -249,6 +254,7 @@ PRECEDENCES := #partial [Token]Precedence {
 	.MOD    = .PRODUCT, // %
 	.BANG   = .PREFIX, // ! (bitwise not)
 	.POUND  = .PREFIX, // #
+	.NOT    = .PREFIX, // not
 	.POW    = .CALL, // ^
 	.OPEN   = .CALL, // (
 	.DOT    = .CALL, // method calls

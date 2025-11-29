@@ -290,6 +290,7 @@ STMT :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 		for arg in args { p->APPEND_CHILD(node, arg) }
 		return node, nil
 	case .FUNCTION:
+		p->EXPECT(.FUNCTION) or_return
 		fn_name := p->FUNCNAME() or_return
 		node = p->FUNCBODY(fn_name) or_return
 		return node, nil
@@ -370,7 +371,6 @@ FUNCNAME :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 FUNCBODY :: proc(p: ^Parser, fn_node: NODEID) -> (node: NODEID, err: ^OuauError) {
 	params := p->PARAMS(fn_node) or_return
 	fn_body := p->BLOCK() or_return
-	p->EXPECT(.END) or_return
 	return fn_body, nil
 }
 @(private = "file", require_results)
@@ -452,7 +452,11 @@ FUNCTION :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 PRECEDENCE :: proc(p: ^Parser, prec: Precedence) -> (lhs: NODEID, err: ^OuauError) {
 	lhs = p->PREFIX() or_return
 	loop: for {
-		current_prec := GET_PRECEDENCE(p->GET_TOKEN())
+		current_token := p->GET_TOKEN()
+		current_prec := GET_PRECEDENCE(current_token)
+		// Process operators with higher precedence
+		// For left-associative operators, also process equal precedence
+		// For right-associative operators, stop at equal precedence
 		if prec >= current_prec { break loop }
 		lhs = p->INFIX(lhs) or_return
 	}
@@ -513,8 +517,19 @@ INFIX :: proc(p: ^Parser, lhs: NODEID) -> (infix: NODEID, err: ^OuauError) {
 		return infix, nil
 	}
 	op_token := p->GET_TOKEN()
+	op_prec := GET_PRECEDENCE(op_token)
+	// Check if this is actually an operator (not a non-operator token with LOWEST precedence)
+	if op_prec == .LOWEST &&
+	   op_token != .OR &&
+	   op_token != .AND &&
+	   op_token != .ASSIGN &&
+	   op_token != .EQ &&
+	   op_token != .NEQ {
+		// Not an operator, return lhs as-is
+		return lhs, nil
+	}
 	p->ADVANCE() or_return
-	rhs := p->PRECEDENCE(GET_PRECEDENCE(p->GET_TOKEN())) or_return
+	rhs := p->PRECEDENCE(op_prec) or_return
 	infix = p->NEW_NODE(.BINARY)
 	p->SET_TOKEN(infix, op_token)
 	p->APPEND_CHILD(infix, lhs)
@@ -555,6 +570,7 @@ PRIMARY :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 		node = p->TABLE() or_return
 		return node, nil
 	case:
+		log.error("PRIMARY: Invalid token %v", p->GET_TOKEN())
 	}
 	return p->NEW_NODE(.INVALID), p->PARSE_ERROR("Invalid Token in Primary Expression")
 }
