@@ -118,13 +118,13 @@ NEXT :: proc(l: ^Lexer) -> (token: TokenDefinition, err: ^OuauError) {
 			start := l.pos
 			l->EAT()
 			token = l->GET_TOKEN(.OROR, start, 2)
-		} else { token = l->GET_TOKEN(.OR, l.pos, 1) }
+		} else { token = l->GET_TOKEN(.BOR, l.pos, 1) }
 	case '&':
 		if l->PEEK() == '&' {
 			start := l.pos
 			l->EAT()
 			token = l->GET_TOKEN(.ANDAND, start, 2)
-		} else { token = l->GET_TOKEN(.AND, l.pos, 1) }
+		} else { token = l->GET_TOKEN(.BAND, l.pos, 1) }
 	case '!':
 		token = l->GET_TOKEN(.BANG, l.pos, 1)
 	case '#':
