@@ -1,9 +1,9 @@
 do
-	a = function(x, y)
+	local b = function(x, y)
 		return x + y
 	end
-	M = {
-		["a(1,2)"] = a(1, 2),
+	local a = {
+		["add"] = b(1, 2),
 	}
-	print(M["a(1,2)"]) -- prints 3
+	print(a["add"]) -- 3
 end

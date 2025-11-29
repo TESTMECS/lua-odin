@@ -1,4 +1,5 @@
 package ouau
+import "core:fmt"
 import "core:mem/virtual"
 import "core:strconv"
 /*
@@ -166,6 +167,7 @@ STMT :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 		my_alloc := virtual.arena_allocator(p.arena)
 		p->EXPECT(.LOCAL) or_return
 		node = p->NEW_NODE(.LOCAL)
+		fmt.println("[LOCAL DECL]")
 		#partial switch p->GET_TOKEN() {
 		case .FUNCTION:
 			function_node := p->FUNCTION() or_return
@@ -175,6 +177,7 @@ STMT :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 			vars := make([dynamic]NODEID, my_alloc)
 			primary_expr := p->PRIMARY() or_return
 			append(&vars, primary_expr)
+			fmt.println("[Identifier]")
 			#partial switch p->GET_TOKEN() {
 			case .COMMA:
 				for p->IS(.COMMA) {
@@ -191,11 +194,49 @@ STMT :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 					}
 				}
 			case .ASSIGN:
-				p->ADVANCE() or_return
-				for v in vars { p->APPEND_CHILD(node, v) }
-				values := p->EXPLIST() or_return
-				for val in values { p->APPEND_CHILD(node, val) }
+				fmt.println("[ASSIGN]")
+				p->ADVANCE() or_return // advance past assign
+				#partial switch p->GET_TOKEN() {
+				case .IDENTIFIER:
+					for v in vars { p->APPEND_CHILD(node, v) }
+					values := p->EXPLIST() or_return
+					for val in values { p->APPEND_CHILD(node, val) }
+				case .FUNCTION:
+					fmt.println("[Parsing function anon]")
+					p->EXPECT(.FUNCTION)
+					node := p->NEW_NODE(.FUNCTION)
+					if p->IS(.OPEN) {
+						p->ADVANCE()
+						for !(p->IS(.CLOSE)) {
+							#partial switch (p->GET_TOKEN()) {
+							case .IDENTIFIER:
+								fn_param := p->NEW_NODE(.IDENTIFIER)
+								p->SET_NAME(fn_param, p->GET_TEXT())
+								p->APPEND_CHILD(node, fn_param)
+								p->ADVANCE() or_return
+								p->EXPECT(.COMMA) or_return
+							case .DOTDOT:
+								p->ADVANCE() or_return
+								varargs_name := p->GET_TEXT()
+								p->ADVANCE() or_return
+								args := p->NEW_NODE(.VARARGS)
+								p->SET_NAME(args, varargs_name)
+								p->APPEND_CHILD(node, args)
+								break
+							case:
+								break
+							}
+						}
+						p->EXPECT(.CLOSE)
+					} else {
+						return node, p->PARSE_ERROR("Expected arg list in anon function")
+					}
+				}
+				body := p->BLOCK() or_return
+				p->EXPECT(.END) or_return
+				p->APPEND_CHILD(node, body)
 			case:
+				// other.
 				for v in vars { p->APPEND_CHILD(node, v) }
 			}
 			return node, nil
@@ -476,10 +517,10 @@ TABLE :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 	table := p->NEW_NODE(.TABLE)
 	if !(p->IS(.TCLOSE)) {
 		tbl_loop: for {
-			if p->IS(.OPEN) {
-				p->ADVANCE() or_return
+			if p->IS(.BOPEN) { 	// is BOPEN
+				p->ADVANCE() or_return // advance past [
 				key := p->EXP() or_return
-				p->EXPECT(.CLOSE) or_return
+				p->EXPECT(.BCLOSE) or_return
 				p->EXPECT(.ASSIGN) or_return
 				value := p->EXP() or_return
 				pair := p->NEW_NODE(.BINARY)

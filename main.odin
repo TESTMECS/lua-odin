@@ -8,7 +8,6 @@ import "core:strings"
 /*
 *	 ./main.odin
 *	 Copyright(C) 2025 TESTMEE
-*	 This file defines the main functions for Ouau CLI.
 */
 HELP_MSG :: "Usage: ouau <file|repl|ast|regs> <file>"
 PROMPT :: "(Ouau)$ "
@@ -109,7 +108,6 @@ Ouau :: proc() -> (main_err: Maybe(^OuauError)) {
 	}
 	return nil
 }
-
 OUAU_EVAL_STRING :: proc(
 	input: string,
 	v: ^virtual.Arena,
