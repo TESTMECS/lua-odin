@@ -9,6 +9,7 @@ import "core:slice"
 Token :: enum u8 {
 	EOF,
 	ILLEGAL,
+	// Keywords
 	DO,
 	END,
 	IN,
@@ -31,45 +32,46 @@ Token :: enum u8 {
 	OR,
 	AND,
 	NOT,
-	ASSIGN,
-	PLUS,
-	MINUS,
-	MUL,
-	DIV,
-	MOD,
-	POW,
-	DOT,
-	DOTDOT,
-	COMMA,
-	COLON,
-	SEMI,
-	LT,
-	LE,
-	GT,
-	GE,
-	EQ,
-	NE,
-	NEQ,
-	LEQ,
-	GEQ,
-	OROR,
-	ANDAND,
-	SHL,
-	SHR,
-	BXOR,
-	POUND,
-	BAND,
-	BOR,
-	BANG,
-	OPEN,
-	CLOSE,
-	IDENTIFIER,
-	NUMBER,
-	STRING,
-	TOPEN,
-	TCLOSE,
-	BOPEN,
-	BCLOSE,
+	// Operators
+	ASSIGN, // =
+	PLUS, // +
+	MINUS, // -
+	MUL, // *
+	DIV, // /
+	MOD, // %
+	POW, // ^
+	DOT, // .
+	DOTDOT, // ..
+	COMMA, // ,
+	COLON, // :
+	SEMI, // ;
+	LT, // <
+	LE, // <=
+	GT, // >
+	GE, // >=
+	EQ, // ==
+	NE, // ~=
+	LEQ, // <=
+	GEQ, // >=
+	OROR, // || (Logical OR)
+	ANDAND, // && (Logical AND)
+	SHL, // <<
+	SHR, // >>
+	BXOR, // ~ (1 ~ 2)
+	POUND, // #
+	BAND, // &
+	BOR, // |
+	BANG, // !
+	OPEN, // (
+	CLOSE, // )
+	// Literals
+	IDENTIFIER, // Identifier
+	NUMBER, // Number
+	STRING, // String
+	TOPEN, // {
+	TCLOSE, // }
+	BOPEN, // [
+	BCLOSE, // ]
 }
 @(rodata)
 KEYWORDS := [22]struct {
@@ -145,27 +147,28 @@ NEW_LEXER :: proc(input: string, varena: ^virtual.Arena) -> Lexer {
 NODEID :: u32
 NODE_KIND :: enum u8 {
 	INVALID,
-	BLOCK,
-	UBLOCK,
-	IF,
-	WHILE,
-	ASSIGN,
-	FUNCTION,
-	CALL,
-	LITERAL,
-	IDENTIFIER,
-	UNARY,
-	BINARY,
-	STRING,
-	GLOBAL,
-	TABLE,
-	REPEAT,
-	DO,
-	FOR,
-	LOCAL,
-	RETURN,
-	BREAK,
-	VARARGS,
+	// Statements
+	BLOCK, // do ... end, also if/while/repeat/function.
+	UBLOCK, // repeat ... until
+	IF, // if ... then ... else ... end
+	WHILE, // while ... do ... end
+	ASSIGN, // a = b
+	FUNCTION, // function a() ... end
+	CALL, // a(b, c)
+	LITERAL, // true, false, nil
+	IDENTIFIER, // a
+	UNARY, // #a
+	BINARY, // a + b
+	STRING, // "a"
+	GLOBAL, // global a
+	LOCAL, // local a
+	TABLE, // {a = b}
+	REPEAT, // repeat ... until
+	DO, // do ... end
+	FOR, // for ... do ... end
+	RETURN, // return a
+	BREAK, // break
+	VARARGS, // ..
 }
 NODES :: struct {
 	kind:         [dynamic]NODE_KIND,
