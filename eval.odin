@@ -171,6 +171,8 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 			return -operand.(f64)
 		case .NOT:
 			return !IS_TRUTHY(operand)
+		case .BANG:
+			return f64(~(i64(operand.(f64))))
 		case .POUND:
 			switch val in operand {
 			case string:

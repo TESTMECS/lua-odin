@@ -94,5 +94,7 @@ alias ast := ast-file
 ast-file:
 	odin run . -- ast {{test_file_dir}}/{{test_file_name}}
 ```
+# Bugs:
+- Bitwise operators not working.
 
 
