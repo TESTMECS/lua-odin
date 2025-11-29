@@ -5,14 +5,6 @@ import "core:slice"
 /*
 	 ./state.odin
 	 Copyright(C) 2025 TESTMEE
-	 One stop shop for all State for Lexer, Parser, Interpreter.
-*/
-/* Lexer State
-	 <Structures> | <Descriptions>
-	 #Token | Token type
-	 #TokenDefinition | Token definition type
-	 #LexerVTable | Lexer virtual table, including EAT, PEEK, NEXT, GET_TOKEN, SKIP_WHITESPACE, CREATE_NUMBER, CREATE_IDENTIFIER_OR_KEYWORD, SYNTAX_ERROR.
-	 #Lexer | Lexer state, including input, ch, pos, read_pos, arena, and vtable.
 */
 Token :: enum u8 {
 	EOF,
@@ -130,25 +122,6 @@ TokenDefinition :: struct {
 	kind: Token, // Token kind like .IF or .EQ
 	text: []u8, // literal lext like "if" or "=="
 }
-LexerVTable :: struct {
-	EAT:                          proc(l: ^Lexer), // Consume the current token
-	PEEK:                         proc(l: ^Lexer) -> u8, // Peek the next literal
-	NEXT:                         proc(l: ^Lexer) -> (TokenDefinition, ^OuauError), // Get the next token definition
-	GET_TOKEN:                    proc(
-		l: ^Lexer,
-		type: Token,
-		start: int,
-		length: int,
-	) -> TokenDefinition, // Get the token definition given the current lexer state.
-	SKIP_WHITESPACE:              proc(l: ^Lexer),
-	CREATE_NUMBER:                proc(l: ^Lexer) -> TokenDefinition,
-	CREATE_IDENTIFIER_OR_KEYWORD: proc(l: ^Lexer) -> TokenDefinition,
-	SYNTAX_ERROR:                 proc(
-		l: ^Lexer,
-		my_msg: string,
-		token: TokenDefinition,
-	) -> ^OuauError, // Create a syntax Error
-}
 Lexer :: struct {
 	input:        []u8,
 	ch:           u8, //current character
@@ -170,15 +143,6 @@ NEW_LEXER :: proc(input: string, varena: ^virtual.Arena) -> Lexer {
 	l->EAT()
 	return l
 }
-/* Parser State
-	 <Structures> | <Descriptions>
-	 #NODEID | Node ID type
-	 #NODE_KIND | Node kind type
-	 #NODES | Nodes state, including kind, first_child, next_sibling, token, int_value, string_value, and name.
-	 #ParserVTable | Parser virtual table, including ADVANCE, APPEND_CHILD, IS, EXPECT, GET_TEXT, GET_TOKEN, CHUNK, BLOCK, EXP, EXPLIST, STMT, FUNCTION, PREFIX, TABLE, UBLOCK, PRIMARY, INFIX, PRECEDENCE, SET_NAME, SET_STRING, SET_INT, NEW_NODE, SET_TOKEN, PARSE_ERROR.
-	 #Parser | Parser state, including pos, nodes, lexer, current, peek, arena, and vtable.
-	 #Precedence | Precedence state, including LOWEST, ASSIGN, EQUALS, LESSGREATER, SUM, PRODUCT, PREFIX, CALL, INDEX.
-*/
 NODEID :: u32
 NODE_KIND :: enum u8 {
 	INVALID,
@@ -223,32 +187,6 @@ Precedence :: enum {
 	PREFIX,
 	CALL,
 	INDEX,
-}
-ParserVTable :: struct {
-	ADVANCE:      proc(p: ^Parser) -> (err: ^OuauError),
-	APPEND_CHILD: proc(p: ^Parser, parent, child: NODEID),
-	IS:           proc(p: ^Parser, kind: Token) -> bool,
-	EXPECT:       proc(p: ^Parser, kind: Token) -> (err: ^OuauError),
-	GET_TEXT:     proc(p: ^Parser) -> (text: string),
-	GET_TOKEN:    proc(p: ^Parser) -> (kind: Token),
-	CHUNK:        proc(p: ^Parser) -> (NODEID, ^OuauError),
-	BLOCK:        proc(p: ^Parser) -> (NODEID, ^OuauError),
-	EXP:          proc(p: ^Parser) -> (expression: NODEID, err: ^OuauError),
-	EXPLIST:      proc(p: ^Parser) -> (parsed_expressions: []NODEID, err: ^OuauError),
-	STMT:         proc(p: ^Parser) -> (NODEID, ^OuauError),
-	FUNCTION:     proc(p: ^Parser) -> (NODEID, ^OuauError),
-	PREFIX:       proc(p: ^Parser) -> (NODEID, ^OuauError),
-	TABLE:        proc(p: ^Parser) -> (NODEID, ^OuauError),
-	UBLOCK:       proc(p: ^Parser) -> (NODEID, ^OuauError),
-	PRIMARY:      proc(p: ^Parser) -> (NODEID, ^OuauError),
-	INFIX:        proc(p: ^Parser, left_expression: NODEID) -> (NODEID, ^OuauError),
-	PRECEDENCE:   proc(p: ^Parser, precedence: Precedence) -> (NODEID, ^OuauError),
-	SET_NAME:     proc(p: ^Parser, node: NODEID, name: string) -> (err: ^OuauError),
-	SET_STRING:   proc(p: ^Parser, node: NODEID, value: string) -> (err: ^OuauError),
-	SET_INT:      proc(p: ^Parser, node: NODEID, value: f64) -> (err: ^OuauError),
-	NEW_NODE:     proc(p: ^Parser, k: NODE_KIND) -> (new_nodeid: NODEID),
-	SET_TOKEN:    proc(p: ^Parser, node: NODEID, token: Token),
-	PARSE_ERROR:  proc(p: ^Parser, msg: string) -> ^OuauError,
 }
 Parser :: struct {
 	pos:          int,
@@ -309,25 +247,11 @@ PRECEDENCES := #partial [Token]Precedence {
 	.BOPEN  = .INDEX,
 	.BCLOSE = .LOWEST,
 }
-/* Evaluator State
-	 <Structures> | <Descriptions>
-	 #Frame | Frame state, including environment, return address, and result.
-	 #InterpreterVTable | Interpreter virtual table, including INTERPRET, EVAL, ASSIGN, GET_CHILD, GET_GCHILD, GET_SIBLING, EVAL_ERROR.
-	 #Interpreter | Interpreter state, including globals, current, nodes, call_stack, arena, and vtable.
-*/
+/* Interpreter State */
 Frame :: struct {
 	env:         ^Environment, // Hashable env of upvalues and locals
 	return_addr: NODEID, // Return address of the frame
 	result:      Value, // Result of the frame
-}
-InterpreterVTable :: struct {
-	INTERPRET:   proc(i: ^Interpreter, root: NODEID) -> (result: Value), // Interpret a node
-	EVAL:        proc(i: ^Interpreter, node: NODEID) -> Value, // Private: Evaluate a node
-	ASSIGN:      proc(i: ^Interpreter, node: NODEID) -> Value, // Private: Assign a node
-	GET_CHILD:   proc(i: ^Interpreter, node: NODEID) -> NODEID, // Private: Get child of a node
-	GET_GCHILD:  proc(i: ^Interpreter, node: NODEID) -> NODEID, // Private: Get grand child of a node
-	GET_SIBLING: proc(i: ^Interpreter, node: NODEID) -> NODEID, // Private: Get sibling of a node
-	EVAL_ERROR:  proc(i: ^Interpreter, msg: string) -> ^OuauError, // Private: Create an error
 }
 Interpreter :: struct {
 	globals:      map[string]Value, // Globals of the interpreter

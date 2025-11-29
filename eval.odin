@@ -6,8 +6,16 @@ import "core:strings"
 /*
 *	 ./eval.odin
 *	 Copyright(C) 2025 TESTMEE
-*	 Defines the interpreter functions for Ouau.
 */
+InterpreterVTable :: struct {
+	INTERPRET:   proc(i: ^Interpreter, root: NODEID) -> (result: Value),
+	EVAL:        proc(i: ^Interpreter, node: NODEID) -> Value,
+	ASSIGN:      proc(i: ^Interpreter, node: NODEID) -> Value,
+	GET_CHILD:   proc(i: ^Interpreter, node: NODEID) -> NODEID,
+	GET_GCHILD:  proc(i: ^Interpreter, node: NODEID) -> NODEID,
+	GET_SIBLING: proc(i: ^Interpreter, node: NODEID) -> NODEID,
+	EVAL_ERROR:  proc(i: ^Interpreter, msg: string) -> ^OuauError,
+}
 @(require_results)
 INTERPRET :: proc(i: ^Interpreter, root: NODEID) -> (result: Value) {
 	for c := i->GET_CHILD(root); c != 0; c = i->GET_SIBLING(c) {

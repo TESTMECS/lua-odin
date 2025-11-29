@@ -3,8 +3,26 @@ import "core:mem/virtual"
 /*
 *	 ./lexer.odin
 *	 Copyright(C) 2025 TESTMEE
-*	 Defines the lexer functions for Ouau.
 */
+LexerVTable :: struct {
+	EAT:                          proc(l: ^Lexer),
+	PEEK:                         proc(l: ^Lexer) -> u8,
+	NEXT:                         proc(l: ^Lexer) -> (TokenDefinition, ^OuauError),
+	GET_TOKEN:                    proc(
+		l: ^Lexer,
+		type: Token,
+		start: int,
+		length: int,
+	) -> TokenDefinition,
+	SKIP_WHITESPACE:              proc(l: ^Lexer),
+	CREATE_NUMBER:                proc(l: ^Lexer) -> TokenDefinition,
+	CREATE_IDENTIFIER_OR_KEYWORD: proc(l: ^Lexer) -> TokenDefinition,
+	SYNTAX_ERROR:                 proc(
+		l: ^Lexer,
+		my_msg: string,
+		token: TokenDefinition,
+	) -> ^OuauError,
+}
 @(require_results)
 NEXT :: proc(l: ^Lexer) -> (token: TokenDefinition, err: ^OuauError) {
 	l->SKIP_WHITESPACE()

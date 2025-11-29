@@ -4,8 +4,33 @@ import "core:strconv"
 /*
 	 ./parser.odin
 	 Copyright(C) 2025 TESTMEE
-	 This file defines the parser functions for Ouau.
 */
+ParserVTable :: struct {
+	ADVANCE:      proc(p: ^Parser) -> (err: ^OuauError),
+	APPEND_CHILD: proc(p: ^Parser, parent, child: NODEID),
+	IS:           proc(p: ^Parser, kind: Token) -> bool,
+	EXPECT:       proc(p: ^Parser, kind: Token) -> (err: ^OuauError),
+	GET_TEXT:     proc(p: ^Parser) -> (text: string),
+	GET_TOKEN:    proc(p: ^Parser) -> (kind: Token),
+	CHUNK:        proc(p: ^Parser) -> (NODEID, ^OuauError),
+	BLOCK:        proc(p: ^Parser) -> (NODEID, ^OuauError),
+	EXP:          proc(p: ^Parser) -> (expression: NODEID, err: ^OuauError),
+	EXPLIST:      proc(p: ^Parser) -> (parsed_expressions: []NODEID, err: ^OuauError),
+	STMT:         proc(p: ^Parser) -> (NODEID, ^OuauError),
+	FUNCTION:     proc(p: ^Parser) -> (NODEID, ^OuauError),
+	PREFIX:       proc(p: ^Parser) -> (NODEID, ^OuauError),
+	TABLE:        proc(p: ^Parser) -> (NODEID, ^OuauError),
+	UBLOCK:       proc(p: ^Parser) -> (NODEID, ^OuauError),
+	PRIMARY:      proc(p: ^Parser) -> (NODEID, ^OuauError),
+	INFIX:        proc(p: ^Parser, left_expression: NODEID) -> (NODEID, ^OuauError),
+	PRECEDENCE:   proc(p: ^Parser, precedence: Precedence) -> (NODEID, ^OuauError),
+	SET_NAME:     proc(p: ^Parser, node: NODEID, name: string) -> (err: ^OuauError),
+	SET_STRING:   proc(p: ^Parser, node: NODEID, value: string) -> (err: ^OuauError),
+	SET_INT:      proc(p: ^Parser, node: NODEID, value: f64) -> (err: ^OuauError),
+	NEW_NODE:     proc(p: ^Parser, k: NODE_KIND) -> (new_nodeid: NODEID),
+	SET_TOKEN:    proc(p: ^Parser, node: NODEID, token: Token),
+	PARSE_ERROR:  proc(p: ^Parser, msg: string) -> ^OuauError,
+}
 @(require_results)
 CHUNK :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 	p->ADVANCE() or_return // Init p.peek
