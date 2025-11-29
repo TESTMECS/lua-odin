@@ -208,8 +208,8 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 			return i->ASSIGN(node)
 		case .EQ:
 			return EVAL_COMPARE(left, right, .EQ)
-		case .NE:
-			return EVAL_COMPARE(left, right, .NE)
+		case .NEQ:
+			return EVAL_COMPARE(left, right, .NEQ)
 		case .LT:
 			return EVAL_COMPARE(left, right, .LT)
 		case .LE:
@@ -538,7 +538,7 @@ EVAL_COMPARE :: proc(left, right: Value, op: Token) -> bool {
 		case ^OuauError:
 			return left.(^OuauError) == right.(^OuauError)
 		}
-	case .NE:
+	case .NEQ:
 		return !EVAL_COMPARE(left, right, .EQ)
 	case .LT:
 		#partial switch ty in left {

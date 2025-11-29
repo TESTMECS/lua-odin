@@ -50,7 +50,7 @@ Token :: enum u8 {
 	GT, // >
 	GE, // >=
 	EQ, // ==
-	NE, // ~=
+	NEQ, // ~=
 	LEQ, // <=
 	GEQ, // >=
 	OROR, // || (Logical OR)
@@ -234,13 +234,13 @@ PRECEDENCES := #partial [Token]Precedence {
 	.AND    = .ASSIGN, // and
 	.ASSIGN = .EQUALS, // =
 	.EQ     = .EQUALS, // ==
-	.NE     = .EQUALS, // ~=
+	.NEQ    = .EQUALS, // ~=
 	.BXOR   = .EQUALS, // ~
 	.BOR    = .EQUALS, // |
 	.LE     = .EQUALS, // <=
-	.LT     = .EQUALS,
+	.LT     = .EQUALS, // <
 	.GE     = .EQUALS, // >=
-	.GT     = .EQUALS,
+	.GT     = .EQUALS, // >
 	.DOTDOT = .LESSGREATER, // .. (string concatenation)
 	.PLUS   = .SUM, // +
 	.MINUS  = .SUM, // -

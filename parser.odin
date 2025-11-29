@@ -336,24 +336,7 @@ PRECEDENCE :: proc(p: ^Parser, prec: Precedence) -> (lhs: NODEID, err: ^OuauErro
 }
 @(private = "file", require_results)
 GET_PRECEDENCE :: proc(t: Token) -> Precedence {
-	#partial switch t {
-	case .ASSIGN:
-		return .ASSIGN
-	case .EQ, .NEQ, .LT, .LE, .GT, .GE, .BOR, .BXOR, .BAND, .OR, .OROR, .AND:
-		return .EQUALS
-	case .PLUS, .MINUS, .SHR, .SHL:
-		return .SUM
-	case .MUL, .DIV, .MOD:
-		return .PRODUCT
-	case .POW, .OPEN, .DOT:
-		return .CALL
-	case .BANG, .POUND, .NOT, .DOTDOT:
-		return .PREFIX
-	case .BOPEN:
-		return .INDEX
-	case:
-		return .LOWEST
-	}
+	return PRECEDENCES[t]
 }
 @(private = "file", require_results)
 EXP :: proc(p: ^Parser) -> (exp: NODEID, err: ^OuauError) {
