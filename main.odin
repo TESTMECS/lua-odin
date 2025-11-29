@@ -140,6 +140,7 @@ dump_node :: proc(p: ^Parser, id: u32, indent: int) {
 	}
 	fmt.println()
 	child := p.nodes.first_child[id]
+	// doesn't work for anon functions?
 	for child != 0 {
 		dump_node(p, child, indent + 1)
 		child = p.nodes.next_sibling[child]

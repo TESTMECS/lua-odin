@@ -300,7 +300,6 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		table := new(Table, my_alloc)
 		// TODO: Use Lua type array/hash
 		table.data = make(map[KeyTag]Value, my_alloc)
-		fmt.println("[Table]")
 		for c := i->GET_CHILD(node); c != 0; c = i->GET_SIBLING(c) {
 			if i.nodes.kind[c] == .BINARY {
 				key := i->EVAL(i->GET_CHILD(c))

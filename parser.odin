@@ -7,30 +7,31 @@ import "core:strconv"
 	 Copyright(C) 2025 TESTMEE
 */
 ParserVTable :: struct {
-	ADVANCE:      proc(p: ^Parser) -> (err: ^OuauError),
-	APPEND_CHILD: proc(p: ^Parser, parent, child: NODEID),
-	IS:           proc(p: ^Parser, kind: Token) -> bool,
-	EXPECT:       proc(p: ^Parser, kind: Token) -> (err: ^OuauError),
-	GET_TEXT:     proc(p: ^Parser) -> (text: string),
-	GET_TOKEN:    proc(p: ^Parser) -> (kind: Token),
-	CHUNK:        proc(p: ^Parser) -> (NODEID, ^OuauError),
-	BLOCK:        proc(p: ^Parser) -> (NODEID, ^OuauError),
-	EXP:          proc(p: ^Parser) -> (expression: NODEID, err: ^OuauError),
-	EXPLIST:      proc(p: ^Parser) -> (parsed_expressions: []NODEID, err: ^OuauError),
-	STMT:         proc(p: ^Parser) -> (NODEID, ^OuauError),
-	FUNCTION:     proc(p: ^Parser) -> (NODEID, ^OuauError),
-	PREFIX:       proc(p: ^Parser) -> (NODEID, ^OuauError),
-	TABLE:        proc(p: ^Parser) -> (NODEID, ^OuauError),
-	UBLOCK:       proc(p: ^Parser) -> (NODEID, ^OuauError),
-	PRIMARY:      proc(p: ^Parser) -> (NODEID, ^OuauError),
-	INFIX:        proc(p: ^Parser, left_expression: NODEID) -> (NODEID, ^OuauError),
-	PRECEDENCE:   proc(p: ^Parser, precedence: Precedence) -> (NODEID, ^OuauError),
-	SET_NAME:     proc(p: ^Parser, node: NODEID, name: string) -> (err: ^OuauError),
-	SET_STRING:   proc(p: ^Parser, node: NODEID, value: string) -> (err: ^OuauError),
-	SET_INT:      proc(p: ^Parser, node: NODEID, value: f64) -> (err: ^OuauError),
-	NEW_NODE:     proc(p: ^Parser, k: NODE_KIND) -> (new_nodeid: NODEID),
-	SET_TOKEN:    proc(p: ^Parser, node: NODEID, token: Token),
-	PARSE_ERROR:  proc(p: ^Parser, msg: string) -> ^OuauError,
+	ADVANCE:       proc(p: ^Parser) -> (err: ^OuauError),
+	APPEND_CHILD:  proc(p: ^Parser, parent, child: NODEID),
+	IS:            proc(p: ^Parser, kind: Token) -> bool,
+	EXPECT:        proc(p: ^Parser, kind: Token) -> (err: ^OuauError),
+	GET_TEXT:      proc(p: ^Parser) -> (text: string),
+	GET_TOKEN:     proc(p: ^Parser) -> (kind: Token),
+	CHUNK:         proc(p: ^Parser) -> (NODEID, ^OuauError),
+	BLOCK:         proc(p: ^Parser) -> (NODEID, ^OuauError),
+	EXP:           proc(p: ^Parser) -> (expression: NODEID, err: ^OuauError),
+	EXPLIST:       proc(p: ^Parser) -> (parsed_expressions: []NODEID, err: ^OuauError),
+	STMT:          proc(p: ^Parser) -> (NODEID, ^OuauError),
+	FUNCTION:      proc(p: ^Parser) -> (NODEID, ^OuauError),
+	PREFIX:        proc(p: ^Parser) -> (NODEID, ^OuauError),
+	TABLE:         proc(p: ^Parser) -> (NODEID, ^OuauError),
+	UBLOCK:        proc(p: ^Parser) -> (NODEID, ^OuauError),
+	PRIMARY:       proc(p: ^Parser) -> (NODEID, ^OuauError),
+	INFIX:         proc(p: ^Parser, left_expression: NODEID) -> (NODEID, ^OuauError),
+	PRECEDENCE:    proc(p: ^Parser, precedence: Precedence) -> (NODEID, ^OuauError),
+	SET_NAME:      proc(p: ^Parser, node: NODEID, name: string) -> (err: ^OuauError),
+	SET_STRING:    proc(p: ^Parser, node: NODEID, value: string) -> (err: ^OuauError),
+	SET_INT:       proc(p: ^Parser, node: NODEID, value: f64) -> (err: ^OuauError),
+	NEW_NODE:      proc(p: ^Parser, k: NODE_KIND) -> (new_nodeid: NODEID),
+	SET_TOKEN:     proc(p: ^Parser, node: NODEID, token: Token),
+	PARSE_ERROR:   proc(p: ^Parser, msg: string) -> ^OuauError,
+	FUNCTION_ARGS: proc(p: ^Parser, node: NODEID) -> (fn_node: NODEID, err: ^OuauError),
 }
 @(require_results)
 CHUNK :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
@@ -44,6 +45,8 @@ ADVANCE :: proc(p: ^Parser) -> (err: ^OuauError) {
 	p.current = p.peek
 	next_token := p.lexer->NEXT() or_return
 	p.peek = next_token
+	// fmt.println("current", p.current)
+	// fmt.println("peek", p.current)
 	return nil
 }
 @(private = "file", require_results)
@@ -167,17 +170,17 @@ STMT :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 		my_alloc := virtual.arena_allocator(p.arena)
 		p->EXPECT(.LOCAL) or_return
 		node = p->NEW_NODE(.LOCAL)
-		fmt.println("[LOCAL DECL]")
 		#partial switch p->GET_TOKEN() {
 		case .FUNCTION:
+			// `local function name()`
 			function_node := p->FUNCTION() or_return
 			p->APPEND_CHILD(node, function_node)
 			return node, nil
 		case .IDENTIFIER:
+			// identifier list.
 			vars := make([dynamic]NODEID, my_alloc)
 			primary_expr := p->PRIMARY() or_return
 			append(&vars, primary_expr)
-			fmt.println("[Identifier]")
 			#partial switch p->GET_TOKEN() {
 			case .COMMA:
 				for p->IS(.COMMA) {
@@ -194,47 +197,18 @@ STMT :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 					}
 				}
 			case .ASSIGN:
-				fmt.println("[ASSIGN]")
-				p->ADVANCE() or_return // advance past assign
+				// Normal assignment.
+				p->ADVANCE() or_return
 				#partial switch p->GET_TOKEN() {
 				case .IDENTIFIER:
+					// Assign identifer list.
 					for v in vars { p->APPEND_CHILD(node, v) }
 					values := p->EXPLIST() or_return
 					for val in values { p->APPEND_CHILD(node, val) }
 				case .FUNCTION:
-					fmt.println("[Parsing function anon]")
-					p->EXPECT(.FUNCTION)
-					node := p->NEW_NODE(.FUNCTION)
-					if p->IS(.OPEN) {
-						p->ADVANCE()
-						for !(p->IS(.CLOSE)) {
-							#partial switch (p->GET_TOKEN()) {
-							case .IDENTIFIER:
-								fn_param := p->NEW_NODE(.IDENTIFIER)
-								p->SET_NAME(fn_param, p->GET_TEXT())
-								p->APPEND_CHILD(node, fn_param)
-								p->ADVANCE() or_return
-								p->EXPECT(.COMMA) or_return
-							case .DOTDOT:
-								p->ADVANCE() or_return
-								varargs_name := p->GET_TEXT()
-								p->ADVANCE() or_return
-								args := p->NEW_NODE(.VARARGS)
-								p->SET_NAME(args, varargs_name)
-								p->APPEND_CHILD(node, args)
-								break
-							case:
-								break
-							}
-						}
-						p->EXPECT(.CLOSE)
-					} else {
-						return node, p->PARSE_ERROR("Expected arg list in anon function")
-					}
+					// Assign Anon function
+					unimplemented("Assign anon function.")
 				}
-				body := p->BLOCK() or_return
-				p->EXPECT(.END) or_return
-				p->APPEND_CHILD(node, body)
 			case:
 				// other.
 				for v in vars { p->APPEND_CHILD(node, v) }
@@ -261,6 +235,7 @@ STMT :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 			for v in vars { p->APPEND_CHILD(node, v) }
 			if p->IS(.ASSIGN) {
 				p->ADVANCE() or_return
+				fmt.println("Expected iD")
 				values := p->EXPLIST() or_return
 				for val in values { p->APPEND_CHILD(node, val) }
 			}
@@ -299,6 +274,35 @@ STMT :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 			return node, nil
 		}
 		return node, nil
+	}
+	return node, nil
+}
+FUNCTION_BLOCK :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
+	node = p->NEW_NODE(.BLOCK)
+
+	// Parse statements until 'end'
+	block_loop: for {
+		#partial switch p->GET_TOKEN() {
+		case .SEMI:
+			p->ADVANCE() or_return
+			continue block_loop
+		case .END:
+			// Don't consume 'end' here - let caller handle it
+			break block_loop
+		case .RETURN:
+			// Parse return statement
+			p->ADVANCE() or_return
+			return_node := p->NEW_NODE(.RETURN)
+			if !(p->IS(.SEMI)) && !(p->IS(.END)) {
+				values := p->EXPLIST() or_return
+				for val in values { p->APPEND_CHILD(return_node, val) }
+			}
+			p->APPEND_CHILD(node, return_node)
+		case:
+			// Parse other statements
+			stmt := p->STMT() or_return
+			p->APPEND_CHILD(node, stmt)
+		}
 	}
 	return node, nil
 }
@@ -506,10 +510,9 @@ EXPLIST :: proc(p: ^Parser) -> (parsed_expressions: []NODEID, err: ^OuauError) {
 		parsed_expressions = list_of_expr[:]
 		return parsed_expressions, nil
 	case:
-		parsed_expressions = list_of_expr[:]
-		return parsed_expressions, nil
+		return parsed_expressions,
+			p->PARSE_ERROR("PARSE_EXPLIST::Unexpected Token in Expression List")
 	}
-	return parsed_expressions, p->PARSE_ERROR("PARSE_EXPLIST::Unexpected Token in Expression List")
 }
 @(private = "file", require_results)
 TABLE :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
@@ -524,6 +527,7 @@ TABLE :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 				p->EXPECT(.ASSIGN) or_return
 				value := p->EXP() or_return
 				pair := p->NEW_NODE(.BINARY)
+				p->SET_TOKEN(pair, .ASSIGN)
 				p->APPEND_CHILD(pair, key)
 				p->APPEND_CHILD(pair, value)
 				p->APPEND_CHILD(table, pair)
@@ -532,6 +536,7 @@ TABLE :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 				p->EXPECT(.ASSIGN) or_return
 				value := p->EXP() or_return
 				pair := p->NEW_NODE(.BINARY)
+				p->SET_TOKEN(pair, .ASSIGN)
 				p->APPEND_CHILD(pair, key)
 				p->APPEND_CHILD(pair, value)
 				p->APPEND_CHILD(table, pair)
@@ -610,6 +615,8 @@ NEW_NODE :: proc(p: ^Parser, k: NODE_KIND) -> (new_nodeid: NODEID) {
 	append(&p.nodes.name, "")
 	return
 }
+
+// NOTE
 @(private = "file")
 APPEND_CHILD :: proc(p: ^Parser, parent, child: NODEID) {
 	if p.nodes.first_child[parent] == 0 {
@@ -632,31 +639,69 @@ PARSE_ERROR :: proc(p: ^Parser, msg: string) -> ^OuauError {
 	}
 	return e
 }
+@(private = "file")
+FUNCTION_ARGS :: proc(p: ^Parser, fn_node: NODEID) -> (node: NODEID, err: ^OuauError) {
+	count := 0
+	if p->IS(.OPEN) {
+		p->ADVANCE() // advance past (
+		for !(p->IS(.CLOSE)) {
+			count += 1
+			fmt.println(count)
+			if count > 5 {
+				fmt.println("Breaking")
+				break
+			}
+			#partial switch (p->GET_TOKEN()) {
+			case .IDENTIFIER:
+				fn_param := p->NEW_NODE(.IDENTIFIER)
+				p->SET_NAME(fn_param, p->GET_TEXT())
+				p->APPEND_CHILD(fn_node, fn_param)
+				p->ADVANCE() or_return
+				p->EXPECT(.COMMA) or_return
+			case .DOTDOT:
+				p->ADVANCE() or_return
+				varargs_name := p->GET_TEXT()
+				p->ADVANCE() or_return
+				args := p->NEW_NODE(.VARARGS)
+				p->SET_NAME(args, varargs_name)
+				p->APPEND_CHILD(fn_node, args)
+				break
+			case:
+				break
+			}
+		}
+		p->EXPECT(.CLOSE)
+		return fn_node, nil
+	} else {
+		return fn_node, p->PARSE_ERROR("Expected arg list in anon function")
+	}
+}
 @(rodata)
 PARSER_VTABLE := ParserVTable {
-	ADVANCE      = ADVANCE,
-	APPEND_CHILD = APPEND_CHILD,
-	IS           = IS,
-	EXPECT       = EXPECT,
-	GET_TEXT     = GET_TEXT,
-	GET_TOKEN    = GET_TOKEN,
-	NEW_NODE     = NEW_NODE,
-	BLOCK        = BLOCK,
-	CHUNK        = CHUNK,
-	EXP          = EXP,
-	EXPLIST      = EXPLIST,
-	STMT         = STMT,
-	FUNCTION     = FUNCTION,
-	UBLOCK       = UBLOCK,
-	PREFIX       = PREFIX,
-	TABLE        = TABLE,
-	PRIMARY      = PRIMARY,
-	INFIX        = INFIX,
-	PRECEDENCE   = PRECEDENCE,
-	SET_NAME     = SET_NAME,
-	SET_STRING   = SET_STRING,
-	SET_INT      = SET_INT,
-	SET_TOKEN    = SET_TOKEN,
-	PARSE_ERROR  = PARSE_ERROR,
+	ADVANCE       = ADVANCE,
+	APPEND_CHILD  = APPEND_CHILD,
+	IS            = IS,
+	EXPECT        = EXPECT,
+	GET_TEXT      = GET_TEXT,
+	GET_TOKEN     = GET_TOKEN,
+	NEW_NODE      = NEW_NODE,
+	BLOCK         = BLOCK,
+	CHUNK         = CHUNK,
+	EXP           = EXP,
+	EXPLIST       = EXPLIST,
+	STMT          = STMT,
+	FUNCTION      = FUNCTION,
+	UBLOCK        = UBLOCK,
+	PREFIX        = PREFIX,
+	TABLE         = TABLE,
+	PRIMARY       = PRIMARY,
+	INFIX         = INFIX,
+	PRECEDENCE    = PRECEDENCE,
+	SET_NAME      = SET_NAME,
+	SET_STRING    = SET_STRING,
+	SET_INT       = SET_INT,
+	SET_TOKEN     = SET_TOKEN,
+	PARSE_ERROR   = PARSE_ERROR,
+	FUNCTION_ARGS = FUNCTION_ARGS,
 }
 

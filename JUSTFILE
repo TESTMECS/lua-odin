@@ -36,7 +36,6 @@ test_file_name := "test.ouau"
 alias tf := test-file
 test-file:
 	odin run . -- file {{test_file_dir}}/{{test_file_name}}
-
 # print ast for a .ouau file
 alias ast := ast-file
 ast-file:
