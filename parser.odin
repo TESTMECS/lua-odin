@@ -89,7 +89,7 @@ BLOCK :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 			break_node := p->NEW_NODE(.BREAK)
 			p->APPEND_CHILD(node, break_node)
 			break block_loop
-		case .EOF, .END, .UNTIL:
+		case .EOF, .END, .UNTIL, .ELSE, .ELSEIF:
 			break block_loop
 		case:
 			stmt := p->STMT() or_return
@@ -457,7 +457,8 @@ PRECEDENCE :: proc(p: ^Parser, prec: Precedence) -> (lhs: NODEID, err: ^OuauErro
 		// Process operators with higher precedence
 		// For left-associative operators, also process equal precedence
 		// For right-associative operators, stop at equal precedence
-		if prec >= current_prec { break loop }
+		if prec > current_prec { break loop }
+		if prec == current_prec && current_token != .OR && current_token != .AND { break loop }
 		lhs = p->INFIX(lhs) or_return
 	}
 	return lhs, nil
@@ -522,7 +523,6 @@ INFIX :: proc(p: ^Parser, lhs: NODEID) -> (infix: NODEID, err: ^OuauError) {
 	if op_prec == .LOWEST &&
 	   op_token != .OR &&
 	   op_token != .AND &&
-	   op_token != .ASSIGN &&
 	   op_token != .EQ &&
 	   op_token != .NEQ {
 		// Not an operator, return lhs as-is
