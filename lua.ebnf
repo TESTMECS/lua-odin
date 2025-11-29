@@ -5,15 +5,15 @@ chunk      ::= block .
 semi       ::= ';' .
 semi       ::= .
 
-block      ::= scope statlist .
-block      ::= scope statlist laststat semi .
+block      ::= scope statementlist .
+block      ::= scope statementlist laststat semi .
 ublock     ::= block 'until' exp .
 
 scope      ::= .
-scope      ::= scope statlist binding semi.
+scope      ::= scope statementlist binding semi.
            
-statlist   ::= .
-statlist   ::= statlist stat semi .
+statementlist   ::= .
+statementlist   ::= statementlist stat semi .
 
 stat       ::= 'do' block 'end' .
 stat       ::= 'while' exp 'do' block 'end' .
