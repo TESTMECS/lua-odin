@@ -1,5 +1,4 @@
 package ouau
-import "core:fmt"
 import "core:log"
 import "core:mem/virtual"
 import "core:strconv"
@@ -47,7 +46,7 @@ ParserVTable :: struct {
 CHUNK :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 	p->ADVANCE() or_return // Init p.peek
 	p->ADVANCE() or_return // Init p.current to p.peek
-	log.info("[Parsing Chunk]")
+	// log.info("[Parsing Chunk]")
 	node = p->BLOCK() or_return
 	return node, nil
 }
@@ -56,7 +55,7 @@ ADVANCE :: proc(p: ^Parser) -> (err: ^OuauError) {
 	p.current = p.peek
 	next_token := p.lexer->NEXT() or_return
 	p.peek = next_token
-	log.info("[p.current]::(%v)", p.current)
+	// log.info("[p.current]::(%v)", p.current)
 	return nil
 }
 @(private = "file", require_results)
@@ -69,7 +68,7 @@ EXPECT :: proc(p: ^Parser, kind: Token) -> (err: ^OuauError) {
 @(private = "file", require_results)
 BLOCK :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 	node = p->NEW_NODE(.BLOCK)
-	log.info("[Block Loop]")
+	// log.info("[Block Loop]")
 	block_loop: for {
 		#partial switch p->GET_TOKEN() {
 		case .SEMI:
@@ -77,34 +76,36 @@ BLOCK :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 			continue block_loop
 		// last stmts
 		case .RETURN:
-			p->EXPECT(.RETURN) or_return
-			node = p->NEW_NODE(.RETURN)
-			if !(p->IS(.SEMI)) && !(p->IS(.EOF)) {
+			p->ADVANCE() or_return
+			return_node := p->NEW_NODE(.RETURN)
+			if !(p->IS(.SEMI)) && !(p->IS(.EOF)) && !(p->IS(.END)) {
 				values := p->EXPLIST() or_return
-				for val in values { p->APPEND_CHILD(node, val) }
+				for val in values { p->APPEND_CHILD(return_node, val) }
 			}
+			p->APPEND_CHILD(node, return_node)
 			break block_loop
 		case .BREAK:
-			p->EXPECT(.BREAK) or_return
-			node = p->NEW_NODE(.BREAK)
+			p->ADVANCE() or_return
+			break_node := p->NEW_NODE(.BREAK)
+			p->APPEND_CHILD(node, break_node)
 			break block_loop
-		case .EOF:
+		case .EOF, .END, .UNTIL:
 			break block_loop
 		case:
 			stmt := p->STMT() or_return
 			p->APPEND_CHILD(node, stmt)
-			return node, nil
+		// Don't return here, continue parsing more statements
 		}
 	}
-	return node, p->PARSE_ERROR("PARSE_BLOCK::Unexpected teriminal::()")
+	return node, nil
 }
 /*
 * this procedure should return when `end` or `)`
 */
 @(private = "file", require_results)
 STMT :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
-	log.info("[STMT]")
-	log.info(p->GET_TOKEN())
+	// log.info("[STMT]")
+	// log.info(p->GET_TOKEN())
 	#partial switch p->GET_TOKEN() {
 	case .WHILE:
 		p->EXPECT(.WHILE) or_return
@@ -578,19 +579,13 @@ EXPLIST :: proc(p: ^Parser) -> (parsed_expressions: []NODEID, err: ^OuauError) {
 	list_of_expr := make([dynamic]NODEID, 0, my_alloc)
 	expression_node := p->EXP() or_return
 	append(&list_of_expr, expression_node)
-	#partial switch p->GET_TOKEN() {
-	case .COMMA:
-		for p->IS(.COMMA) {
-			p->ADVANCE() or_return
-			expression_node = p->EXP() or_return
-			append(&list_of_expr, expression_node)
-		}
-		parsed_expressions = list_of_expr[:]
-		return parsed_expressions, nil
-	case:
-		return parsed_expressions,
-			p->PARSE_ERROR("PARSE_EXPLIST::Unexpected Token in Expression List")
+	for p->IS(.COMMA) {
+		p->ADVANCE() or_return
+		expression_node = p->EXP() or_return
+		append(&list_of_expr, expression_node)
 	}
+	parsed_expressions = list_of_expr[:]
+	return parsed_expressions, nil
 }
 @(private = "file", require_results)
 TABLE :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
