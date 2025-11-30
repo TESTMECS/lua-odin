@@ -464,14 +464,38 @@ INFIX :: proc(p: ^Parser, lhs: NODEID) -> (infix: NODEID, err: ^OuauError) {
 	p->APPEND_CHILD(infix, rhs)
 	return infix, nil
 }
+PARSE_NUMBER :: proc(text: string) -> (value: f64, is_integer: bool, ok: bool) {
+	// Check for hexadecimal
+	if len(text) >= 2 && text[0] == '0' && (text[1] == 'x' || text[1] == 'X') {
+		// Parse hexadecimal as integer
+		hex_val, hex_ok := strconv.parse_u64(text[2:], 16)
+		return f64(hex_val), true, hex_ok
+	}
+	// Check if it's an integer (no decimal point, no exponent)
+	is_int := true
+	for ch in text {
+		if ch == '.' || ch == 'e' || ch == 'E' {
+			is_int = false
+			break
+		}
+	}
+	if is_int {
+		// Parse as integer first
+		int_val, int_ok := strconv.parse_i64(text, 10)
+		if int_ok {
+			return f64(int_val), true, true
+		}
+	}
+	// Parse as float
+	float_val, float_ok := strconv.parse_f64(text)
+	return float_val, false, float_ok
+}
 @(private = "file", require_results)
 PRIMARY :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 	#partial switch p->GET_TOKEN() {
 	case .NUMBER:
 		node = p->NEW_NODE(.LITERAL)
-		val, ok := strconv.parse_f64(p->GET_TEXT())
-		if !ok { return 0, p->PARSE_ERROR("Couldn't Parse f64") }
-		p->SET_INT(node, val)
+		p->SET_STRING(node, p->GET_TEXT())
 		p->ADVANCE() or_return
 		return node, nil
 	case .STRING:

@@ -356,17 +356,23 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		}
 		return nil
 	case .LITERAL:
-		s_val := i.nodes.string_value[node]
-		if s_val != "" {
-			if s_val == "true" {
-				return true
+		literal_string := i.nodes.string_value[node]
+		if literal_string != "" && len(literal_string) > 0 {
+			value, is_integer, ok := PARSE_NUMBER(literal_string)
+			if ok {
+				return value
 			}
-			if s_val == "false" {
-				return false
-			}
-			return nil
 		}
-		return f64(i.nodes.int_value[node])
+		switch literal_string {
+		case "true":
+			return true
+		case "false":
+			return false
+		case "nil":
+			return nil
+		case:
+			return f64(i.nodes.int_value[node])
+		}
 	}
 	return nil
 }

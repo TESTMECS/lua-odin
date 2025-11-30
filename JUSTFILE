@@ -32,7 +32,7 @@ test_eval:
 
 # test a .ouau file
 test_file_dir := "./examples"
-test_file_name := "test.ouau"
+test_file_name := "test1.ouau"
 alias tf := test-file
 test-file:
 	odin run . -- file {{test_file_dir}}/{{test_file_name}}

@@ -157,10 +157,7 @@ GET_TOKEN :: proc(l: ^Lexer, type: Token, start: int, length: int) -> TokenDefin
 IS_LETTER :: proc(ch: u8) -> bool {
 	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_'
 }
-@(private = "file")
-IS_DIGIT :: proc(ch: u8) -> bool {
-	return '0' <= ch && ch <= '9'
-}
+
 @(private = "file")
 TOKEN_FROM_CHAR :: proc(l: ^Lexer, ty: Token) -> TokenDefinition {
 	return l->GET_TOKEN(ty, l.pos, 1)
@@ -199,13 +196,50 @@ CREATE_IDENTIFIER_OR_KEYWORD :: proc(l: ^Lexer) -> TokenDefinition {
 @(private = "file")
 CREATE_NUMBER :: proc(l: ^Lexer) -> TokenDefinition {
 	start := l.pos
+	// Handle Hex digits.
+	if l.ch == '0' && (l->PEEK() == 'x' || l->PEEK() == 'X') {
+		l->EAT() // consume '0'
+		l->EAT() // consume 'x' or 'X'
+		if !(IS_HEX_DIGIT(l.ch)) {
+			return l->GET_TOKEN(.ILLEGAL, start, l.pos - start)
+		}
+		for IS_HEX_DIGIT(l.ch) { l->EAT() }
+		return l->GET_TOKEN(.NUMBER, start, l.pos - start)
+	}
+	// Handle Decimals
 	for IS_DIGIT(l.ch) { l->EAT() }
 	if l.ch == '.' {
 		l->EAT()
 		for IS_DIGIT(l.ch) { l->EAT() }
 		return l->GET_TOKEN(.NUMBER, start, (l.pos - start))
 	}
+	// Handle Scientific Notation
+	if l.ch == 'e' || l.ch == 'E' {
+		l->EAT()
+		if l.ch == '+' || l.ch == '-' {
+			l->EAT()
+		}
+		if !(IS_DIGIT(l.ch)) {
+			return l->GET_TOKEN(.ILLEGAL, start, l.pos - start)
+		}
+		for IS_DIGIT(l.ch) { l->EAT() }
+	}
 	return l->GET_TOKEN(.NUMBER, start, l.pos - start)
+}
+@(private = "file")
+IS_HEX_DIGIT :: proc(ch: u8) -> bool {
+	return '0' <= ch && ch <= '9' || 'a' <= ch && ch <= 'f' || 'A' <= ch && ch <= 'F'
+}
+@(private = "file")
+IS_DIGIT :: proc(ch: u8) -> bool {
+	return '0' <= ch && ch <= '9'
+}
+@(private = "file")
+HEX_TO_INT :: proc(ch: u8) -> int {
+	if '0' <= ch && ch <= '9' { return int(ch - '0') }
+	if 'a' <= ch && ch <= 'f' { return int(ch - 'a') + 10 }
+	if 'A' <= ch && ch <= 'F' { return int(ch - 'A') + 10 }
+	return 0
 }
 @(private = "file")
 CREATE_STRING :: proc(l: ^Lexer) -> TokenDefinition {

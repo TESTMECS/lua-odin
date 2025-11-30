@@ -1,0 +1,4 @@
+do
+	local a = 0xFF1A;
+	print(a);
+end
