@@ -241,7 +241,8 @@ STMT :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 					values := p->EXPLIST() or_return
 					for val in values { p->APPEND_CHILD(node, val) }
 				case .FUNCTION:
-					// Assign Anon function
+					// Assign @Anon function
+					p->EXPECT(.FUNCTION)
 					fn_name: NODEID
 					fn_body := p->FUNCBODY(fn_name) or_return
 					p->APPEND_CHILD(node, fn_body)

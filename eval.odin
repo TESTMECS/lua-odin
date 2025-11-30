@@ -659,7 +659,6 @@ EVAL_ERROR :: proc(i: ^Interpreter, msg: string) -> ^OuauError {
 	e.kind = .EvalErr
 	e.msg = msg
 	e.payload = EvalErr {
-		msg       = msg,
 		evaluator = i,
 	}
 	fmt.eprintfln("|Eval Error::Msg::(%s)|", msg)
