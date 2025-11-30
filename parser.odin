@@ -242,7 +242,10 @@ STMT :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 					for val in values { p->APPEND_CHILD(node, val) }
 				case .FUNCTION:
 					// Assign Anon function
-					unimplemented("Assign anon function.")
+					fn_name: NODEID
+					fn_body := p->FUNCBODY(fn_name) or_return
+					p->APPEND_CHILD(node, fn_body)
+					p->EXPECT(.END) // expect end
 				}
 				return node, nil
 			case:
@@ -369,7 +372,7 @@ PARAMS :: proc(p: ^Parser, fn_node: NODEID) -> (node: NODEID, err: ^OuauError) {
 		p->EXPECT(.CLOSE)
 		return fn_node, nil
 	} else {
-		return fn_node, p->PARSE_ERROR("Expected arg list in anon function")
+		return fn_node, p->PARSE_ERROR("Expected Arg list in::%v", #procedure)
 	}
 }
 @(private = "file", require_results)
@@ -651,7 +654,6 @@ PARSE_ERROR :: proc(p: ^Parser, msg: string, xtra: ..any) -> ^OuauError {
 	}
 	e.kind = .ParseErr
 	e.payload = ParseErr {
-		msg           = msg,
 		parser_object = p,
 	}
 	return e

@@ -172,11 +172,9 @@ SyntaxErr :: struct {
 	text: string,
 }
 ParseErr :: struct {
-	msg:           string,
 	parser_object: ^Parser,
 }
 EvalErr :: struct {
-	msg:       string,
 	evaluator: ^Interpreter,
 }
 
