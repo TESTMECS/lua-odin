@@ -6,7 +6,7 @@ import "core:mem/virtual"
 	 ./parser.odin
 	 Copyright(C) 2025 TESTMEE
 */
-DEBUG_PARSER :: false
+DEBUG_PARSER :: true
 ParserVTable :: struct {
 	//Get next token from lexer.
 	ADVANCE:      proc(p: ^Parser) -> (err: ^OuauError),
@@ -86,6 +86,7 @@ BLOCK :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 }
 @(private = "file", require_results)
 STMT :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
+	my_alloc := virtual.arena_allocator(p.arena)
 	#partial switch p->GET_TOKEN() {
 	case .WHILE:
 		p->EXPECT(.WHILE) or_return
@@ -179,7 +180,6 @@ STMT :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 		}
 		return node, nil // end for
 	case .LOCAL:
-		my_alloc := virtual.arena_allocator(p.arena)
 		p->EXPECT(.LOCAL) or_return
 		node = p->NEW_NODE(.LOCAL)
 		#partial switch p->GET_TOKEN() {
@@ -192,7 +192,7 @@ STMT :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 			p->APPEND_CHILD(node, fn_body_node)
 			return node, nil
 		case .IDENTIFIER:
-			// identifier list.
+			// identifier
 			vars := make([dynamic]NODEID, my_alloc)
 			primary_expr := p->PRIMARY() or_return
 			append(&vars, primary_expr)

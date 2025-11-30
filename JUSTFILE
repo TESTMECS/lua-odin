@@ -26,7 +26,7 @@ test_parser:
 	odin test ./test_parser -define:ODIN_TEST_NAMES={{test_parser_name}}
 
 # test eval functions
-test_eval_name := "test_varargs"
+test_eval_name := "test_eval_block"
 test_eval:
 	odin test ./test_eval -define:ODIN_TEST_NAMES={{test_eval_name}}
 
