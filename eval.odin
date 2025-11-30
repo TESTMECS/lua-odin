@@ -57,10 +57,20 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		if IS_TRUTHY(cond) {
 			return i->EVAL(c)
 		} else {
-			for c = i->GET_SIBLING(c); c != 0; c = i->GET_SIBLING(c) {
-				cond := i->EVAL(c)
-				body := i->GET_SIBLING(c)
-				if IS_TRUTHY(cond) { return i->EVAL(body) }
+			c = i->GET_SIBLING(c) // Move from if-body to first elseif-condition
+			for c != 0 {
+				cond_node := c
+				body_node := i->GET_SIBLING(cond_node)
+				if body_node == 0 { // This is an 'else' block
+					return i->EVAL(cond_node)
+				}
+				
+				cond := i->EVAL(cond_node)
+				if IS_TRUTHY(cond) {
+					return i->EVAL(body_node)
+				}
+				
+				c = i->GET_SIBLING(body_node) // Move to next elseif-condition
 			}
 		}
 		return nil
@@ -647,7 +657,7 @@ ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 			}
 			env = env.outer
 		}
-		ENV_SET(env, name, value_to_assign)
+		i.globals[name] = value_to_assign
 		return value_to_assign
 	case .BINARY:
 		op := i.nodes.token[lvalue]
@@ -659,7 +669,7 @@ ASSIGN :: proc(i: ^Interpreter, node: NODEID) -> Value {
 				return i->EVAL_ERROR("Expected table in dot expression")
 			}
 			key_node := i->GET_GCHILD(lvalue)
-			key_val := i->EVAL(key_node)
+			key_val := i.nodes.name[key_node]
 			key_tag := VALUE_TO_KEY_TAG(key_val)
 			// Now evaluate RHS after we have the table location
 			value_to_assign := i->EVAL(rvalue)

@@ -130,12 +130,11 @@ test_while :: proc(t: ^testing.T) {
 
 	input := `
 	local a = 0;
-	while true do
-			a = a + 1;	
-			break;
-	end
-	a;`
-	p, p_err := NEW_PARSER(input, &v)
+			while true do
+				a = a + 1;	
+				break;
+		end
+		return a;`	p, p_err := NEW_PARSER(input, &v)
 	testing.expectf(t, p_err == nil, "Error creating Parser::(%v)", p_err)
 	root, chunk_err := CHUNK(&p)
 	testing.expectf(t, chunk_err == nil, "Error parsing chunk::(%v)", chunk_err)

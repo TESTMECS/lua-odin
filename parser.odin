@@ -6,7 +6,7 @@ import "core:mem/virtual"
 	 ./parser.odin
 	 Copyright(C) 2025 TESTMEE
 */
-DEBUG_PARSER :: true
+DEBUG_PARSER :: false
 ParserVTable :: struct {
 	//Get next token from lexer.
 	ADVANCE:      proc(p: ^Parser) -> (err: ^OuauError),
@@ -214,19 +214,9 @@ STMT :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 				return node, nil
 			case .ASSIGN:
 				p->ADVANCE() or_return
-				#partial switch p->GET_TOKEN() {
-				case .IDENTIFIER:
-					for v in vars { p->APPEND_CHILD(node, v) }
-					values := p->EXPLIST() or_return
-					for val in values { p->APPEND_CHILD(node, val) }
-				case .FUNCTION:
-					// @Anonfunction
-					fn_name := p->NEW_NODE(.FUNCTION)
-					p->EXPECT(.FUNCTION)
-					fn_body := p->FUNCBODY(fn_name) or_return
-					p->APPEND_CHILD(node, fn_body)
-					p->EXPECT(.END)
-				}
+				for v in vars { p->APPEND_CHILD(node, v) }
+				values := p->EXPLIST() or_return
+				for val in values { p->APPEND_CHILD(node, val) }
 				return node, nil
 			case:
 				// other.
@@ -273,6 +263,7 @@ STMT :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 		p->EXPECT(.FUNCTION) or_return
 		fn_name := p->FUNCNAME() or_return
 		node = p->FUNCBODY(fn_name) or_return
+		p->EXPECT(.END) or_return
 		return node, nil
 	case:
 		// Expression-statement
@@ -283,7 +274,7 @@ STMT :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 			p->APPEND_CHILD(assign_node, node)
 			rhs := p->EXPLIST() or_return
 			for expr in rhs { p->APPEND_CHILD(assign_node, expr) }
-			return node, nil
+			return assign_node, nil
 		}
 		return node, nil
 	}
@@ -323,7 +314,8 @@ FUNCNAME :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 FUNCBODY :: proc(p: ^Parser, fn_node: NODEID) -> (node: NODEID, err: ^OuauError) {
 	params := p->PARAMS(fn_node) or_return
 	fn_body := p->BLOCK() or_return
-	return fn_body, nil
+	p->APPEND_CHILD(fn_node, fn_body)
+	return fn_node, nil
 }
 @(private = "file", require_results)
 PARAMS :: proc(p: ^Parser, fn_node: NODEID) -> (node: NODEID, err: ^OuauError) {
