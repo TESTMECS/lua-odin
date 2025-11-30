@@ -2,11 +2,11 @@ package ouau
 import "core:fmt"
 import "core:log"
 import "core:mem/virtual"
-import "core:strconv"
 /*
 	 ./parser.odin
 	 Copyright(C) 2025 TESTMEE
 */
+DEBUG_PARSER :: false
 ParserVTable :: struct {
 	//Get next token from lexer.
 	ADVANCE:      proc(p: ^Parser) -> (err: ^OuauError),
@@ -51,20 +51,6 @@ CHUNK :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 	return node, nil
 }
 @(private = "file", require_results)
-ADVANCE :: proc(p: ^Parser) -> (err: ^OuauError) {
-	p.current = p.peek
-	next_token := p.lexer->NEXT() or_return
-	p.peek = next_token
-	return nil
-}
-@(private = "file", require_results)
-EXPECT :: proc(p: ^Parser, kind: Token) -> (err: ^OuauError) {
-	if p->IS(kind) {
-		p->ADVANCE() or_return
-	}
-	return nil
-}
-@(private = "file", require_results)
 BLOCK :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 	node = p->NEW_NODE(.BLOCK)
 	block_loop: for {
@@ -89,21 +75,17 @@ BLOCK :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 			break block_loop
 		case .EOF, .END, .UNTIL, .ELSE, .ELSEIF:
 			break block_loop
+		// end last stmts
 		case:
 			stmt := p->STMT() or_return
 			p->APPEND_CHILD(node, stmt)
-		// Don't return here, continue parsing more statements
+			continue block_loop
 		}
 	}
 	return node, nil
 }
-/*
-* this procedure should return when `end` or `)`
-*/
 @(private = "file", require_results)
 STMT :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
-	// log.info("[STMT]")
-	// log.info(p->GET_TOKEN())
 	#partial switch p->GET_TOKEN() {
 	case .WHILE:
 		p->EXPECT(.WHILE) or_return
@@ -195,15 +177,14 @@ STMT :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 		case:
 			return node, p->PARSE_ERROR("Invalid Token in For Loop")
 		}
-		return node, nil
-	// end for
+		return node, nil // end for
 	case .LOCAL:
 		my_alloc := virtual.arena_allocator(p.arena)
 		p->EXPECT(.LOCAL) or_return
 		node = p->NEW_NODE(.LOCAL)
 		#partial switch p->GET_TOKEN() {
 		case .FUNCTION:
-			// local function name( params )`
+			// local function
 			p->EXPECT(.FUNCTION)
 			fn_node := p->FUNCNAME() or_return
 			fn_body_node := p->FUNCBODY(fn_node) or_return
@@ -232,21 +213,19 @@ STMT :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
 				}
 				return node, nil
 			case .ASSIGN:
-				// Normal assignment.
 				p->ADVANCE() or_return
 				#partial switch p->GET_TOKEN() {
 				case .IDENTIFIER:
-					// Assign identifer list.
 					for v in vars { p->APPEND_CHILD(node, v) }
 					values := p->EXPLIST() or_return
 					for val in values { p->APPEND_CHILD(node, val) }
 				case .FUNCTION:
-					// Assign @Anon function
+					// @Anonfunction
+					fn_name := p->NEW_NODE(.FUNCTION)
 					p->EXPECT(.FUNCTION)
-					fn_name: NODEID
 					fn_body := p->FUNCBODY(fn_name) or_return
 					p->APPEND_CHILD(node, fn_body)
-					p->EXPECT(.END) // expect end
+					p->EXPECT(.END)
 				}
 				return node, nil
 			case:
@@ -392,7 +371,7 @@ PRECEDENCE :: proc(p: ^Parser, prec: Precedence) -> (lhs: NODEID, err: ^OuauErro
 	return lhs, nil
 }
 @(private = "file", require_results)
-GET_PRECEDENCE :: proc(t: Token) -> Precedence {
+GET_PRECEDENCE :: #force_inline proc(t: Token) -> Precedence {
 	return PRECEDENCES[t]
 }
 @(private = "file", require_results)
@@ -463,32 +442,6 @@ INFIX :: proc(p: ^Parser, lhs: NODEID) -> (infix: NODEID, err: ^OuauError) {
 	p->APPEND_CHILD(infix, lhs)
 	p->APPEND_CHILD(infix, rhs)
 	return infix, nil
-}
-PARSE_NUMBER :: proc(text: string) -> (value: f64, is_integer: bool, ok: bool) {
-	// Check for hexadecimal
-	if len(text) >= 2 && text[0] == '0' && (text[1] == 'x' || text[1] == 'X') {
-		// Parse hexadecimal as integer
-		hex_val, hex_ok := strconv.parse_u64(text[2:], 16)
-		return f64(hex_val), true, hex_ok
-	}
-	// Check if it's an integer (no decimal point, no exponent)
-	is_int := true
-	for ch in text {
-		if ch == '.' || ch == 'e' || ch == 'E' {
-			is_int = false
-			break
-		}
-	}
-	if is_int {
-		// Parse as integer first
-		int_val, int_ok := strconv.parse_i64(text, 10)
-		if int_ok {
-			return f64(int_val), true, true
-		}
-	}
-	// Parse as float
-	float_val, float_ok := strconv.parse_f64(text)
-	return float_val, false, float_ok
 }
 @(private = "file", require_results)
 PRIMARY :: proc(p: ^Parser) -> (node: NODEID, err: ^OuauError) {
@@ -656,8 +609,6 @@ NEW_NODE :: proc(p: ^Parser, k: NODE_KIND) -> (new_nodeid: NODEID) {
 	append(&p.nodes.name, "")
 	return
 }
-
-// NOTE
 @(private = "file")
 APPEND_CHILD :: proc(p: ^Parser, parent, child: NODEID) {
 	if p.nodes.first_child[parent] == 0 {
@@ -682,6 +633,23 @@ PARSE_ERROR :: proc(p: ^Parser, msg: string, xtra: ..any) -> ^OuauError {
 		parser_object = p,
 	}
 	return e
+}
+@(private = "file", require_results)
+ADVANCE :: proc(p: ^Parser) -> (err: ^OuauError) {
+	if DEBUG_PARSER do log.infof("|.current::(%v) before advance|", p.current)
+	p.current = p.peek
+	if DEBUG_PARSER do log.infof("|.peek::(%v)before advance|", p.peek)
+	next_token := p.lexer->NEXT() or_return
+	if DEBUG_PARSER do log.infof("|next_token::(%v)|", next_token)
+	p.peek = next_token
+	return nil
+}
+@(private = "file", require_results)
+EXPECT :: proc(p: ^Parser, kind: Token) -> (err: ^OuauError) {
+	if p->IS(kind) {
+		p->ADVANCE() or_return
+	}
+	return nil
 }
 @(rodata)
 PARSER_VTABLE := ParserVTable {

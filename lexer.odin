@@ -157,7 +157,6 @@ GET_TOKEN :: proc(l: ^Lexer, type: Token, start: int, length: int) -> TokenDefin
 IS_LETTER :: proc(ch: u8) -> bool {
 	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_'
 }
-
 @(private = "file")
 TOKEN_FROM_CHAR :: proc(l: ^Lexer, ty: Token) -> TokenDefinition {
 	return l->GET_TOKEN(ty, l.pos, 1)

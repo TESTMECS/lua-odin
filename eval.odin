@@ -2,6 +2,7 @@ package ouau
 import "core:fmt"
 import "core:math"
 import "core:mem/virtual"
+import "core:strconv"
 import "core:strings"
 /*
 *	 ./eval.odin
@@ -375,6 +376,31 @@ EVAL :: proc(i: ^Interpreter, node: NODEID) -> Value {
 		}
 	}
 	return nil
+}
+PARSE_NUMBER :: proc(text: string) -> (value: f64, is_integer: bool, ok: bool) {
+	// Check for hexadecimal
+	if len(text) >= 2 && text[0] == '0' && (text[1] == 'x' || text[1] == 'X') {
+		hex_val, hex_ok := strconv.parse_u64(text[2:], 16)
+		return f64(hex_val), true, hex_ok
+	}
+	// Check if it's an integer (no decimal point, no exponent)
+	is_int := true
+	for ch in text {
+		if ch == '.' || ch == 'e' || ch == 'E' {
+			is_int = false
+			break
+		}
+	}
+	if is_int {
+		// Parse as integer first
+		int_val, int_ok := strconv.parse_i64(text, 10)
+		if int_ok {
+			return f64(int_val), true, true
+		}
+	}
+	// Parse as float
+	float_val, float_ok := strconv.parse_f64(text)
+	return float_val, false, float_ok
 }
 @(private = "file")
 EVAL_FUNCTION :: proc(i: ^Interpreter, node: NODEID) -> Value {

@@ -8,7 +8,7 @@ commit-push MSG:
 # just build the binary
 alias b := build
 build:
-	odin build . -out:lua-odin.build
+	odin build . -out:lua-odin.build -o:size
 
 # clean the builds	
 alias c := clean
@@ -32,7 +32,7 @@ test_eval:
 
 # test a .ouau file
 test_file_dir := "./examples"
-test_file_name := "test1.ouau"
+test_file_name := "test.ouau"
 alias tf := test-file
 test-file:
 	odin run . -- file {{test_file_dir}}/{{test_file_name}}
